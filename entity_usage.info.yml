@@ -1,0 +1,5 @@
+name: Entity Usage
+type: module
+description: Track usage of entities referenced by other entities
+core: 8.x
+package: Other
