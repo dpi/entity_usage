@@ -1,21 +1,23 @@
 <?php
 
-namespace Drupal\entity_usage\Tests\EntityUsageTest;
+namespace Drupal\entity_usage\Tests\Kernel;
 
-use Drupal\config\Tests\AssertConfigEntityImportTrait;
+use Drupal\Core\Field\FieldStorageDefinitionInterface;
+use Drupal\field\Entity\FieldStorageConfig;
+use Drupal\filter\Entity\FilterFormat;
+use Drupal\KernelTests\Core\Entity\EntityKernelTestBase;
 use Drupal\entity_test\Entity\EntityTest;
 use Drupal\field\Entity\FieldConfig;
 use Drupal\field\Tests\EntityReference\EntityReferenceTestTrait;
-use Drupal\simpletest\WebTestBase;
+
 
 /**
  * Tests basic usage tracking on generic entities.
  *
  * @group entity_usage
  */
-class EntityUsageTest extends WebTestBase {
+class EntityUsageTest extends EntityKernelTestBase {
 
-  use AssertConfigEntityImportTrait;
   use EntityReferenceTestTrait;
 
   /**
@@ -37,14 +39,28 @@ class EntityUsageTest extends WebTestBase {
    *
    * @var string
    */
-  protected $fieldName;
+  protected $fieldName = 'field_test';
 
   /**
-   * Modules to install.
+   * The entity to be referenced in this test.
    *
-   * @var array
+   * @var \Drupal\Core\Entity\EntityInterface
    */
-  public static $modules = ['config_test', 'entity_test', 'field_ui'];
+  protected $referencedEntity;
+
+  /**
+   * Some test entities.
+   *
+   * @var \Drupal\Core\Entity\EntityInterface[]
+   */
+  protected $testEntities;
+
+  /**
+   * The injected database connection;
+   *
+   * @var \Drupal\Core\Database\Connection
+   */
+  protected $injectedDatabase;
 
   /**
    * {@inheritdoc}
@@ -52,13 +68,183 @@ class EntityUsageTest extends WebTestBase {
   protected function setUp() {
     parent::setUp();
 
-    // Create a test user.
-    $web_user = $this->drupalCreateUser([
-      'administer entity_test content',
-      'administer entity_test fields',
-      'view test entity',
-    ]);
-    $this->drupalLogin($web_user);
+//    // Use Classy theme for testing markup output.
+//    \Drupal::service('theme_handler')->install(['classy']);
+//    \Drupal::service('theme_handler')->setDefault('classy');
+    $this->installEntitySchema('entity_test');
+//    // Grant the 'view test entity' permission.
+//    $this->installConfig(['user']);
+//    Role::load(RoleInterface::ANONYMOUS_ID)
+//      ->grantPermission('view test entity')
+//      ->save();
+
+    $this->createEntityReferenceField($this->entityType, $this->bundle, $this->fieldName, 'Field test', $this->entityType, 'default', [], FieldStorageDefinitionInterface::CARDINALITY_UNLIMITED);
+
+    // Set up a field, so that the entity that'll be referenced bubbles up a
+    // cache tag when rendering it entirely.
+    FieldStorageConfig::create([
+      'field_name' => 'body',
+      'entity_type' => $this->entityType,
+      'type' => 'text',
+      'settings' => array(),
+    ])->save();
+    FieldConfig::create([
+      'entity_type' => $this->entityType,
+      'bundle' => $this->bundle,
+      'field_name' => 'body',
+      'label' => 'Body',
+    ])->save();
+    \Drupal::entityTypeManager()
+      ->getStorage('entity_view_display')
+      ->load($this->entityType . '.' . $this->bundle . '.' . 'default')
+      ->setComponent('body', [
+        'type' => 'text_default',
+        'settings' => [],
+      ])
+      ->save();
+
+    FilterFormat::create(array(
+      'format' => 'full_html',
+      'name' => 'Full HTML',
+    ))->save();
+
+    // Create the entity to be referenced.
+    $this->referencedEntity = $this->container->get('entity_type.manager')
+      ->getStorage($this->entityType)
+      ->create(['name' => $this->randomMachineName()]);
+    $this->referencedEntity->body = [
+      'value' => '<p>Lorem ipsum</p>',
+      'format' => 'full_html',
+    ];
+    $this->referencedEntity->save();
+
+    $this->testEntities = $this->getTestEntities();
+
+    $this->injectedDatabase = $this->container->get('database');
+  }
+
+  /**
+   * @covers \Drupal\entity_usage\DatabaseEntityUsageUsageBackend::listUsage().
+   */
+  public function testGetUsage() {
+    $entity = $this->testEntities[0];
+    $this->injectedDatabase->insert('entity_usage')
+      ->fields([
+        't_id' => $entity->id(), // Target entity id.
+        't_type' => $entity->getEntityTypeId(), // Target entity type.
+        're_id' => 1, // Referencing entity id.
+        're_type' => 'foo', // Referencing entity type.
+        'reference_method' => 'entity_reference',
+        'count' => 1,
+      ])
+      ->execute();
+
+    // We assume ::listUsage() will take only $entity as parameter.
+    $usage = $this->container->get('entity_usage.usage')->listUsage($entity);
+
+    $this->assertEquals(1, $usage, 'Returned the correct count.');
+
+    // Clean back the environment.
+    $this->injectedDatabase->truncate('entity_usage');
+  }
+
+  /**
+   * @covers \Drupal\entity_usage\DatabaseEntityUsageUsageBackend::add().
+   */
+  function testAddUsage() {
+    $entity = $this->testEntities[0];
+    $entity_usage = $this->container->get('entity_usage.usage');
+    // Assuming ::add() will take: $entity (target), $re_id, $re_type, $method, $count.
+    $entity_usage->add($entity, '1', 'foo', 'entity_reference', 1);
+
+    $real_usage = $this->injectedDatabase->select('entity_usage')
+      ->fields('f')
+      ->condition('f.t_id', $entity->id())
+      ->execute()
+      ->fetchAllAssoc('re_id');
+
+    $this->assertEquals(1, $real_usage[1]->count, 'Returned the correct count.');
+
+    // Clean back the environment.
+    $this->injectedDatabase->truncate('entity_usage');
+
+  }
+
+  /**
+   * @covers \Drupal\entity_usage\DatabaseEntityUsageUsageBackend::delete().
+   */
+  function testRemoveUsage() {
+    $entity = $this->testEntities[0];
+    $entity_usage = $this->container->get('entity_usage.usage');
+
+    $this->injectedDatabase->insert('entity_usage')
+      ->fields([
+        't_id' => $entity->id(), // Target entity id.
+        't_type' => $entity->getEntityTypeId(), // Target entity type.
+        're_id' => 1, // Referencing entity id.
+        're_type' => 'foo', // Referencing entity type.
+        'reference_method' => 'entity_reference',
+        'count' => 3,
+      ])
+      ->execute();
+
+    // Normal decrement.
+    // Assuming ::delete() will take $entity, $re_id, $re_type, $count.
+    $entity_usage->delete($entity, 1, 'foo', 1);
+    $count = $this->injectedDatabase->select('entity_usage', 'e')
+      ->fields('e', ['count'])
+      ->condition('e.t_id', $entity->id())
+      ->execute()
+      ->fetchField();
+    $this->assertEquals(2, $count, 'The count was decremented correctly.');
+
+    // Multiple decrement and removal.
+    $entity_usage->delete($entity, 1, 'foo', 2);
+    $count = $this->injectedDatabase->select('entity_usage', 'e')
+      ->fields('e', ['count'])
+      ->condition('e.t_id', $entity->id())
+      ->execute()
+      ->fetchField();
+    $this->assertSame(FALSE, $count, 'The count was removed entirely when empty.');
+
+    // Non-existent decrement.
+    $entity_usage->delete($entity, 1, 'foo', 2);
+    $count = $this->injectedDatabase->select('entity_usage', 'e')
+      ->fields('e', ['count'])
+      ->condition('e.t_id', $entity->id())
+      ->execute()
+      ->fetchField();
+    $this->assertSame(FALSE, $count, 'Decrementing non-exist record complete.');
+
+  }
+
+  /**
+   * Tests basic entity tracking on test entities using entityreference fields.
+   */
+  public function testBasicUsageTracking() {
+
+    // First check usage is 0 for the referenced entity.
+
+    // Create an entity referencing it and check that the usage increases to 1.
+    $field_name = $this->fieldName;
+    $referencing_entity = $this->container->get('entity_type.manager')
+      ->getStorage($this->entityType)
+      ->create(array('name' => $this->randomMachineName()));
+    $referencing_entity->save();
+    $referencing_entity->{$field_name}->entity = $this->referencedEntity;
+
+    // Update other values on the referencing entity, check usage remains 1.
+
+    // Delete the value from the entityreference field and check that the
+    // usage goes back to 0.
+
+    // Create a reference again, check the value is back to 1.
+
+    // Delete the whole referencing entity, check usage goes back to 0.
+
+    // Create a reference again, check the value is back to 1.
+
+    // Unpublish the host entity, check usage goes back to 0.
 
   }
 
@@ -199,17 +385,15 @@ class EntityUsageTest extends WebTestBase {
    */
   protected function getTestEntities() {
 
-    $content_entity_1 = EntityTest::create(array('name' => $this->randomMachineName()));
+    $content_entity_1 = EntityTest::create(['name' => $this->randomMachineName()]);
     $content_entity_1->save();
-    $content_entity_2 = EntityTest::create(array('name' => $this->randomMachineName()));
+    $content_entity_2 = EntityTest::create(['name' => $this->randomMachineName()]);
     $content_entity_2->save();
 
-    return array(
-      'content' => array(
-        $content_entity_1,
-        $content_entity_2,
-      ),
-    );
+    return [
+      $content_entity_1,
+      $content_entity_2,
+    ];
   }
 
 }

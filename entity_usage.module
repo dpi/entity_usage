@@ -2,7 +2,7 @@
 
 /**
  * @file
- * Contains entity_usage.module..
+ * Contains entity_usage.module.
  */
 
 use Drupal\Core\Routing\RouteMatchInterface;
