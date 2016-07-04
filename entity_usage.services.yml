@@ -1,4 +1,4 @@
 services:
   entity_usage.usage:
-    class: Drupal\entity_usage\DatabaseEntityUsageUsageBackend
+    class: Drupal\entity_usage\DatabaseEntityUsageBackend
     arguments: ['@database']

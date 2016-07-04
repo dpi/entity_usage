@@ -122,7 +122,7 @@ class EntityUsageTest extends EntityKernelTestBase {
   }
 
   /**
-   * @covers \Drupal\entity_usage\DatabaseEntityUsageUsageBackend::listUsage().
+   * @covers \Drupal\entity_usage\DatabaseEntityUsageBackend::listUsage().
    */
   public function testGetUsage() {
     $entity = $this->testEntities[0];
@@ -137,7 +137,6 @@ class EntityUsageTest extends EntityKernelTestBase {
       ])
       ->execute();
 
-    // We assume ::listUsage() will take only $entity as parameter.
     $usage = $this->container->get('entity_usage.usage')->listUsage($entity);
 
     $this->assertEquals(1, $usage, 'Returned the correct count.');
@@ -147,12 +146,11 @@ class EntityUsageTest extends EntityKernelTestBase {
   }
 
   /**
-   * @covers \Drupal\entity_usage\DatabaseEntityUsageUsageBackend::add().
+   * @covers \Drupal\entity_usage\DatabaseEntityUsageBackend::add().
    */
   function testAddUsage() {
     $entity = $this->testEntities[0];
     $entity_usage = $this->container->get('entity_usage.usage');
-    // Assuming ::add() will take: $entity (target), $re_id, $re_type, $method, $count.
     $entity_usage->add($entity, '1', 'foo', 'entity_reference', 1);
 
     $real_usage = $this->injectedDatabase->select('entity_usage')
@@ -169,7 +167,7 @@ class EntityUsageTest extends EntityKernelTestBase {
   }
 
   /**
-   * @covers \Drupal\entity_usage\DatabaseEntityUsageUsageBackend::delete().
+   * @covers \Drupal\entity_usage\DatabaseEntityUsageBackend::delete().
    */
   function testRemoveUsage() {
     $entity = $this->testEntities[0];
@@ -187,7 +185,6 @@ class EntityUsageTest extends EntityKernelTestBase {
       ->execute();
 
     // Normal decrement.
-    // Assuming ::delete() will take $entity, $re_id, $re_type, $count.
     $entity_usage->delete($entity, 1, 'foo', 1);
     $count = $this->injectedDatabase->select('entity_usage', 'e')
       ->fields('e', ['count'])
@@ -230,7 +227,6 @@ class EntityUsageTest extends EntityKernelTestBase {
     $referencing_entity = $this->testEntities[0];
 
     // First check usage is 0 for the referenced entity.
-    // We assume ::listUsage() will take only $entity as parameter.
     $usage = $entity_usage->listUsage($this->referencedEntity);
     $this->assertSame([], $usage, 'Initial usage is correctly empty.');
 
