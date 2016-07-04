@@ -26,7 +26,7 @@ abstract class EntityUsageBase implements EntityUsageInterface {
   /**
    * {@inheritdoc}
    */
-  public function listUsage(EntityInterface $entity) {
+  public function listUsage(EntityInterface $entity, $include_method = FALSE) {
 
   }
 

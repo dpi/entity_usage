@@ -39,73 +39,81 @@ class DatabaseEntityUsageBackend extends EntityUsageBase {
     $this->tableName = $table;
   }
 
-//  /**
-//   * {@inheritdoc}
-//   */
-//  public function add(FileInterface $file, $module, $type, $id, $count = 1) {
-//    $this->connection->merge($this->tableName)
-//      ->keys(array(
-//        'fid' => $file->id(),
-//        'module' => $module,
-//        'type' => $type,
-//        'id' => $id,
-//      ))
-//      ->fields(array('count' => $count))
-//      ->expression('count', 'count + :count', array(':count' => $count))
-//      ->execute();
-//
-//    parent::add($file, $module, $type, $id, $count);
-//  }
-//
-//  /**
-//   * {@inheritdoc}
-//   */
-//  public function delete(FileInterface $file, $module, $type = NULL, $id = NULL, $count = 1) {
-//    // Delete rows that have a exact or less value to prevent empty rows.
-//    $query = $this->connection->delete($this->tableName)
-//      ->condition('module', $module)
-//      ->condition('fid', $file->id());
-//    if ($type && $id) {
-//      $query
-//        ->condition('type', $type)
-//        ->condition('id', $id);
-//    }
-//    if ($count) {
-//      $query->condition('count', $count, '<=');
-//    }
-//    $result = $query->execute();
-//
-//    // If the row has more than the specified count decrement it by that number.
-//    if (!$result && $count > 0) {
-//      $query = $this->connection->update($this->tableName)
-//        ->condition('module', $module)
-//        ->condition('fid', $file->id());
-//      if ($type && $id) {
-//        $query
-//          ->condition('type', $type)
-//          ->condition('id', $id);
-//      }
-//      $query->expression('count', 'count - :count', array(':count' => $count));
-//      $query->execute();
-//    }
-//
-//    parent::delete($file, $module, $type, $id, $count);
-//  }
-//
-//  /**
-//   * {@inheritdoc}
-//   */
-//  public function listUsage(FileInterface $file) {
-//    $result = $this->connection->select($this->tableName, 'f')
-//      ->fields('f', array('module', 'type', 'id', 'count'))
-//      ->condition('fid', $file->id())
-//      ->condition('count', 0, '>')
-//      ->execute();
-//    $references = array();
-//    foreach ($result as $usage) {
-//      $references[$usage->module][$usage->type][$usage->id] = $usage->count;
-//    }
-//    return $references;
-//  }
+  /**
+   * {@inheritdoc}
+   */
+  public function add(EntityInterface $entity, $re_id, $re_type, $method = 'entity_reference', $count = 1) {
+    $this->connection->merge($this->tableName)
+      ->keys([
+        't_id' => $entity->id(),
+        't_type' => $entity->getEntityTypeId(),
+        're_id' => $re_id,
+        're_type' => $re_type,
+        'method' => $method,
+      ])
+      ->fields(['count' => $count])
+      ->expression('count', 'count + :count', [':count' => $count])
+      ->execute();
+
+    parent::add($entity, $re_id, $re_type, $method, $count);
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function delete(EntityInterface $entity, $re_id = NULL, $re_type = NULL, $count = 1) {
+
+    // Delete rows that have an exact or less value to prevent empty rows.
+    $query = $this->connection->delete($this->tableName)
+      ->condition('t_type', $entity->getEntityTypeId())
+      ->condition('t_id', $entity->id());
+    if ($re_type && $re_id) {
+      $query
+        ->condition('re_type', $re_type)
+        ->condition('re_id', $re_id);
+    }
+    if ($count) {
+      $query->condition('count', $count, '<=');
+    }
+    $result = $query->execute();
+
+    // If the row has more than the specified count decrement it by that number.
+    if (!$result && $count > 0) {
+      $query = $this->connection->update($this->tableName)
+        ->condition('t_type', $entity->getEntityTypeId())
+        ->condition('t_id', $entity->id());
+      if ($re_type && $re_id) {
+        $query
+          ->condition('re_type', $re_type)
+          ->condition('re_id', $re_id);
+      }
+      $query->expression('count', 'count - :count', [':count' => $count]);
+      $query->execute();
+    }
+
+    parent::delete($entity, $re_id, $re_type, $count);
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function listUsage(EntityInterface $entity, $include_method = FALSE) {
+    $result = $this->connection->select($this->tableName, 'e')
+      ->fields('e', ['re_id', 're_type', 'method', 'count'])
+      ->condition('t_id', $entity->id())
+      ->condition('t_type', $entity->getEntityTypeId())
+      ->condition('count', 0, '>')
+      ->execute();
+    $references = [];
+    foreach ($result as $usage) {
+      if ($include_method) {
+        $references[$usage->method][$usage->re_type][$usage->re_id] = $usage->count;
+      }
+      else {
+        $references[$usage->re_type][$usage->re_id] = $usage->count;
+      }
+    }
+    return $references;
+  }
 
 }

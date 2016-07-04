@@ -132,7 +132,7 @@ class EntityUsageTest extends EntityKernelTestBase {
         't_type' => $entity->getEntityTypeId(), // Target entity type.
         're_id' => 1, // Referencing entity id.
         're_type' => 'foo', // Referencing entity type.
-        'reference_method' => 'entity_reference',
+        'method' => 'entity_reference',
         'count' => 1,
       ])
       ->execute();
@@ -181,7 +181,7 @@ class EntityUsageTest extends EntityKernelTestBase {
         't_type' => $entity->getEntityTypeId(), // Target entity type.
         're_id' => 1, // Referencing entity id.
         're_type' => 'foo', // Referencing entity type.
-        'reference_method' => 'entity_reference',
+        'method' => 'entity_reference',
         'count' => 3,
       ])
       ->execute();
@@ -192,6 +192,7 @@ class EntityUsageTest extends EntityKernelTestBase {
     $count = $this->injectedDatabase->select('entity_usage', 'e')
       ->fields('e', ['count'])
       ->condition('e.t_id', $entity->id())
+      ->condition('e.t_type', $entity->getEntityTypeId())
       ->execute()
       ->fetchField();
     $this->assertEquals(2, $count, 'The count was decremented correctly.');
@@ -201,6 +202,7 @@ class EntityUsageTest extends EntityKernelTestBase {
     $count = $this->injectedDatabase->select('entity_usage', 'e')
       ->fields('e', ['count'])
       ->condition('e.t_id', $entity->id())
+      ->condition('e.t_type', $entity->getEntityTypeId())
       ->execute()
       ->fetchField();
     $this->assertSame(FALSE, $count, 'The count was removed entirely when empty.');
@@ -210,6 +212,7 @@ class EntityUsageTest extends EntityKernelTestBase {
     $count = $this->injectedDatabase->select('entity_usage', 'e')
       ->fields('e', ['count'])
       ->condition('e.t_id', $entity->id())
+      ->condition('e.t_type', $entity->getEntityTypeId())
       ->execute()
       ->fetchField();
     $this->assertSame(FALSE, $count, 'Decrementing non-exist record complete.');

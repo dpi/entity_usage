@@ -54,7 +54,7 @@ interface EntityUsageInterface {
    * Determines where an entity is used.
    *
    * Examples:
-   *  - A possible return value of this function could be:
+   *  - Return example 1:
    *  [
    *    'node' => [
    *      123 => 1,
@@ -64,15 +64,27 @@ interface EntityUsageInterface {
    *      2 => 1,
    *    ],
    *  ]
+   *  - Return example 2:
+   *  [
+   *    'entity_reference' => [
+   *      'node' => [...],
+   *      'user' => [...],
+   *    ]
+   *  ]
    *
    * @param \Drupal\Core\Entity\EntityInterface $entity
    *   A target (referenced) entity.
+   * @param bool $include_method
+   *   (optional) Whether the results must be wrapped into an additional array
+   *   level, by the reference method. Defaults to FALSE.
    *
    * @return array
    *   A nested array with usage data. The first level is keyed by the type of
    *   the referencing entities, the second by the referencing objects id. The
    *   value of the second level contains the usage count.
+   *   Note that if $include_method is TRUE, the first level is keyed by the
+   *   reference method, and the second level will continue as explained above.
    */
-  public function listUsage(EntityInterface $entity);
+  public function listUsage(EntityInterface $entity, $include_method = FALSE);
 
 }
