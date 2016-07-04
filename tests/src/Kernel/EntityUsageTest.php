@@ -137,7 +137,9 @@ class EntityUsageTest extends EntityKernelTestBase {
       ])
       ->execute();
 
-    $usage = $this->container->get('entity_usage.usage')->listUsage($entity);
+    /** @var \Drupal\entity_usage\DatabaseEntityUsageBackend $entity_usage */
+    $entity_usage = $this->container->get('entity_usage.usage');
+    $usage = $entity_usage->listUsage($entity);
 
     $this->assertEquals(1, $usage, 'Returned the correct count.');
 
@@ -150,6 +152,7 @@ class EntityUsageTest extends EntityKernelTestBase {
    */
   function testAddUsage() {
     $entity = $this->testEntities[0];
+    /** @var \Drupal\entity_usage\DatabaseEntityUsageBackend $entity_usage */
     $entity_usage = $this->container->get('entity_usage.usage');
     $entity_usage->add($entity, '1', 'foo', 'entity_reference', 1);
 
@@ -171,6 +174,7 @@ class EntityUsageTest extends EntityKernelTestBase {
    */
   function testRemoveUsage() {
     $entity = $this->testEntities[0];
+    /** @var \Drupal\entity_usage\DatabaseEntityUsageBackend $entity_usage */
     $entity_usage = $this->container->get('entity_usage.usage');
 
     $this->injectedDatabase->insert('entity_usage')
@@ -221,6 +225,7 @@ class EntityUsageTest extends EntityKernelTestBase {
    */
   public function testBasicUsageTracking() {
 
+    /** @var \Drupal\entity_usage\DatabaseEntityUsageBackend $entity_usage */
     $entity_usage = $this->container->get('entity_usage.usage');
 
     $field_name = $this->fieldName;
