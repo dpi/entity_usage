@@ -1,0 +1,24 @@
+<?php
+
+/**
+ * @file
+ * Contains entity_usage.module..
+ */
+
+use Drupal\Core\Routing\RouteMatchInterface;
+
+/**
+ * Implements hook_help().
+ */
+function entity_usage_help($route_name, RouteMatchInterface $route_match) {
+  switch ($route_name) {
+    // Main module help for the entity_usage module.
+    case 'help.page.entity_usage':
+      $output = '';
+      $output .= '<h3>' . t('About') . '</h3>';
+      $output .= '<p>' . t('Track usage of entities referenced by other entities') . '</p>';
+      return $output;
+
+    default:
+  }
+}
