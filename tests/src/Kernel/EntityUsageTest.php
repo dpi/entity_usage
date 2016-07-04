@@ -1,6 +1,6 @@
 <?php
 
-namespace Drupal\entity_usage\Tests\Kernel;
+namespace Drupal\Tests\entity_usage\Kernel;
 
 use Drupal\Core\Field\FieldStorageDefinitionInterface;
 use Drupal\field\Entity\FieldStorageConfig;
@@ -19,6 +19,13 @@ use Drupal\field\Tests\EntityReference\EntityReferenceTestTrait;
 class EntityUsageTest extends EntityKernelTestBase {
 
   use EntityReferenceTestTrait;
+
+  /**
+   * Modules to enable.
+   *
+   * @var array
+   */
+  public static $modules = ['system', 'user', 'field', 'entity_reference', 'entity_usage'];
 
   /**
    * The entity type used in this test.
@@ -68,6 +75,9 @@ class EntityUsageTest extends EntityKernelTestBase {
   protected function setUp() {
     parent::setUp();
 
+    $this->installConfig(['system']);
+    $this->installSchema('entity_usage', ['entity_usage']);
+    $this->installEntitySchema('user');
     $this->installEntitySchema('entity_test');
     $this->createEntityReferenceField($this->entityType, $this->bundle, $this->fieldName, 'Field test', $this->entityType, 'default', [], FieldStorageDefinitionInterface::CARDINALITY_UNLIMITED);
 
@@ -84,14 +94,14 @@ class EntityUsageTest extends EntityKernelTestBase {
       'field_name' => 'body',
       'label' => 'Body',
     ])->save();
-    \Drupal::entityTypeManager()
-      ->getStorage('entity_view_display')
-      ->load($this->entityType . '.' . $this->bundle . '.' . 'default')
-      ->setComponent('body', [
-        'type' => 'text_default',
-        'settings' => [],
-      ])
-      ->save();
+//    \Drupal::entityTypeManager()
+//      ->getStorage('entity_view_display')
+//      ->load($this->entityType . '.' . $this->bundle . '.' . 'default')
+//      ->setComponent('body', [
+//        'type' => 'text_default',
+//        'settings' => [],
+//      ])
+//      ->save();
 
     FilterFormat::create(array(
       'format' => 'full_html',
@@ -119,6 +129,7 @@ class EntityUsageTest extends EntityKernelTestBase {
 
     $this->injectedDatabase = $this->container->get('database');
 
+    $this->assertEquals(2, 2, '2 equals 2');
   }
 
   /**
