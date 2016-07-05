@@ -21,11 +21,11 @@ class EntityUsageTest extends EntityKernelTestBase {
   use EntityReferenceTestTrait;
 
   /**
-   * Modules to enable.
+   * Modules to install.
    *
    * @var array
    */
-  public static $modules = ['system', 'user', 'field', 'entity_reference', 'entity_usage'];
+  public static $modules = ['entity_reference_test', 'entity_usage'];
 
   /**
    * The entity type used in this test.
@@ -63,11 +63,18 @@ class EntityUsageTest extends EntityKernelTestBase {
   protected $testEntities;
 
   /**
-   * The injected database connection;
+   * The injected database connection.
    *
    * @var \Drupal\Core\Database\Connection
    */
   protected $injectedDatabase;
+
+  /**
+   * The name of the table that stores entity usage information.
+   *
+   * @var string
+   */
+  protected $tableName;
 
   /**
    * {@inheritdoc}
@@ -75,10 +82,10 @@ class EntityUsageTest extends EntityKernelTestBase {
   protected function setUp() {
     parent::setUp();
 
-    $this->installConfig(['system']);
+    $this->injectedDatabase = $this->container->get('database');
+
     $this->installSchema('entity_usage', ['entity_usage']);
-    $this->installEntitySchema('user');
-    $this->installEntitySchema('entity_test');
+    $this->tableName = 'entity_usage';
     $this->createEntityReferenceField($this->entityType, $this->bundle, $this->fieldName, 'Field test', $this->entityType, 'default', [], FieldStorageDefinitionInterface::CARDINALITY_UNLIMITED);
 
     // Set up an additional field.
@@ -94,14 +101,6 @@ class EntityUsageTest extends EntityKernelTestBase {
       'field_name' => 'body',
       'label' => 'Body',
     ])->save();
-//    \Drupal::entityTypeManager()
-//      ->getStorage('entity_view_display')
-//      ->load($this->entityType . '.' . $this->bundle . '.' . 'default')
-//      ->setComponent('body', [
-//        'type' => 'text_default',
-//        'settings' => [],
-//      ])
-//      ->save();
 
     FilterFormat::create(array(
       'format' => 'full_html',
@@ -127,17 +126,17 @@ class EntityUsageTest extends EntityKernelTestBase {
     ];
     $this->testEntities[1]->save();
 
-    $this->injectedDatabase = $this->container->get('database');
+
 
     $this->assertEquals(2, 2, '2 equals 2');
   }
 
   /**
-   * @covers \Drupal\entity_usage\DatabaseEntityUsageBackend::listUsage().
+   * @covers \Drupal\entity_usage\DatabaseEntityUsageBackend::listUsage
    */
   public function testGetUsage() {
     $entity = $this->testEntities[0];
-    $this->injectedDatabase->insert('entity_usage')
+    $this->injectedDatabase->insert($this->tableName)
       ->fields([
         't_id' => $entity->id(), // Target entity id.
         't_type' => $entity->getEntityTypeId(), // Target entity type.
@@ -150,16 +149,16 @@ class EntityUsageTest extends EntityKernelTestBase {
 
     /** @var \Drupal\entity_usage\DatabaseEntityUsageBackend $entity_usage */
     $entity_usage = $this->container->get('entity_usage.usage');
-    $usage = $entity_usage->listUsage($entity);
+    $usage = $entity_usage->listUsage($entity)['media'][1];
 
     $this->assertEquals(1, $usage, 'Returned the correct count.');
 
     // Clean back the environment.
-    $this->injectedDatabase->truncate('entity_usage');
+    $this->injectedDatabase->truncate($this->tableName);
   }
 
   /**
-   * @covers \Drupal\entity_usage\DatabaseEntityUsageBackend::add().
+   * @covers \Drupal\entity_usage\DatabaseEntityUsageBackend::add
    */
   function testAddUsage() {
     $entity = $this->testEntities[0];
@@ -167,7 +166,7 @@ class EntityUsageTest extends EntityKernelTestBase {
     $entity_usage = $this->container->get('entity_usage.usage');
     $entity_usage->add($entity, '1', 'foo', 'entity_reference', 1);
 
-    $real_usage = $this->injectedDatabase->select('entity_usage')
+    $real_usage = $this->injectedDatabase->select($this->tableName)
       ->fields('f')
       ->condition('f.t_id', $entity->id())
       ->execute()
@@ -176,19 +175,19 @@ class EntityUsageTest extends EntityKernelTestBase {
     $this->assertEquals(1, $real_usage[1]->count, 'Returned the correct count.');
 
     // Clean back the environment.
-    $this->injectedDatabase->truncate('entity_usage');
+    $this->injectedDatabase->truncate($this->tableName);
 
   }
 
   /**
-   * @covers \Drupal\entity_usage\DatabaseEntityUsageBackend::delete().
+   * @covers \Drupal\entity_usage\DatabaseEntityUsageBackend::delete
    */
   function testRemoveUsage() {
     $entity = $this->testEntities[0];
     /** @var \Drupal\entity_usage\DatabaseEntityUsageBackend $entity_usage */
     $entity_usage = $this->container->get('entity_usage.usage');
 
-    $this->injectedDatabase->insert('entity_usage')
+    $this->injectedDatabase->insert($this->tableName)
       ->fields([
         't_id' => $entity->id(), // Target entity id.
         't_type' => $entity->getEntityTypeId(), // Target entity type.
@@ -201,7 +200,7 @@ class EntityUsageTest extends EntityKernelTestBase {
 
     // Normal decrement.
     $entity_usage->delete($entity, 1, 'foo', 1);
-    $count = $this->injectedDatabase->select('entity_usage', 'e')
+    $count = $this->injectedDatabase->select($this->tableName, 'e')
       ->fields('e', ['count'])
       ->condition('e.t_id', $entity->id())
       ->condition('e.t_type', $entity->getEntityTypeId())
@@ -211,7 +210,7 @@ class EntityUsageTest extends EntityKernelTestBase {
 
     // Multiple decrement and removal.
     $entity_usage->delete($entity, 1, 'foo', 2);
-    $count = $this->injectedDatabase->select('entity_usage', 'e')
+    $count = $this->injectedDatabase->select($this->tableName, 'e')
       ->fields('e', ['count'])
       ->condition('e.t_id', $entity->id())
       ->condition('e.t_type', $entity->getEntityTypeId())
@@ -221,13 +220,13 @@ class EntityUsageTest extends EntityKernelTestBase {
 
     // Non-existent decrement.
     $entity_usage->delete($entity, 1, 'foo', 2);
-    $count = $this->injectedDatabase->select('entity_usage', 'e')
+    $count = $this->injectedDatabase->select($this->tableName, 'e')
       ->fields('e', ['count'])
       ->condition('e.t_id', $entity->id())
       ->condition('e.t_type', $entity->getEntityTypeId())
       ->execute()
       ->fetchField();
-    $this->assertSame(FALSE, $count, 'Decrementing non-exist record complete.');
+    $this->assertSame(FALSE, $count, 'Decrementing non-existing record complete.');
 
   }
 
