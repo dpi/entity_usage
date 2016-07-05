@@ -2,3 +2,7 @@ services:
   entity_usage.usage:
     class: Drupal\entity_usage\DatabaseEntityUsageBackend
     arguments: ['@database']
+  entity_usage.entity_update_manager:
+    class: Drupal\entity_usage\EntityUpdateManager
+    arguments:
+     - @logger.factory
