@@ -26,7 +26,7 @@ function entity_usage_schema() {
         'default' => '',
       ],
       're_id' => [
-        'description' => 'The primary key of the referencing entity.',
+        'description' => 'Referencing entity ID.',
         'type' => 'varchar_ascii',
         'length' => 64,
         'not null' => TRUE,

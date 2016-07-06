@@ -42,11 +42,11 @@ class DatabaseEntityUsageBackend extends EntityUsageBase {
   /**
    * {@inheritdoc}
    */
-  public function add(EntityInterface $entity, $re_id, $re_type, $method = 'entity_reference', $count = 1) {
+  public function add($t_id, $t_type, $re_id, $re_type, $method = 'entity_reference', $count = 1) {
     $this->connection->merge($this->tableName)
       ->keys([
-        't_id' => $entity->id(),
-        't_type' => $entity->getEntityTypeId(),
+        't_id' => $t_id,
+        't_type' => $t_type,
         're_id' => $re_id,
         're_type' => $re_type,
         'method' => $method,
@@ -55,18 +55,18 @@ class DatabaseEntityUsageBackend extends EntityUsageBase {
       ->expression('count', 'count + :count', [':count' => $count])
       ->execute();
 
-    parent::add($entity, $re_id, $re_type, $method, $count);
+    parent::add($t_id, $t_type, $re_id, $re_type, $method, $count);
   }
 
   /**
    * {@inheritdoc}
    */
-  public function delete(EntityInterface $entity, $re_id = NULL, $re_type = NULL, $count = 1) {
+  public function delete($t_id, $t_type, $re_id = NULL, $re_type = NULL, $count = 1) {
 
     // Delete rows that have an exact or less value to prevent empty rows.
     $query = $this->connection->delete($this->tableName)
-      ->condition('t_type', $entity->getEntityTypeId())
-      ->condition('t_id', $entity->id());
+      ->condition('t_type', $t_type)
+      ->condition('t_id', $t_id);
     if ($re_type && $re_id) {
       $query
         ->condition('re_type', $re_type)
@@ -80,8 +80,8 @@ class DatabaseEntityUsageBackend extends EntityUsageBase {
     // If the row has more than the specified count decrement it by that number.
     if (!$result && $count > 0) {
       $query = $this->connection->update($this->tableName)
-        ->condition('t_type', $entity->getEntityTypeId())
-        ->condition('t_id', $entity->id());
+        ->condition('t_type', $t_type)
+        ->condition('t_id', $t_id);
       if ($re_type && $re_id) {
         $query
           ->condition('re_type', $re_type)
@@ -91,7 +91,7 @@ class DatabaseEntityUsageBackend extends EntityUsageBase {
       $query->execute();
     }
 
-    parent::delete($entity, $re_id, $re_type, $count);
+    parent::delete($t_id, $t_type, $re_id, $re_type, $count);
   }
 
   /**

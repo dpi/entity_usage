@@ -12,14 +12,14 @@ abstract class EntityUsageBase implements EntityUsageInterface {
   /**
    * {@inheritdoc}
    */
-  public function add(EntityInterface $entity, $re_id, $re_type, $method = 'entity_reference', $count = 1) {
+  public function add($t_id, $t_type, $re_id, $re_type, $method = 'entity_reference', $count = 1) {
 
   }
 
   /**
    * {@inheritdoc}
    */
-  public function delete(EntityInterface $entity, $re_id = NULL, $re_type = NULL, $count = 1) {
+  public function delete($t_id, $t_type, $re_id = NULL, $re_type = NULL, $count = 1) {
 
   }
 

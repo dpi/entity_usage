@@ -27,27 +27,19 @@ function entity_usage_help($route_name, RouteMatchInterface $route_match) {
  * Implements hook_entity_insert().
  */
 function entity_usage_entity_insert(Drupal\Core\Entity\EntityInterface $entity) {
-//  return \Drupal::service('entity_usage.entity_update_manager')->trackUpdate($entity, 'insert');
+  \Drupal::service('entity_usage.entity_update_manager')->trackUpdateOnCreation($entity);
 }
 
 /**
  * Implements hook_entity_update().
  */
 function entity_usage_entity_update(Drupal\Core\Entity\EntityInterface $entity) {
-//  return \Drupal::service('entity_usage.entity_update_manager')->trackUpdate($entity, 'update');
-}
-
-/**
- * Implements hook_entity_presave().
- */
-function entity_usage_entity_presave(Drupal\Core\Entity\EntityInterface $entity) {
-  $operation = $entity->isNew() ? 'insert' : 'update';
-  return \Drupal::service('entity_usage.entity_update_manager')->trackUpdate($entity, $operation);
+  \Drupal::service('entity_usage.entity_update_manager')->trackUpdateOnEdition($entity);
 }
 
 /**
  * Implements hook_entity_predelete().
  */
 function entity_usage_entity_predelete(Drupal\Core\Entity\EntityInterface $entity) {
-  return \Drupal::service('entity_usage.entity_update_manager')->trackUpdate($entity, 'delete');
+  return \Drupal::service('entity_usage.entity_update_manager')->trackUpdateOnDeletion($entity);
 }

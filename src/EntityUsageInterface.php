@@ -16,8 +16,10 @@ interface EntityUsageInterface {
    * Examples:
    * - A node that references another node using an entityreference field.
    *
-   * @param \Drupal\Core\Entity\EntityInterface $entity
-   *   A target (referenced) entity.
+   * @param int $t_id
+   *   The identifier of the target entity.
+   * @param string $t_type
+   *   The type of the target entity.
    * @param int $re_id
    *   The identifier of the referencing entity.
    * @param string $re_type
@@ -28,13 +30,15 @@ interface EntityUsageInterface {
    * @param int $count
    *   (optional) The number of references to add to the object. Defaults to 1.
    */
-  public function add(EntityInterface $entity, $re_id, $re_type, $method = 'entity_reference', $count = 1);
+  public function add($t_id, $t_type, $re_id, $re_type, $method = 'entity_reference', $count = 1);
 
   /**
    * Removes a record indicating that the entity is not being referenced anymore.
    *
-   * @param \Drupal\Core\Entity\EntityInterface $entity
-   *   A target (referenced) entity.
+   * @param int $t_id
+   *   The identifier of the target entity.
+   * @param string $t_type
+   *   The type of the target entity.
    * @param int $re_id
    *   (optional) The unique, numerid ID of the object containing the referenced
    *   entity. May be omitted if all references to an entity are being deleted.
@@ -48,7 +52,7 @@ interface EntityUsageInterface {
    *   to 1. Zero may be specified to delete all references to the entity within
    *   a specific object.
    */
-  public function delete(EntityInterface $entity, $re_id = NULL, $re_type = NULL, $count = 1);
+  public function delete($t_id, $t_type, $re_id = NULL, $re_type = NULL, $count = 1);
 
   /**
    * Determines where an entity is used.
