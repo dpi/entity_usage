@@ -5,4 +5,5 @@ services:
   entity_usage.entity_update_manager:
     class: Drupal\entity_usage\EntityUpdateManager
     arguments:
-     - @logger.factory
+      - @entity_field.manager
+      - @logger.factory
