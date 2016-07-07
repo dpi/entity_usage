@@ -45,7 +45,7 @@ function entity_usage_views_data_alter(array &$data) {
     if (empty($data[$entity_type->getBaseTable()])) {
       continue;
     }
-    
+
     if ($data_table = $entity_type->getBaseTable()) {
       $data[$data_table][$type . '_to_usage_entity'] = [
         'title' => t('Information about the usage of this @entity_type', ['@entity_type' => $entity_type->getLabel()]),

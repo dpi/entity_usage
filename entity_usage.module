@@ -16,7 +16,7 @@ function entity_usage_help($route_name, RouteMatchInterface $route_match) {
     case 'help.page.entity_usage':
       $output = '';
       $output .= '<h3>' . t('About') . '</h3>';
-      $output .= '<p>' . t('Track usage of entities referenced by other entities') . '</p>';
+      $output .= '<p>' . t('Track usage of entities referenced by other entities.') . '</p>';
       return $output;
 
     default:

@@ -102,10 +102,10 @@ class EntityUsageTest extends EntityKernelTestBase {
       'label' => 'Body',
     ])->save();
 
-    FilterFormat::create(array(
+    FilterFormat::create([
       'format' => 'full_html',
       'name' => 'Full HTML',
-    ))->save();
+    ])->save();
 
     // Create the entity to be referenced.
     $this->referencedEntity = $this->container->get('entity_type.manager')
@@ -126,9 +126,6 @@ class EntityUsageTest extends EntityKernelTestBase {
     ];
     $this->testEntities[1]->save();
 
-
-
-    $this->assertEquals(2, 2, '2 equals 2');
   }
 
   /**
@@ -149,7 +146,8 @@ class EntityUsageTest extends EntityKernelTestBase {
 
     /** @var \Drupal\entity_usage\DatabaseEntityUsageBackend $entity_usage */
     $entity_usage = $this->container->get('entity_usage.usage');
-    $usage = $entity_usage->listUsage($entity)['media'][1];
+    $complete_usage = $entity_usage->listUsage($entity);
+    $usage = $complete_usage[$entity->getEntityTypeId()][$entity->id()];
 
     $this->assertEquals(1, $usage, 'Returned the correct count.');
 
@@ -164,11 +162,11 @@ class EntityUsageTest extends EntityKernelTestBase {
     $entity = $this->testEntities[0];
     /** @var \Drupal\entity_usage\DatabaseEntityUsageBackend $entity_usage */
     $entity_usage = $this->container->get('entity_usage.usage');
-    $entity_usage->add($entity, '1', 'foo', 'entity_reference', 1);
+    $entity_usage->add($entity->id(), $entity->getEntityTypeId(), '1', 'foo', 'entity_reference', 1);
 
-    $real_usage = $this->injectedDatabase->select($this->tableName)
-      ->fields('f')
-      ->condition('f.t_id', $entity->id())
+    $real_usage = $this->injectedDatabase->select($this->tableName, 'e')
+      ->fields('e', ['count'])
+      ->condition('e.t_id', $entity->id())
       ->execute()
       ->fetchAllAssoc('re_id');
 
@@ -199,7 +197,7 @@ class EntityUsageTest extends EntityKernelTestBase {
       ->execute();
 
     // Normal decrement.
-    $entity_usage->delete($entity, 1, 'foo', 1);
+    $entity_usage->delete($entity->id(), $entity->getEntityTypeId(), 1, 'foo', 1);
     $count = $this->injectedDatabase->select($this->tableName, 'e')
       ->fields('e', ['count'])
       ->condition('e.t_id', $entity->id())
@@ -209,7 +207,7 @@ class EntityUsageTest extends EntityKernelTestBase {
     $this->assertEquals(2, $count, 'The count was decremented correctly.');
 
     // Multiple decrement and removal.
-    $entity_usage->delete($entity, 1, 'foo', 2);
+    $entity_usage->delete($entity->id(), $entity->getEntityTypeId(), 1, 'foo', 2);
     $count = $this->injectedDatabase->select($this->tableName, 'e')
       ->fields('e', ['count'])
       ->condition('e.t_id', $entity->id())
@@ -219,7 +217,7 @@ class EntityUsageTest extends EntityKernelTestBase {
     $this->assertSame(FALSE, $count, 'The count was removed entirely when empty.');
 
     // Non-existent decrement.
-    $entity_usage->delete($entity, 1, 'foo', 2);
+    $entity_usage->delete($entity->id(), $entity->getEntityTypeId(), 1, 'foo', 2);
     $count = $this->injectedDatabase->select($this->tableName, 'e')
       ->fields('e', ['count'])
       ->condition('e.t_id', $entity->id())

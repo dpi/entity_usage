@@ -114,7 +114,6 @@ class EntityUpdateManager {
    *   The entity we are dealing with.
    */
   public function trackUpdateOnEdition(EntityInterface $entity) {
-//    $this->logger->get('entity_usage')->log('warning', 'Received entity: ' . $entity->label() . ' and operation: ' . $operation);
 
     // Only act on content entities.
     $is_content_entity = $entity->getEntityType() instanceof \Drupal\Core\Entity\ContentEntityType;
