@@ -3,29 +3,36 @@ Entity Usage
 
 DO NOT USE THIS MODULE IN PRODUCTION YET
 
-This module is a proof-of-concept for a tool to track usage of entities by other entities in drupal.
+This module is a proof-of-concept for a tool to track usage of entities by other
+entities in drupal.
 
 For the moment only entities referenced in entity_reference fields are tracked.
 
-There is no specific configuration, once enabled, the module will start tracking the relation between entities, getting
-updated on all CRUD entity operations.
+There is no specific configuration, once enabled, the module will start tracking
+the relation between entities, getting updated on all CRUD entity operations.
 
-A basic views integration is provided. To use the tracked information in a view, follow the following steps:
+A basic views integration is provided. To use the tracked information in a view,
+follow the following steps:
  1) Create a view that has as base table any content entity (Node, User, Etc)
  2) Add a relationship to your view named
     "Information about the usage of this @entity_type"
  3) After adding the relationship, add the field to your view:
     "Usage count"
- 4) You will probably want to enable aggregation, to avoid duplicate rows and have the real count sum. To do that, go to
-    the "Advanced" section of the view configuration, select "Use aggregation" to "Yes"
- 5) Go to the "Usage count" field you added before, open up the "Aggregation settings" form, and select "SUM".
+ 4) You will probably want to enable aggregation, to avoid duplicate rows and
+ have the real count sum. To do that, go to the "Advanced" section of the view
+ configuration, select "Use aggregation" to "Yes"
+ 5) Go to the "Usage count" field you added before, open up the "Aggregation
+ settings" form, and select "SUM".
 
-In your view (or anywhere else) you can build a link to the page where you can consult the details of the entities that
-use (reference) any given entity. Build the link using the following structure:
+In your view (or anywhere else) you can build a link to the page where you can
+consult the details of the entities that use (reference) any given entity. Build
+the link using the following structure:
   /admin/content/entity-usage/{entity_type}/{entity_id}
-Make sure the visitors of this page have the permission to 'access entity usage statistics' enabled.
+Make sure the visitors of this page have the permission to 'access entity usage
+statistics' enabled.
 
-If you are developing you can also check the tracking information recorded by this module at the "entity_usage" table.
+If you are developing you can also check the tracking information recorded by
+this module at the "entity_usage" table.
 
 You can also use the service
   \Drupal::service('entity_usage.usage')->listUsage($entity);

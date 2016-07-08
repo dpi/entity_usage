@@ -43,9 +43,9 @@ class EntityUpdateManager {
    *   The logger service.
    */
   public function __construct(
-    DatabaseEntityUsageBackend $usage_service,
-    EntityFieldManagerInterface $entity_field_manager,
-    LoggerChannelFactoryInterface $logger
+      DatabaseEntityUsageBackend $usage_service,
+      EntityFieldManagerInterface $entity_field_manager,
+      LoggerChannelFactoryInterface $logger
   ) {
     $this->usageService = $usage_service;
     $this->entityFieldManager = $entity_field_manager;
