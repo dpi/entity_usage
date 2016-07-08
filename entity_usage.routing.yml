@@ -1,0 +1,7 @@
+entity_usage.usage_list:
+  path: '/admin/content/entity-usage/{type}/{id}'
+  defaults:
+    _controller: 'Drupal\entity_usage\Controller\ListUsageController::listUsagePage'
+    _title_callback: 'Drupal\entity_usage\Controller\ListUsageController::getTitle'
+  requirements:
+    _permission: 'access entity usage statistics'

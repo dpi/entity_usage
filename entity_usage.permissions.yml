@@ -1,0 +1,4 @@
+access entity usage statistics:
+  title: 'Access entity usage statistics'
+  description: 'Users with this permission will be able to see all statistics of entity usage, regardless of the entity type.'
+  restrict access: TRUE
