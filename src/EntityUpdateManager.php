@@ -6,6 +6,7 @@ use Drupal\Core\Entity\EntityFieldManagerInterface;
 use Drupal\Core\Field\Plugin\Field\FieldType\EntityReferenceItem;
 use Drupal\Core\Logger\LoggerChannelFactoryInterface;
 use Drupal\Core\Entity\EntityInterface;
+use Drupal\Core\Entity\ContentEntityType;
 
 /**
  * Class EntityUpdateManager.
@@ -60,7 +61,7 @@ class EntityUpdateManager {
   public function trackUpdateOnCreation(EntityInterface $entity) {
 
     // Only act on content entities.
-    $is_content_entity = $entity->getEntityType() instanceof \Drupal\Core\Entity\ContentEntityType;
+    $is_content_entity = $entity->getEntityType() instanceof ContentEntityType;
     if (!$is_content_entity) {
       return;
     }
@@ -86,7 +87,7 @@ class EntityUpdateManager {
   public function trackUpdateOnDeletion(EntityInterface $entity) {
 
     // Only act on content entities.
-    $is_content_entity = $entity->getEntityType() instanceof \Drupal\Core\Entity\ContentEntityType;
+    $is_content_entity = $entity->getEntityType() instanceof ContentEntityType;
     if (!$is_content_entity) {
       return;
     }
@@ -116,7 +117,7 @@ class EntityUpdateManager {
   public function trackUpdateOnEdition(EntityInterface $entity) {
 
     // Only act on content entities.
-    $is_content_entity = $entity->getEntityType() instanceof \Drupal\Core\Entity\ContentEntityType;
+    $is_content_entity = $entity->getEntityType() instanceof ContentEntityType;
     if (!$is_content_entity) {
       return;
     }
@@ -154,6 +155,7 @@ class EntityUpdateManager {
    * Check if a given entity object is "pointing to" other entities.
    *
    * @param \Drupal\Core\Entity\EntityInterface $entity
+   *   The entity object.
    *
    * @return bool|array
    *   If the received entity is potentially a "linker" to other entities, will
@@ -178,7 +180,7 @@ class EntityUpdateManager {
   /**
    * Check the presence of target ids in an entity object, for a given field.
    *
-   * @param \Drupal\Core\Entity\EntityInterface $entity
+   * @param \Drupal\Core\Entity\EntityInterface $host_entity
    *   The host entity object.
    * @param int $referenced_entity_id
    *   The referenced entity id.

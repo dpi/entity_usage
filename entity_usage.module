@@ -6,6 +6,7 @@
  */
 
 use Drupal\Core\Routing\RouteMatchInterface;
+use Drupal\Core\Entity\EntityInterface;
 
 /**
  * Implements hook_help().
@@ -26,20 +27,20 @@ function entity_usage_help($route_name, RouteMatchInterface $route_match) {
 /**
  * Implements hook_entity_insert().
  */
-function entity_usage_entity_insert(Drupal\Core\Entity\EntityInterface $entity) {
+function entity_usage_entity_insert(EntityInterface $entity) {
   \Drupal::service('entity_usage.entity_update_manager')->trackUpdateOnCreation($entity);
 }
 
 /**
  * Implements hook_entity_update().
  */
-function entity_usage_entity_update(Drupal\Core\Entity\EntityInterface $entity) {
+function entity_usage_entity_update(EntityInterface $entity) {
   \Drupal::service('entity_usage.entity_update_manager')->trackUpdateOnEdition($entity);
 }
 
 /**
  * Implements hook_entity_predelete().
  */
-function entity_usage_entity_predelete(Drupal\Core\Entity\EntityInterface $entity) {
+function entity_usage_entity_predelete(EntityInterface $entity) {
   return \Drupal::service('entity_usage.entity_update_manager')->trackUpdateOnDeletion($entity);
 }

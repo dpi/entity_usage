@@ -10,7 +10,6 @@ use Drupal\entity_test\Entity\EntityTest;
 use Drupal\field\Entity\FieldConfig;
 use Drupal\field\Tests\EntityReference\EntityReferenceTestTrait;
 
-
 /**
  * Tests basic usage tracking on generic entities.
  *
@@ -129,16 +128,18 @@ class EntityUsageTest extends EntityKernelTestBase {
   }
 
   /**
+   * Tests the listUsage() method.
+   *
    * @covers \Drupal\entity_usage\DatabaseEntityUsageBackend::listUsage
    */
   public function testGetUsage() {
     $entity = $this->testEntities[0];
     $this->injectedDatabase->insert($this->tableName)
       ->fields([
-        't_id' => $entity->id(), // Target entity id.
-        't_type' => $entity->getEntityTypeId(), // Target entity type.
-        're_id' => 1, // Referencing entity id.
-        're_type' => 'foo', // Referencing entity type.
+        't_id' => $entity->id(),
+        't_type' => $entity->getEntityTypeId(),
+        're_id' => 1,
+        're_type' => 'foo',
         'method' => 'entity_reference',
         'count' => 1,
       ])
@@ -156,9 +157,11 @@ class EntityUsageTest extends EntityKernelTestBase {
   }
 
   /**
+   * Tests the add() method.
+   *
    * @covers \Drupal\entity_usage\DatabaseEntityUsageBackend::add
    */
-  function testAddUsage() {
+  public function testAddUsage() {
     $entity = $this->testEntities[0];
     /** @var \Drupal\entity_usage\DatabaseEntityUsageBackend $entity_usage */
     $entity_usage = $this->container->get('entity_usage.usage');
@@ -178,19 +181,21 @@ class EntityUsageTest extends EntityKernelTestBase {
   }
 
   /**
+   * Tests the delete() method.
+   *
    * @covers \Drupal\entity_usage\DatabaseEntityUsageBackend::delete
    */
-  function testRemoveUsage() {
+  public function testRemoveUsage() {
     $entity = $this->testEntities[0];
     /** @var \Drupal\entity_usage\DatabaseEntityUsageBackend $entity_usage */
     $entity_usage = $this->container->get('entity_usage.usage');
 
     $this->injectedDatabase->insert($this->tableName)
       ->fields([
-        't_id' => $entity->id(), // Target entity id.
-        't_type' => $entity->getEntityTypeId(), // Target entity type.
-        're_id' => 1, // Referencing entity id.
-        're_type' => 'foo', // Referencing entity type.
+        't_id' => $entity->id(),
+        't_type' => $entity->getEntityTypeId(),
+        're_id' => 1,
+        're_type' => 'foo',
         'method' => 'entity_reference',
         'count' => 3,
       ])
@@ -301,10 +306,12 @@ class EntityUsageTest extends EntityKernelTestBase {
 
     // Unpublish the host entity, check usage goes back to 0.
     // We don't deal with entities statuses yet.
-//    $referencing_entity->status = FALSE;
-//    $referencing_entity->save();
-//    $usage = $entity_usage->listUsage($this->referencedEntity);
-//    $this->assertSame([], $usage, 'Non-referenced usage is correctly empty.');
+    /*
+    $referencing_entity->status = FALSE;
+    $referencing_entity->save();
+    $usage = $entity_usage->listUsage($this->referencedEntity);
+    $this->assertSame([], $usage, 'Non-referenced usage is correctly empty.');
+     */
 
   }
 

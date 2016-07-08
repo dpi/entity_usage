@@ -21,7 +21,7 @@ class ListUsageController extends ControllerBase {
   public function listUsagePage($type, $id) {
     $entity_types = array_keys(\Drupal::entityTypeManager()->getDefinitions());
     if (!is_string($type) || !is_numeric($id) || !in_array($type, $entity_types)) {
-      throw new NotFoundHttpException;
+      throw new NotFoundHttpException();
     }
     $entity = \Drupal::entityTypeManager()->getStorage($type)->load($id);
     if ($entity) {
@@ -34,7 +34,11 @@ class ListUsageController extends ControllerBase {
       }
       else {
         // Entity is being used.
-        $header = [t('Referencing entity'), t('Referencing entity type'), t('Count')];
+        $header = [
+          t('Referencing entity'),
+          t('Referencing entity type'),
+          t('Count'),
+        ];
         $rows = [];
         foreach ($usages as $re_type => $type_usages) {
           foreach ($type_usages as $re_id => $count) {
@@ -84,4 +88,5 @@ class ListUsageController extends ControllerBase {
       return t('Entity Usage List');
     }
   }
+
 }

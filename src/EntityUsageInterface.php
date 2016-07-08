@@ -4,7 +4,6 @@ namespace Drupal\entity_usage;
 
 use Drupal\Core\Entity\EntityInterface;
 
-
 /**
  * Entity usage backend interface.
  */
@@ -33,7 +32,7 @@ interface EntityUsageInterface {
   public function add($t_id, $t_type, $re_id, $re_type, $method = 'entity_reference', $count = 1);
 
   /**
-   * Removes a record indicating that the entity is not being referenced anymore.
+   * Remove a record indicating that the entity is not being referenced anymore.
    *
    * @param int $t_id
    *   The identifier of the target entity.
