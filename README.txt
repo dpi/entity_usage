@@ -20,6 +20,11 @@ A basic views integration is provided. To use the tracked information in a view,
     the "Advanced" section of the view configuration, select "Use aggregation" to "Yes"
  5) Go to the "Usage count" field you added before, open up the "Aggregation settings" form, and select "SUM".
 
+In your view (or anywhere else) you can build a link to the page where you can consult the details of the entities that
+use (reference) any given entity. Build the link using the following structure:
+  /admin/content/entity-usage/{entity_type}/{entity_id}
+Make sure the visitors of this page have the permission to 'access entity usage statistics' enabled.
+
 If you are developing you can also check the tracking information recorded by this module at the "entity_usage" table.
 
 You can also use the service
