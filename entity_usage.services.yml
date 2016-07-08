@@ -1,6 +1,6 @@
 services:
   entity_usage.usage:
-    class: Drupal\entity_usage\DatabaseEntityUsageBackend
+    class: Drupal\entity_usage\EntityUsage
     arguments: ['@database']
   entity_usage.entity_update_manager:
     class: Drupal\entity_usage\EntityUpdateManager

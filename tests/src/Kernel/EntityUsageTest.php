@@ -130,7 +130,7 @@ class EntityUsageTest extends EntityKernelTestBase {
   /**
    * Tests the listUsage() method.
    *
-   * @covers \Drupal\entity_usage\DatabaseEntityUsageBackend::listUsage
+   * @covers \Drupal\entity_usage\EntityUsage::listUsage
    */
   public function testGetUsage() {
     $entity = $this->testEntities[0];
@@ -145,7 +145,7 @@ class EntityUsageTest extends EntityKernelTestBase {
       ])
       ->execute();
 
-    /** @var \Drupal\entity_usage\DatabaseEntityUsageBackend $entity_usage */
+    /** @var \Drupal\entity_usage\EntityUsage $entity_usage */
     $entity_usage = $this->container->get('entity_usage.usage');
     $complete_usage = $entity_usage->listUsage($entity);
     $usage = $complete_usage['foo'][1];
@@ -159,11 +159,11 @@ class EntityUsageTest extends EntityKernelTestBase {
   /**
    * Tests the add() method.
    *
-   * @covers \Drupal\entity_usage\DatabaseEntityUsageBackend::add
+   * @covers \Drupal\entity_usage\EntityUsage::add
    */
   public function testAddUsage() {
     $entity = $this->testEntities[0];
-    /** @var \Drupal\entity_usage\DatabaseEntityUsageBackend $entity_usage */
+    /** @var \Drupal\entity_usage\EntityUsage $entity_usage */
     $entity_usage = $this->container->get('entity_usage.usage');
     $entity_usage->add($entity->id(), $entity->getEntityTypeId(), '1', 'foo', 'entity_reference', 1);
 
@@ -183,11 +183,11 @@ class EntityUsageTest extends EntityKernelTestBase {
   /**
    * Tests the delete() method.
    *
-   * @covers \Drupal\entity_usage\DatabaseEntityUsageBackend::delete
+   * @covers \Drupal\entity_usage\EntityUsage::delete
    */
   public function testRemoveUsage() {
     $entity = $this->testEntities[0];
-    /** @var \Drupal\entity_usage\DatabaseEntityUsageBackend $entity_usage */
+    /** @var \Drupal\entity_usage\EntityUsage $entity_usage */
     $entity_usage = $this->container->get('entity_usage.usage');
 
     $this->injectedDatabase->insert($this->tableName)
@@ -238,7 +238,7 @@ class EntityUsageTest extends EntityKernelTestBase {
    */
   public function testBasicUsageTracking() {
 
-    /** @var \Drupal\entity_usage\DatabaseEntityUsageBackend $entity_usage */
+    /** @var \Drupal\entity_usage\EntityUsage $entity_usage */
     $entity_usage = $this->container->get('entity_usage.usage');
 
     $field_name = $this->fieldName;

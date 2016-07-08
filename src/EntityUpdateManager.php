@@ -18,7 +18,7 @@ class EntityUpdateManager {
   /**
    * Our usage tracking service.
    *
-   * @var \Drupal\entity_usage\DatabaseEntityUsageBackend $usage_service
+   * @var \Drupal\entity_usage\EntityUsage $usage_service
    */
   protected $usageService;
 
@@ -43,7 +43,7 @@ class EntityUpdateManager {
    *   The logger service.
    */
   public function __construct(
-      DatabaseEntityUsageBackend $usage_service,
+      EntityUsage $usage_service,
       EntityFieldManagerInterface $entity_field_manager,
       LoggerChannelFactoryInterface $logger
   ) {

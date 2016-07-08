@@ -5,7 +5,7 @@ namespace Drupal\entity_usage;
 use Drupal\Core\Entity\EntityInterface;
 
 /**
- * Entity usage backend interface.
+ * Entity usage interface.
  */
 interface EntityUsageInterface {
 

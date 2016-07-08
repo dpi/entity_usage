@@ -6,9 +6,9 @@ use Drupal\Core\Database\Connection;
 use Drupal\Core\Entity\EntityInterface;
 
 /**
- * Defines the database entity usage backend.
+ * Defines the entity usage base class.
  */
-class DatabaseEntityUsageBackend extends EntityUsageBase {
+class EntityUsage implements EntityUsageInterface {
 
   /**
    * The database connection used to store entity usage information.
@@ -25,7 +25,7 @@ class DatabaseEntityUsageBackend extends EntityUsageBase {
   protected $tableName;
 
   /**
-   * Construct the DatabaseEntityUsageBackend.
+   * Construct the EntityUsage object.
    *
    * @param \Drupal\Core\Database\Connection $connection
    *   The database connection which will be used to store the entity usage
@@ -35,14 +35,17 @@ class DatabaseEntityUsageBackend extends EntityUsageBase {
    *   'entity_usage'.
    */
   public function __construct(Connection $connection, $table = 'entity_usage') {
+
     $this->connection = $connection;
     $this->tableName = $table;
+
   }
 
   /**
    * {@inheritdoc}
    */
   public function add($t_id, $t_type, $re_id, $re_type, $method = 'entity_reference', $count = 1) {
+
     $this->connection->merge($this->tableName)
       ->keys([
         't_id' => $t_id,
@@ -55,7 +58,6 @@ class DatabaseEntityUsageBackend extends EntityUsageBase {
       ->expression('count', 'count + :count', [':count' => $count])
       ->execute();
 
-    parent::add($t_id, $t_type, $re_id, $re_type, $method, $count);
   }
 
   /**
@@ -91,13 +93,13 @@ class DatabaseEntityUsageBackend extends EntityUsageBase {
       $query->execute();
     }
 
-    parent::delete($t_id, $t_type, $re_id, $re_type, $count);
   }
 
   /**
    * {@inheritdoc}
    */
   public function listUsage(EntityInterface $entity, $include_method = FALSE) {
+
     $result = $this->connection->select($this->tableName, 'e')
       ->fields('e', ['re_id', 're_type', 'method', 'count'])
       ->condition('t_id', $entity->id())
@@ -114,6 +116,7 @@ class DatabaseEntityUsageBackend extends EntityUsageBase {
       }
     }
     return $references;
+
   }
 
 }
