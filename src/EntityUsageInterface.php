@@ -54,6 +54,14 @@ interface EntityUsageInterface {
   public function delete($t_id, $t_type, $re_id = NULL, $re_type = NULL, $count = 1);
 
   /**
+   * Remove all records of a given entity_type (target).
+   *
+   * @param string $t_type
+   *   The type of the target entity.
+   */
+  public function bulkDelete($t_type);
+
+  /**
    * Determines where an entity is used.
    *
    * Examples:

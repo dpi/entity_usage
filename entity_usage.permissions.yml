@@ -2,3 +2,7 @@ access entity usage statistics:
   title: 'Access entity usage statistics'
   description: 'Users with this permission will be able to see all statistics of entity usage, regardless of the entity type.'
   restrict access: TRUE
+perform batch updates entity usage:
+  title: 'Access the form to launch batch updates on existing entities'
+  description: 'Users with this permission will be able to reset/relaunch the statistics counts on all existing entities in the system.'
+  restrict access: TRUE
