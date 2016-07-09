@@ -231,7 +231,8 @@ class EntityUsageTest extends EntityKernelTestBase {
       ->fetchField();
     $this->assertSame(FALSE, $count, 'Decrementing non-existing record complete.');
 
-    // @TODO Add test coverage for bulkDelete().
+    // @TODO Add test coverage for bulkDeleteTargets().
+    // @TODO Add test coverage for bulkDeleteHosts().
   }
 
   /**

@@ -57,9 +57,17 @@ interface EntityUsageInterface {
    * Remove all records of a given entity_type (target).
    *
    * @param string $t_type
-   *   The type of the target entity.
+   *   The type of the target entity (referenced).
    */
-  public function bulkDelete($t_type);
+  public function bulkDeleteTargets($t_type);
+
+  /**
+   * Remove all records of a given entity_type (host).
+   *
+   * @param string $re_type
+   *   The type of the referencing entity (host).
+   */
+  public function bulkDeleteHosts($re_type);
 
   /**
    * Determines where an entity is used.

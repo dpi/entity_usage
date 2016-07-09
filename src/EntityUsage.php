@@ -98,11 +98,23 @@ class EntityUsage implements EntityUsageInterface {
   /**
    * {@inheritdoc}
    */
-  public function bulkDelete($t_type) {
+  public function bulkDeleteTargets($t_type) {
 
     // Delete all rows of this given type.
     $query = $this->connection->delete($this->tableName)
       ->condition('t_type', $t_type);
+    $query->execute();
+
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function bulkDeleteHosts($re_type) {
+
+    // Delete all rows of this given type.
+    $query = $this->connection->delete($this->tableName)
+      ->condition('re_type', $re_type);
     $query->execute();
 
   }

@@ -57,7 +57,7 @@ function entity_usage_entity_predelete(EntityInterface $entity) {
  */
 function entity_usage_update_batch_worker(EntityInterface $entity, $operation_details, &$context) {
 
-  // Track as if it was a new entity.
+  // Hosts are tracked as if they were new entities.
   \Drupal::service('entity_usage.entity_update_manager')->trackUpdateOnCreation($entity);
 
   $context['results'][] = $entity->getEntityTypeId() . ':' . $entity->id();
