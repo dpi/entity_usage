@@ -46,7 +46,7 @@ function entity_usage_entity_predelete(EntityInterface $entity) {
 }
 
 /**
- * Batch operation worker for statistics update.
+ * Batch operation worker for re-creating statistics for entities when host.
  *
  * @param EntityInterface $entity
  *   The entity object.
@@ -55,14 +55,54 @@ function entity_usage_entity_predelete(EntityInterface $entity) {
  * @param array $context
  *   The context array.
  */
-function entity_usage_update_batch_worker(EntityInterface $entity, $operation_details, &$context) {
+function entity_usage_update_hosts_batch_worker(EntityInterface $entity, $operation_details, &$context) {
 
   // Hosts are tracked as if they were new entities.
   \Drupal::service('entity_usage.entity_update_manager')->trackUpdateOnCreation($entity);
 
-  $context['results'][] = $entity->getEntityTypeId() . ':' . $entity->id();
+  $context['results'][] = $entity->getEntityTypeId() . ':' . $entity->id() . t(' (treated as HOST)');
 
   $context['message'] = t('Running batch for entity @details', ['@details' => $operation_details]);
+}
+
+/**
+ * Batch operation worker for re-creating statistics for entities when target.
+ *
+ * @param string $t_type
+ *   The type of the target entities.
+ * @param string $re_type
+ *   The type of the host entities.
+ * @param string $field_name
+ *   The name of the field referencing them.
+ * @param array $context
+ *   The context array.
+ */
+function entity_usage_update_targets_batch_worker($t_type, $re_type, $field_name, $operation_details, &$context) {
+
+  $table_name = $re_type . '__' . $field_name;
+  $table_target_field_name = $field_name . '_target_id';
+  $result = \Drupal::database()->select($table_name, 'e')
+    ->fields('e', ['entity_id', $table_target_field_name])
+    ->condition('deleted', 0)
+    ->execute();
+  foreach ($result as $usage) {
+    $alreay_tracked = \Drupal::database()->select('entity_usage', 'e')
+      ->fields('e', ['count'])
+      ->condition('t_id', $usage->{$table_target_field_name})
+      ->condition('t_type', $t_type)
+      ->condition('re_id', $usage->entity_id)
+      ->condition('re_type', $re_type)
+      ->condition('method', 'entity_reference')
+      ->execute()
+      ->fetchField();
+    if (empty($alreay_tracked)) {
+      \Drupal::service('entity_usage.usage')->add($usage->{$table_target_field_name}, $t_type, $usage->entity_id, $re_type);
+    }
+  }
+
+  $context['results'][] = $t_type . ':' . $re_type . ':' . $field_name . t(' (treated as TARGET)');
+
+  $context['message'] = t('Running batch for entity set @details', ['@details' => $operation_details]);
 }
 
 /**
@@ -77,11 +117,11 @@ function entity_usage_update_batch_worker(EntityInterface $entity, $operation_de
  */
 function entity_usage_update_batch_fihished($success, $results, $operations) {
   if ($success) {
-    drupal_set_message(t('@count results processed.', ['@count' => count($results)]));
+    drupal_set_message(t('@count operations processed.', ['@count' => count($results)]));
     // Just for debugging:
-    foreach ($results as $result) {
-      drupal_set_message('worked on: ' . $result);
-    }
+    // foreach ($results as $result) {
+    //   drupal_set_message('worked on: ' . $result);
+    // }
   }
   else {
     // An error occurred.
