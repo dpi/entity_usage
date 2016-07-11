@@ -2,11 +2,11 @@
 
 namespace Drupal\entity_usage;
 
+use Drupal\Core\Entity\ContentEntityInterface;
 use Drupal\Core\Entity\EntityFieldManagerInterface;
 use Drupal\Core\Field\Plugin\Field\FieldType\EntityReferenceItem;
 use Drupal\Core\Logger\LoggerChannelFactoryInterface;
 use Drupal\Core\Entity\EntityInterface;
-use Drupal\Core\Entity\ContentEntityType;
 
 /**
  * Class EntityUpdateManager.
@@ -61,8 +61,7 @@ class EntityUpdateManager {
   public function trackUpdateOnCreation(EntityInterface $entity) {
 
     // Only act on content entities.
-    $is_content_entity = $entity->getEntityType() instanceof ContentEntityType;
-    if (!$is_content_entity) {
+    if (!($entity instanceof ContentEntityInterface)) {
       return;
     }
 
@@ -87,8 +86,7 @@ class EntityUpdateManager {
   public function trackUpdateOnDeletion(EntityInterface $entity) {
 
     // Only act on content entities.
-    $is_content_entity = $entity->getEntityType() instanceof ContentEntityType;
-    if (!$is_content_entity) {
+    if (!($entity instanceof ContentEntityInterface)) {
       return;
     }
 
@@ -117,8 +115,7 @@ class EntityUpdateManager {
   public function trackUpdateOnEdition(EntityInterface $entity) {
 
     // Only act on content entities.
-    $is_content_entity = $entity->getEntityType() instanceof ContentEntityType;
-    if (!$is_content_entity) {
+    if (!($entity instanceof ContentEntityInterface)) {
       return;
     }
 

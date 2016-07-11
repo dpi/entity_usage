@@ -100,7 +100,7 @@ class BatchUpdateForm extends FormBase {
     $types = [];
     foreach ($entity_types as $type => $entity_type) {
       // Only look for content entities.
-      if ($entity_type->isSubclassOf('\Drupal\Core\Entity\ContentEntityBase')) {
+      if ($entity_type->isSubclassOf('\Drupal\Core\Entity\ContentEntityInterface')) {
         $types[$type] = $type;
       }
     }
@@ -219,7 +219,7 @@ class BatchUpdateForm extends FormBase {
     // @TODO There must be a better way of doing this!
     $all_entities = $this->entityTypeManager->getDefinitions();
     $content_entities = array_filter($all_entities, function ($v) {
-      return $v->isSubclassOf('\Drupal\Core\Entity\ContentEntityBase');
+      return $v->isSubclassOf('\Drupal\Core\Entity\ContentEntityInterface');
     });
     foreach (array_keys($content_entities) as $type) {
       $entityref_fields_on_this_entity_type = $this->entityFieldManager->getFieldMapByFieldType('entity_reference')[$type];
