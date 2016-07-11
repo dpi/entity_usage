@@ -8,3 +8,6 @@ services:
       - @entity_usage.usage
       - @entity_field.manager
       - @logger.factory
+      - @entity_type.manager
+      - @entity.repository
+      - @module_handler
