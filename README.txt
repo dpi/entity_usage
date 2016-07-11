@@ -6,7 +6,10 @@ DO NOT USE THIS MODULE IN PRODUCTION YET
 This module is a proof-of-concept for a tool to track usage of entities by other
 entities in drupal.
 
-For the moment only entities referenced in entity_reference fields are tracked.
+Currently only the tracking of entities linked to each other using one of the
+following methods is supported:
+ - through entity_reference fields
+ - embedded into text fields (using the "Entity Embed" module)
 
 There is no specific configuration, once enabled, the module will start tracking
 the relation between entities, getting updated on all CRUD entity operations.
