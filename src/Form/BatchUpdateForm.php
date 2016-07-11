@@ -107,17 +107,14 @@ class BatchUpdateForm extends FormBase {
 
     $form['description'] = [
       '#type' => 'markup',
-      '#markup' => t("This form allows you to reset and track again all entity usages in your system.<br /> It may be useful if you want to have available the information about the relationships between entities before installing the module.<br /><b>Be aware though that using this operation will DELETE all your current usage data for the selected entity types!</b>"),
+      '#markup' => t("This form allows you to reset and track again all entity usages in your system.<br /> It may be useful if you want to have available the information about the relationships between entities before installing the module.<br /><b>Be aware though that using this operation will delete all tracked statistics and re-create everything again.</b>"),
     ];
     $form['host_entity_types'] = [
       '#type' => 'checkboxes',
-      '#title' => t('Re-create usage tracking for these entities when used REFERENCING other entities (hosts).'),
+      '#title' => t('Delete and re-create all usage statistics for these entity types:'),
       '#options' => $types,
-    ];
-    $form['target_entity_types'] = [
-      '#type' => 'checkboxes',
-      '#title' => t('Re-create usage tracking for these entities when used REFERENCED by other entities (targets).'),
-      '#options' => $types,
+      '#default_value' => $types,
+      '#disabled' => TRUE,
     ];
     $form['submit'] = [
       '#type' => 'submit',
@@ -132,25 +129,19 @@ class BatchUpdateForm extends FormBase {
    * {@inheritdoc}
    */
   public function submitForm(array &$form, FormStateInterface $form_state) {
-    $types['hosts'] = [];
-    $types['targets'] = [];
 
     $host_entity_types = array_filter($form_state->getValue('host_entity_types'));
     // Delete current usage statistics for these entities.
     foreach ($host_entity_types as $type) {
       $this->entityUsage->bulkDeleteHosts($type);
     }
-    $types['hosts'] = $host_entity_types;
 
-    $target_entity_types = array_filter($form_state->getValue('target_entity_types'));
-    // Delete current usage statistics for these entities.
-    foreach ($target_entity_types as $type) {
-      $this->entityUsage->bulkDeleteTargets($type);
-    }
-    $types['targets'] = $target_entity_types;
-
-    // Generate a batch to re-create the statistics.
-    $batch = $this->generateBatch($types);
+    // Generate a batch to re-create the statistics for all entities.
+    // Note that if we force all statistics to be created, there is no need to
+    // separate them between host / target cases. If all entities are going to
+    // be re-tracked, tracking all of them as hosts is enough, because there
+    // could never be a target without host.
+    $batch = $this->generateBatch($host_entity_types);
     batch_set($batch);
   }
 
@@ -168,10 +159,7 @@ class BatchUpdateForm extends FormBase {
   public function generateBatch(array $types) {
     $operations = [];
 
-    // Generation for host entity types:
-    $entity_types = $types['hosts'];
-
-    foreach ($entity_types as $type) {
+    foreach ($types as $type) {
       $entities = $this->entityTypeManager->getStorage($type)->loadMultiple();
       foreach ($entities as $id => $entity) {
         $operations[] = [
@@ -184,11 +172,6 @@ class BatchUpdateForm extends FormBase {
       }
     }
 
-    // Generation for target entity types:
-    $entity_types = $types['targets'];
-
-    $this->populateTargetBatchOperations($entity_types, $operations);
-
     $batch = [
       'operations' => $operations,
       'finished' => 'entity_usage_update_batch_fihished',
@@ -200,58 +183,6 @@ class BatchUpdateForm extends FormBase {
     return $batch;
   }
 
-  /**
-   * Populate a batch operations array for treating target entities types.
-   *
-   * This will iterate over all entity_reference fields on the system (in all
-   * entities) checking whether the 'target_type' defined in each of them
-   * matches any of the $entity_types received. If there is a match, then there
-   * might be a set of entities that need tracking, and this information is then
-   * packed into the operations array to be trated by the batch worker.
-   * // @TODO There must be a better way of retrieving this info! ^^
-   *
-   * @param array $entity_types
-   *   An array of entity types that need to have statistics re-created.
-   * @param array $operations
-   *   The $operations array, passed-in by reference.
-   */
-  private function populateTargetBatchOperations(array $entity_types, array &$operations) {
-    // @TODO There must be a better way of doing this!
-    $all_entities = $this->entityTypeManager->getDefinitions();
-    $content_entities = array_filter($all_entities, function ($v) {
-      return $v->isSubclassOf('\Drupal\Core\Entity\ContentEntityInterface');
-    });
-    foreach (array_keys($content_entities) as $type) {
-      $entityref_fields_on_this_entity_type = $this->entityFieldManager->getFieldMapByFieldType('entity_reference')[$type];
-      // Clean out basefields.
-      $basefields = $this->entityFieldManager->getBaseFieldDefinitions($type);
-      $entityref_on_this_entity = array_diff_key($entityref_fields_on_this_entity_type, $basefields);
-      $field_names = [];
-      if (!empty($entityref_on_this_entity)) {
-        $field_names = array_keys($entityref_on_this_entity);
-      }
-      $bundles_on_this_type = $this->bundleInfo->getBundleInfo($type);
-      foreach ($bundles_on_this_type as $bundle => $bundle_arr) {
-        $definitions = $this->entityFieldManager->getFieldDefinitions($type, $bundle);
-        $entityref_fields_on_this_bundle = array_intersect($field_names, array_keys($definitions));
-        foreach ($entityref_fields_on_this_bundle as $field_name) {
-          $target_entity_type = $definitions[$field_name]->getSetting('target_type');
-          if (in_array($target_entity_type, $entity_types)) {
-            // If there is a match we need to re-track these entities.
-            $referencing_entity_type = $type;
-            $operations[] = [
-              'entity_usage_update_targets_batch_worker',
-              [
-                $target_entity_type,
-                $referencing_entity_type,
-                $field_name,
-                '(' . $target_entity_type . ':' . $referencing_entity_type . ':' . $field_name . ')',
-              ],
-            ];
-          }
-        }
-      }
-    }
-  }
+
 
 }
