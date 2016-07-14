@@ -3,12 +3,49 @@
 namespace Drupal\entity_usage\Controller;
 
 use Drupal\Core\Controller\ControllerBase;
+use Drupal\Core\Entity\EntityTypeManagerInterface;
+use Drupal\entity_usage\EntityUsageInterface;
+use Symfony\Component\DependencyInjection\ContainerInterface;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 /**
- * Controller routines for page example routes.
+ * Controller for our pages.
  */
 class ListUsageController extends ControllerBase {
+
+  /**
+   * The EntityTypeManager service.
+   *
+   * @var \Drupal\Core\Entity\EntityTypeManagerInterface
+   */
+  protected $entityTypeManager;
+
+  /**
+   * The EntityUsage service.
+   *
+   * @var \Drupal\entity_usage\EntityUsageInterface
+   */
+  protected $entityUsage;
+
+  /**
+   * ListUsageController constructor.
+   *
+   * @param \Drupal\Core\Entity\EntityTypeManagerInterface $entity_type_manager
+   *   The EntityManager service.
+   * @param \Drupal\entity_usage\EntityUsageInterface $entity_usage
+   *   The EntityUsage service.
+   */
+  public function __construct(EntityTypeManagerInterface $entity_type_manager, EntityUsageInterface $entity_usage) {
+    $this->entityTypeManager = $entity_type_manager;
+    $this->entityUsage = $entity_usage;
+  }
+
+  public static function create(ContainerInterface $container) {
+    return new static(
+      $container->get('entity_type.manager'),
+      $container->get('entity_usage.usage')
+    );
+  }
 
   /**
    * Lists the usage of a given entity.
@@ -19,13 +56,13 @@ class ListUsageController extends ControllerBase {
    *   The entity ID.
    */
   public function listUsagePage($type, $id) {
-    $entity_types = array_keys(\Drupal::entityTypeManager()->getDefinitions());
+    $entity_types = array_keys($this->entityTypeManager->getDefinitions());
     if (!is_string($type) || !is_numeric($id) || !in_array($type, $entity_types)) {
       throw new NotFoundHttpException();
     }
-    $entity = \Drupal::entityTypeManager()->getStorage($type)->load($id);
+    $entity = $this->entityTypeManager->getStorage($type)->load($id);
     if ($entity) {
-      $usages = \Drupal::service('entity_usage.usage')->listUsage($entity);
+      $usages = $this->entityUsage->listUsage($entity);
       if (empty($usages)) {
         // Entity exists but not used.
         $build = [
@@ -42,7 +79,7 @@ class ListUsageController extends ControllerBase {
         $rows = [];
         foreach ($usages as $re_type => $type_usages) {
           foreach ($type_usages as $re_id => $count) {
-            $referencing_entity = \Drupal::entityTypeManager()->getStorage($re_type)->load($re_id);
+            $referencing_entity = $this->entityTypeManager->getStorage($re_type)->load($re_id);
             if ($referencing_entity) {
               $rows[] = [
                 $referencing_entity->toLink(),
@@ -80,7 +117,7 @@ class ListUsageController extends ControllerBase {
    *   The title to be used on this page.
    */
   public function getTitle($type, $id) {
-    $entity = \Drupal::entityTypeManager()->getStorage($type)->load($id);
+    $entity = $this->entityTypeManager->getStorage($type)->load($id);
     if ($entity) {
       return t('Entity usage information for @entity_label', ['@entity_label' => $entity->label()]);
     }
