@@ -40,6 +40,9 @@ class ListUsageController extends ControllerBase {
     $this->entityUsage = $entity_usage;
   }
 
+  /**
+   * {@inheritdoc}
+   */
   public static function create(ContainerInterface $container) {
     return new static(
       $container->get('entity_type.manager'),

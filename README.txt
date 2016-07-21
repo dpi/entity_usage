@@ -34,11 +34,19 @@ the link using the following structure:
 Make sure the visitors of this page have the permission to 'access entity usage
 statistics' enabled.
 
-If you are developing you can also check the tracking information recorded by
-this module at the "entity_usage" table.
+==== FOR DEVELOPERS ====
 
-You can also use the service
+The tracking information recorded by this module is stored at the "entity_usage"
+table.
+
+You can use the service
   \Drupal::service('entity_usage.usage')->listUsage($entity);
-to get the statistics in code.
+to get the statistics anywhere in your code.
+
+If you want to provide your own tracking method (additionally to the methods
+provided by the module: entity_reference and entity_embed), you only need to
+implement a plugin of type EntityUsageTrack, which will be used on all CRUD
+entity operations. Examples of how to implement the plugin can be found in
+ src/Plugin/EntityUsage/Track
 
 Feedback is very welcome in the issue queue.

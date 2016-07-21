@@ -1,4 +1,7 @@
 services:
+  plugin.manager.entity_usage.track:
+    class: Drupal\entity_usage\EntityUsageTrackManager
+    parent: default_plugin_manager
   entity_usage.usage:
     class: Drupal\entity_usage\EntityUsage
     arguments: ['@database']
@@ -6,8 +9,4 @@ services:
     class: Drupal\entity_usage\EntityUpdateManager
     arguments:
       - @entity_usage.usage
-      - @entity_field.manager
-      - @logger.factory
-      - @entity_type.manager
-      - @entity.repository
-      - @module_handler
+      - @plugin.manager.entity_usage.track

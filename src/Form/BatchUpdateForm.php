@@ -183,6 +183,4 @@ class BatchUpdateForm extends FormBase {
     return $batch;
   }
 
-
-
 }

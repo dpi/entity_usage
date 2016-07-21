@@ -78,10 +78,6 @@ function entity_usage_update_hosts_batch_worker(EntityInterface $entity, $operat
 function entity_usage_update_batch_fihished($success, $results, $operations) {
   if ($success) {
     drupal_set_message(t('@count operations processed.', ['@count' => count($results)]));
-    // Just for debugging:
-    // foreach ($results as $result) {
-    //   drupal_set_message('worked on: ' . $result);
-    // }
   }
   else {
     // An error occurred.
