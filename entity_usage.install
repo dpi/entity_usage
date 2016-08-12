@@ -2,7 +2,7 @@
 
 /**
  * @file
- * Install, update and uninstall functions for entity_update module.
+ * Install, update and uninstall functions for entity_usage module.
  */
 
 use Drupal\Core\Url;

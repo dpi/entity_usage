@@ -8,7 +8,7 @@ use Drupal\Core\Entity\EntityInterface;
 /**
  * Class EntityUpdateManager.
  *
- * @package Drupal\entity_update
+ * @package Drupal\entity_usage
  */
 class EntityUpdateManager {
 
