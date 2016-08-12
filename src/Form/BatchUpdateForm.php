@@ -9,6 +9,7 @@ use Drupal\Core\Form\FormBase;
 use Drupal\Core\Form\FormStateInterface;
 use Drupal\entity_usage\EntityUsageInterface;
 use Symfony\Component\DependencyInjection\ContainerInterface;
+use Drupal\Core\Entity\EntityInterface;
 
 /**
  * Form to launch batch tracking of existing entities.
@@ -163,7 +164,7 @@ class BatchUpdateForm extends FormBase {
       $entities = $this->entityTypeManager->getStorage($type)->loadMultiple();
       foreach ($entities as $id => $entity) {
         $operations[] = [
-          'entity_usage_update_hosts_batch_worker',
+          'Drupal\entity_usage\Form\BatchUpdateForm::updateHostsBatchWorker',
           [
             $entity,
             $this->t('Host operation in @name', ['@name' => $entity->getEntityTypeId() . ':' . $entity->id()]),
@@ -174,7 +175,7 @@ class BatchUpdateForm extends FormBase {
 
     $batch = [
       'operations' => $operations,
-      'finished' => 'entity_usage_update_batch_fihished',
+      'finished' => 'Drupal\entity_usage\Form\BatchUpdateForm::batchFinished',
       'title' => $this->t('Processing batch update.'),
       'progress_message' => $this->t('Processed @current out of @total.'),
       'error_message' => $this->t('This batch encountered an error.'),
@@ -183,4 +184,52 @@ class BatchUpdateForm extends FormBase {
     return $batch;
   }
 
+  /**
+   * Batch operation worker for re-creating statistics for entities when host.
+   *
+   * @param EntityInterface $entity
+   *   The entity object.
+   * @param string $operation_details
+   *   Operation details information.
+   * @param array $context
+   *   The context array.
+   */
+  public static function updateHostsBatchWorker(EntityInterface $entity, $operation_details, &$context) {
+
+    // Hosts are tracked as if they were new entities.
+    \Drupal::service('entity_usage.entity_update_manager')->trackUpdateOnCreation($entity);
+
+    $context['results'][] = $entity->getEntityTypeId() . ':' . $entity->id();
+
+    $context['message'] = t('Running batch for entity @details', ['@details' => $operation_details]);
+  }
+
+  /**
+   * Finish callback for our batch processing.
+   *
+   * @param bool $success
+   *   Whether the batch completed successfully.
+   * @param array $results
+   *   The results array.
+   * @param array $operations
+   *   The operations array.
+   */
+  public static function batchFinished($success, $results, $operations) {
+    if ($success) {
+      drupal_set_message(t('@count operations processed.', ['@count' => count($results)]));
+    }
+    else {
+      // An error occurred.
+      // $operations contains the operations that remained unprocessed.
+      $error_operation = reset($operations);
+      drupal_set_message(
+        t('An error occurred while processing @operation with arguments : @args',
+          [
+            '@operation' => $error_operation[0],
+            '@args' => print_r($error_operation[0], TRUE),
+          ]
+        )
+      );
+    }
+  }
 }
