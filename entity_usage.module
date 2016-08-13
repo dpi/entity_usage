@@ -56,4 +56,3 @@ function entity_usage_entity_update(EntityInterface $entity) {
 function entity_usage_entity_predelete(EntityInterface $entity) {
   return \Drupal::service('entity_usage.entity_update_manager')->trackUpdateOnDeletion($entity);
 }
-

@@ -232,4 +232,5 @@ class BatchUpdateForm extends FormBase {
       );
     }
   }
+
 }
