@@ -9,6 +9,8 @@ use Drupal\KernelTests\Core\Entity\EntityKernelTestBase;
  * Tests the basic API operations of our tracking service..
  *
  * @group entity_usage
+ *
+ * @package Drupal\Tests\entity_usage\Kernel
  */
 class EntityUsageTest extends EntityKernelTestBase {
 

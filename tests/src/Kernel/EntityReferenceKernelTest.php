@@ -14,6 +14,9 @@ use Drupal\field\Tests\EntityReference\EntityReferenceTestTrait;
  * Tests basic usage tracking on generic entities.
  *
  * @group entity_usage
+ *
+ * @package Drupal\Tests\entity_usage\Kernel
+ *
  */
 class EntityReferenceKernelTest extends EntityKernelTestBase {
 
