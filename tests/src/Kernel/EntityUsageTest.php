@@ -2,29 +2,22 @@
 
 namespace Drupal\Tests\entity_usage\Kernel;
 
-use Drupal\Core\Field\FieldStorageDefinitionInterface;
-use Drupal\field\Entity\FieldStorageConfig;
-use Drupal\filter\Entity\FilterFormat;
-use Drupal\KernelTests\Core\Entity\EntityKernelTestBase;
 use Drupal\entity_test\Entity\EntityTest;
-use Drupal\field\Entity\FieldConfig;
-use Drupal\field\Tests\EntityReference\EntityReferenceTestTrait;
+use Drupal\KernelTests\Core\Entity\EntityKernelTestBase;
 
 /**
- * Tests basic usage tracking on generic entities.
+ * Tests the basic API operations of our tracking service..
  *
  * @group entity_usage
  */
 class EntityUsageTest extends EntityKernelTestBase {
-
-  use EntityReferenceTestTrait;
 
   /**
    * Modules to install.
    *
    * @var array
    */
-  public static $modules = ['entity_reference_test', 'entity_usage'];
+  public static $modules = ['entity_usage'];
 
   /**
    * The entity type used in this test.
@@ -39,20 +32,6 @@ class EntityUsageTest extends EntityKernelTestBase {
    * @var string
    */
   protected $bundle = 'entity_test';
-
-  /**
-   * The name of the field used in this test.
-   *
-   * @var string
-   */
-  protected $fieldName = 'field_test';
-
-  /**
-   * The entity to be referenced in this test.
-   *
-   * @var \Drupal\Core\Entity\EntityInterface
-   */
-  protected $referencedEntity;
 
   /**
    * Some test entities.
@@ -85,45 +64,9 @@ class EntityUsageTest extends EntityKernelTestBase {
 
     $this->installSchema('entity_usage', ['entity_usage']);
     $this->tableName = 'entity_usage';
-    $this->createEntityReferenceField($this->entityType, $this->bundle, $this->fieldName, 'Field test', $this->entityType, 'default', [], FieldStorageDefinitionInterface::CARDINALITY_UNLIMITED);
-
-    // Set up an additional field.
-    FieldStorageConfig::create([
-      'field_name' => 'body',
-      'entity_type' => $this->entityType,
-      'type' => 'text',
-      'settings' => array(),
-    ])->save();
-    FieldConfig::create([
-      'entity_type' => $this->entityType,
-      'bundle' => $this->bundle,
-      'field_name' => 'body',
-      'label' => 'Body',
-    ])->save();
-
-    FilterFormat::create([
-      'format' => 'full_html',
-      'name' => 'Full HTML',
-    ])->save();
-
-    // Create the entity to be referenced.
-    $this->referencedEntity = $this->container->get('entity_type.manager')
-      ->getStorage($this->entityType)
-      ->create(['name' => $this->randomMachineName()]);
-    $this->referencedEntity->save();
 
     // Create two test entities.
     $this->testEntities = $this->getTestEntities();
-    $this->testEntities[0]->body = [
-      'value' => '<p>Lorem ipsum 1</p>',
-      'format' => 'full_html',
-    ];
-    $this->testEntities[0]->save();
-    $this->testEntities[1]->body = [
-      'value' => '<p>Lorem ipsum 2</p>',
-      'format' => 'full_html',
-    ];
-    $this->testEntities[1]->save();
 
   }
 
@@ -149,8 +92,11 @@ class EntityUsageTest extends EntityKernelTestBase {
     $entity_usage = $this->container->get('entity_usage.usage');
     $complete_usage = $entity_usage->listUsage($entity);
     $usage = $complete_usage['foo'][1];
+    $this->assertEquals(1, $usage, 'Returned the correct count, without tracking method.');
 
-    $this->assertEquals(1, $usage, 'Returned the correct count.');
+    $complete_usage = $entity_usage->listUsage($entity, TRUE);
+    $usage = $complete_usage['entity_reference']['foo'][1];
+    $this->assertEquals(1, $usage, 'Returned the correct count, with tracking method.');
 
     // Clean back the environment.
     $this->injectedDatabase->truncate($this->tableName);
@@ -173,7 +119,7 @@ class EntityUsageTest extends EntityKernelTestBase {
       ->execute()
       ->fetchField();
 
-    $this->assertEquals(1, $real_usage, 'Returned the correct count.');
+    $this->assertEquals(1, $real_usage, 'Usage saved correctly to the database.');
 
     // Clean back the environment.
     $this->injectedDatabase->truncate($this->tableName);
@@ -231,90 +177,86 @@ class EntityUsageTest extends EntityKernelTestBase {
       ->fetchField();
     $this->assertSame(FALSE, $count, 'Decrementing non-existing record complete.');
 
-    // @TODO Add test coverage for bulkDeleteTargets().
-    // @TODO Add test coverage for bulkDeleteHosts().
+    // Clean back the environment.
+    $this->injectedDatabase->truncate($this->tableName);
   }
 
   /**
-   * Tests basic entity tracking on test entities using entityreference fields.
+   * Tests the bulkDeleteTargets() method.
+   *
+   * @covers \Drupal\entity_usage\EntityUsage::bulkDeleteTargets
    */
-  public function testBasicUsageTracking() {
+  public function testBulkDeleteTargets() {
+
+    $entity_type = $this->testEntities[0]->getEntityTypeId();
+
+    // Create 2 fake registers on the database table, one for each entity.
+    foreach ($this->testEntities as $entity) {
+      $this->injectedDatabase->insert($this->tableName)
+        ->fields([
+          't_id' => $entity->id(),
+          't_type' => $entity_type,
+          're_id' => 1,
+          're_type' => 'foo',
+          'method' => 'entity_reference',
+          'count' => 1,
+        ])
+        ->execute();
+    }
 
     /** @var \Drupal\entity_usage\EntityUsage $entity_usage */
     $entity_usage = $this->container->get('entity_usage.usage');
+    $entity_usage->bulkDeleteTargets($entity_type);
 
-    $field_name = $this->fieldName;
-    $referencing_entity = $this->testEntities[0];
+    // Check if there are no records left.
+    $count = $this->injectedDatabase->select($this->tableName, 'e')
+      ->fields('e', ['count'])
+      ->condition('e.t_type', $entity_type)
+      ->execute()
+      ->fetchField();
+    $this->assertSame(FALSE, $count, 'Successfully deleted all records of this type.');
 
-    // First check usage is 0 for the referenced entity.
-    $usage = $entity_usage->listUsage($this->referencedEntity);
-    $this->assertSame([], $usage, 'Initial usage is correctly empty.');
+    // Clean back the environment.
+    $this->injectedDatabase->truncate($this->tableName);
+  }
 
-    // Reference from other entity and check that the usage increases to 1.
-    $referencing_entity->{$field_name}->entity = $this->referencedEntity;
-    $referencing_entity->save();
-    $usage = $entity_usage->listUsage($this->referencedEntity);
-    $this->assertEquals([
-      $referencing_entity->getEntityTypeId() => [
-        $referencing_entity->id() => 1,
-      ],
-    ], $usage, 'The usage count is correct.');
+  /**
+   * Tests the bulkDeleteHosts() method.
+   *
+   * @covers \Drupal\entity_usage\EntityUsage::bulkDeleteHosts
+   */
+  public function testBulkDeleteHosts() {
 
-    // Update other values on the referencing entity, check usage remains 1.
-    $referencing_entity->body = [
-      'value' => '<p>Modified lorem ipsum</p>',
-      'format' => 'full_html',
-    ];
-    $referencing_entity->save();
-    $usage = $entity_usage->listUsage($this->referencedEntity);
-    $this->assertEquals([
-      $referencing_entity->getEntityTypeId() => [
-        $referencing_entity->id() => 1,
-      ],
-    ], $usage, 'The usage count is correct.');
+    $entity_type = $this->testEntities[0]->getEntityTypeId();
 
-    // Delete the field value from the entityreference field and check that the
-    // usage goes back to 0.
-    $referencing_entity->{$field_name}->entity = $this->testEntities[1];
-    $referencing_entity->save();
-    $usage = $entity_usage->listUsage($this->referencedEntity);
-    $this->assertSame([], $usage, 'Non-referenced usage is correctly empty.');
+    // Create 2 fake registers on the database table, one for each entity.
+    foreach ($this->testEntities as $entity) {
+      $this->injectedDatabase->insert($this->tableName)
+        ->fields([
+          't_id' => 1,
+          't_type' => 'foo',
+          're_id' => $entity->id(),
+          're_type' => $entity_type,
+          'method' => 'entity_reference',
+          'count' => 1,
+        ])
+        ->execute();
+    }
 
-    // Create a reference again, check the value is back to 1.
-    $referencing_entity->{$field_name}->entity = $this->referencedEntity;
-    $referencing_entity->save();
-    $usage = $entity_usage->listUsage($this->referencedEntity);
-    $this->assertEquals([
-      $referencing_entity->getEntityTypeId() => [
-        $referencing_entity->id() => 1,
-      ],
-    ], $usage, 'The usage count is correct.');
+    /** @var \Drupal\entity_usage\EntityUsage $entity_usage */
+    $entity_usage = $this->container->get('entity_usage.usage');
+    $entity_usage->bulkDeleteHosts($entity_type);
 
-    // Delete the whole referencing entity, check usage goes back to 0.
-    $referencing_entity->delete();
-    $usage = $entity_usage->listUsage($this->referencedEntity);
-    $this->assertSame([], $usage, 'Non-referenced usage is correctly empty.');
+    // Check if there are no records left.
+    $count = $this->injectedDatabase->select($this->tableName, 'e')
+      ->fields('e', ['count'])
+      ->condition('e.re_type', $entity_type)
+      ->execute()
+      ->fetchField();
+    $this->assertSame(FALSE, $count, 'Successfully deleted all records of this type.');
 
-    // Create a reference again, check the value is back to 1.
-    $referencing_entity = $this->testEntities[1];
-    $referencing_entity->{$field_name}->entity = $this->referencedEntity;
-    $referencing_entity->save();
-    $usage = $entity_usage->listUsage($this->referencedEntity);
-    $this->assertEquals([
-      $referencing_entity->getEntityTypeId() => [
-        $referencing_entity->id() => 1,
-      ],
-    ], $usage, 'The usage count is correct.');
-
-    // Unpublish the host entity, check usage goes back to 0.
-    // We don't deal with entities statuses yet.
-    /*
-    $referencing_entity->status = FALSE;
-    $referencing_entity->save();
-    $usage = $entity_usage->listUsage($this->referencedEntity);
-    $this->assertSame([], $usage, 'Non-referenced usage is correctly empty.');
-     */
-
+    // Clean back the environment.
+    $this->injectedDatabase->truncate($this->tableName);
   }
 
   /**
