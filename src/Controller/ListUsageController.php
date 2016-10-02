@@ -65,30 +65,34 @@ class ListUsageController extends ControllerBase {
     }
     $entity = $this->entityTypeManager->getStorage($type)->load($id);
     if ($entity) {
-      $usages = $this->entityUsage->listUsage($entity);
+      $usages = $this->entityUsage->listUsage($entity, TRUE);
       if (empty($usages)) {
         // Entity exists but not used.
         $build = [
-          '#markup' => t('There are no recorded usages for entity of type: @type with id: @id', ['@type' => $type, '@id' => $id]),
+          '#markup' => $this->t('There are no recorded usages for entity of type: @type with id: @id', ['@type' => $type, '@id' => $id]),
         ];
       }
       else {
         // Entity is being used.
         $header = [
-          t('Referencing entity'),
-          t('Referencing entity type'),
-          t('Count'),
+          $this->t('Referencing entity'),
+          $this->t('Referencing entity type'),
+          $this->t('Referencing method'),
+          $this->t('Count'),
         ];
         $rows = [];
-        foreach ($usages as $re_type => $type_usages) {
-          foreach ($type_usages as $re_id => $count) {
-            $referencing_entity = $this->entityTypeManager->getStorage($re_type)->load($re_id);
-            if ($referencing_entity) {
-              $rows[] = [
-                $referencing_entity->toLink(),
-                $re_type,
-                $count,
-              ];
+        foreach ($usages as $method => $method_usages) {
+          foreach ($method_usages as $re_type => $type_usages) {
+            foreach ($type_usages as $re_id => $count) {
+              $referencing_entity = $this->entityTypeManager->getStorage($re_type)->load($re_id);
+              if ($referencing_entity) {
+                $rows[] = [
+                  $referencing_entity->toLink(),
+                  $re_type,
+                  $method,
+                  $count,
+                ];
+              }
             }
           }
         }
