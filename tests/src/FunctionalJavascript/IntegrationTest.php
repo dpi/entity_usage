@@ -2,18 +2,15 @@
 
 namespace Drupal\Tests\entity_usage\FunctionalJavascript;
 
-use Drupal\Core\Field\FieldStorageDefinitionInterface;
 use Drupal\entity_usage\EntityUsage;
-use Drupal\file\Entity\File;
-use Drupal\field\Entity\FieldConfig;
-use Drupal\field\Entity\FieldStorageConfig;
-use Drupal\FunctionalJavascriptTests\JavascriptTestBase;
 use Drupal\node\Entity\Node;
 
 /**
  * Basic tests for the entity_reference and entity_embed tracking plugins.
  *
  * @package Drupal\Tests\entity_usage\FunctionalJavascript
+ *
+ * @group entity_usage
  */
 class IntegrationTest extends EntityUsageJavascriptTestBase {
 
