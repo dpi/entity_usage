@@ -138,7 +138,10 @@ class EntityReference extends EntityUsageTrackBase implements EntityUsageTrackIn
   private function entityReferenceFieldsAvailable(EntityInterface $entity) {
     $return_fields = [];
     $fields_on_entity = $this->entityFieldManager->getFieldDefinitions($entity->getEntityTypeId(), $entity->bundle());
-    $entityref_fields_on_this_entity_type = $this->entityFieldManager->getFieldMapByFieldType('entity_reference')[$entity->getEntityTypeId()];
+    $entityref_fields_on_this_entity_type = [];
+    if (!empty($this->entityFieldManager->getFieldMapByFieldType('entity_reference')[$entity->getEntityTypeId()])) {
+      $entityref_fields_on_this_entity_type = $this->entityFieldManager->getFieldMapByFieldType('entity_reference')[$entity->getEntityTypeId()];
+    }
     $entityref_on_this_bundle = array_intersect_key($fields_on_entity, $entityref_fields_on_this_entity_type);
     // Clean out basefields.
     $basefields = $this->entityFieldManager->getBaseFieldDefinitions($entity->getEntityTypeId());
