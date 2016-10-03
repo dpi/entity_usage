@@ -23,6 +23,7 @@ abstract class EntityUsageJavascriptTestBase extends JavascriptTestBase {
     'entity_embed',
     'text',
     'ckeditor',
+    'views',
     'entity_usage',
     'entity_usage_test',
   ];

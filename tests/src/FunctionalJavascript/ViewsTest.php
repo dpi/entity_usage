@@ -14,13 +14,6 @@ use Drupal\node\Entity\Node;
 class ViewsTest extends EntityUsageJavascriptTestBase {
 
   /**
-   * Modules to enable.
-   *
-   * @var array
-   */
-  public static $modules = ['views'];
-
-  /**
    * {@inheritdoc}
    */
   public function setUp() {
