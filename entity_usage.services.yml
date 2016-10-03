@@ -8,5 +8,5 @@ services:
   entity_usage.entity_update_manager:
     class: Drupal\entity_usage\EntityUpdateManager
     arguments:
-      - @entity_usage.usage
-      - @plugin.manager.entity_usage.track
+      - '@entity_usage.usage'
+      - '@plugin.manager.entity_usage.track'
