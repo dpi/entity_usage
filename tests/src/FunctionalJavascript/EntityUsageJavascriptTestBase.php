@@ -2,10 +2,6 @@
 
 namespace Drupal\Tests\entity_usage\FunctionalJavascript;
 
-use Drupal\Core\Field\FieldStorageDefinitionInterface;
-use Drupal\file\Entity\File;
-use Drupal\field\Entity\FieldConfig;
-use Drupal\field\Entity\FieldStorageConfig;
 use Drupal\FunctionalJavascriptTests\JavascriptTestBase;
 
 /**
@@ -37,37 +33,12 @@ abstract class EntityUsageJavascriptTestBase extends JavascriptTestBase {
   public function setUp() {
     parent::setUp();
 
-//    $this->drupalCreateContentType(['type' => 'article', 'name' => 'Article']);
-//
-//    FieldStorageConfig::create([
-//      'field_name' => 'field_reference',
-//      'type' => 'entity_reference',
-//      'entity_type' => 'node',
-//      'cardinality' => FieldStorageDefinitionInterface::CARDINALITY_UNLIMITED,
-//      'settings' => [
-//        'target_type' => 'node',
-//      ],
-//    ])->save();
-//
-//    FieldConfig::create([
-//      'field_name' => 'field_reference',
-//      'entity_type' => 'node',
-//      'bundle' => 'article',
-//      'label' => 'Referenced content',
-//      'settings' => [
-//        'target_bundles' => ['node' => 'node'],
-//        'sort' => ['field' => '_none'],
-//        'auto_create' => FALSE,
-//        'auto_create_bundle' => '',
-//      ],
-//    ])->save();
-
     $account = $this->drupalCreateUser([
       'administer node fields',
       'administer node display',
       'administer nodes',
       'bypass node access',
-      'use text format eu_test_text_format'
+      'use text format eu_test_text_format',
     ]);
     $this->drupalLogin($account);
   }

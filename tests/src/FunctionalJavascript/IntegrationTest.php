@@ -2,7 +2,6 @@
 
 namespace Drupal\Tests\entity_usage\FunctionalJavascript;
 
-use Drupal\entity_usage\EntityUsage;
 use Drupal\node\Entity\Node;
 
 /**
@@ -19,9 +18,7 @@ class IntegrationTest extends EntityUsageJavascriptTestBase {
    *
    * @var array
    */
-  public static $modules = [
-
-  ];
+  public static $modules = [];
 
   /**
    * {@inheritdoc}
@@ -36,7 +33,7 @@ class IntegrationTest extends EntityUsageJavascriptTestBase {
   public function testCRUDTracking() {
 
     $page = $this->getSession()->getPage();
-    /** @var EntityUsage $usage_service */
+    /** @var \Drupal\entity_usage\EntityUsage $usage_service */
     $usage_service = \Drupal::service('entity_usage.usage');
 
     // Create node 1.
