@@ -30,7 +30,7 @@ class IntegrationTest extends EntityUsageJavascriptTestBase {
   /**
    * Tests the tracking of nodes in some simple CRUD operations.
    */
-  public function testCRUDTracking() {
+  public function testCrudTracking() {
 
     $page = $this->getSession()->getPage();
     /** @var \Drupal\entity_usage\EntityUsage $usage_service */

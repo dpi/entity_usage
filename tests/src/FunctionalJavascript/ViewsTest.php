@@ -5,7 +5,7 @@ namespace Drupal\Tests\entity_usage\FunctionalJavascript;
 use Drupal\node\Entity\Node;
 
 /**
- * Basic tests for the entity_reference and entity_embed tracking plugins.
+ * Basic tests for the views integration.
  *
  * @package Drupal\Tests\entity_usage\FunctionalJavascript
  *
@@ -21,7 +21,7 @@ class ViewsTest extends EntityUsageJavascriptTestBase {
   }
 
   /**
-   * Tests the tracking of nodes in some simple CRUD operations.
+   * Tests the views integration.
    */
   public function testViewsIntegration() {
 
