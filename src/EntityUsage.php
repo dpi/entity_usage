@@ -136,7 +136,13 @@ class EntityUsage implements EntityUsageInterface {
         $references[$usage->method][$usage->re_type][$usage->re_id] = $usage->count;
       }
       else {
-        $references[$usage->re_type][$usage->re_id] = $usage->count;
+        $count = $usage->count;
+        // If there were previous usages recorded for this same pair of entities
+        // (with different methods), sum on the top of it.
+        if (!empty($references[$usage->re_type][$usage->re_id])) {
+          $count += $references[$usage->re_type][$usage->re_id];
+        }
+        $references[$usage->re_type][$usage->re_id] = $count;
       }
     }
     return $references;
