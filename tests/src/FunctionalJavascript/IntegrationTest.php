@@ -84,6 +84,29 @@ class IntegrationTest extends EntityUsageJavascriptTestBase {
     $usage = $usage_service->listUsage($node2, TRUE);
     $this->assertEquals($usage['entity_embed']['node'], ['3' => '1'], 'Correct usage found.');
 
+    // Create node 4 referencing node 2 using both methods.
+    $node4 = Node::create([
+      'type' => 'eu_test_ct',
+      'title' => 'Node 4',
+      'field_eu_test_related_nodes' => [
+        'target_id' => '2',
+      ],
+      'field_eu_test_rich_text' => [
+        'value' => $embedded_text,
+        'format' => 'eu_test_text_format',
+      ],
+    ]);
+    $node4->save();
+    // Check that we registered correctly the relation between N4 and N2.
+    $usage = $usage_service->listUsage($node2);
+    $expected_count = [
+      'node' => [
+        '3' => '1',
+        '4' => '2',
+      ],
+    ];
+    $this->assertEquals($usage['node'], $expected_count['node'], 'Correct usage found.');
+
     // Delete node 2 and verify that we clean up usages.
     $node2->delete();
     $usage = $usage_service->listUsage($node1);
