@@ -1,8 +1,6 @@
 Entity Usage
 ============
 
-DO NOT USE THIS MODULE IN PRODUCTION YET
-
 This module is a proof-of-concept for a tool to track usage of entities by other
 entities in drupal.
 
@@ -34,6 +32,9 @@ the link using the following structure:
 Make sure the visitors of this page have the permission to 'access entity usage
 statistics' enabled.
 
+This module is in early development phase. Please help testing it and provide
+feedback on the issue queue.
+
 ==== FOR DEVELOPERS ====
 
 The tracking information recorded by this module is stored at the "entity_usage"
@@ -49,4 +50,4 @@ implement a plugin of type EntityUsageTrack, which will be used on all CRUD
 entity operations. Examples of how to implement the plugin can be found in
  src/Plugin/EntityUsage/Track
 
-Feedback is very welcome in the issue queue.
+Feedback is very welcome on the issue queue.
