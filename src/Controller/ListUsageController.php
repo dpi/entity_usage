@@ -3,6 +3,7 @@
 namespace Drupal\entity_usage\Controller;
 
 use Drupal\Core\Controller\ControllerBase;
+use Drupal\Core\Entity\EntityInterface;
 use Drupal\Core\Entity\EntityTypeManagerInterface;
 use Drupal\entity_usage\EntityUsageInterface;
 use Symfony\Component\DependencyInjection\ContainerInterface;
@@ -86,8 +87,9 @@ class ListUsageController extends ControllerBase {
             foreach ($type_usages as $re_id => $count) {
               $referencing_entity = $this->entityTypeManager->getStorage($re_type)->load($re_id);
               if ($referencing_entity) {
+                $link = $this->getReferencingEntityLink($referencing_entity);
                 $rows[] = [
-                  $referencing_entity->toLink(),
+                  $link,
                   $re_type,
                   $method,
                   $count,
@@ -131,6 +133,41 @@ class ListUsageController extends ControllerBase {
     else {
       return t('Entity Usage List');
     }
+  }
+
+  /**
+   * Retrieve a link to the referencing entity.
+   *
+   * @param \Drupal\Core\Entity\EntityInterface $referencing_entity
+   *   The fully-loaded referencing entity.
+   * @param string|null $text
+   *   (optional) The link text for the anchor tag as a translated string.
+   *   If NULL, it will use the entity's label. Defaults to NULL.
+   *
+   * @return \Drupal\Core\Link|string
+   *   A link to the entity, or its non-linked label, in case it was impossible
+   *   to correctly build a link.
+   *   Note that Paragraph entities are specially treated. This function will
+   *   return the link to its parent entity, relying on the fact that paragraphs
+   *   have only one single parent and don't have canonical template.
+   */
+  private function getReferencingEntityLink(EntityInterface $referencing_entity, $text = NULL) {
+    if ($referencing_entity->hasLinkTemplate('canonical')) {
+      return $referencing_entity->toLink($text);
+    }
+
+    // Treat paragraph entities in a special manner. Once the current paragraphs
+    // implementation does not support reusing paragraphs, it is safe to
+    // consider that each paragraph entity is attached to only one parent
+    // entity. For this reason we will use the link to the parent's entity,
+    // adding a note that the parent uses this entity through a paragraph.
+    // @see #2414865 and related issues for more info.
+    if ($referencing_entity->getEntityTypeId() == 'paragraph') {
+      return $this->getReferencingEntityLink($referencing_entity->getParentEntity(), $referencing_entity->label());
+    }
+
+    // As a fallback just return a non-linked label.
+    return $referencing_entity->label();
   }
 
 }
