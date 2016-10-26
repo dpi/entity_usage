@@ -2,7 +2,9 @@
 
 namespace Drupal\entity_usage\Plugin\EntityUsage\Track;
 
+use Drupal\Core\Config\Entity\ConfigEntityTypeInterface;
 use Drupal\Core\Entity\EntityFieldManagerInterface;
+use Drupal\Core\Entity\EntityTypeManagerInterface;
 use Drupal\Core\Field\Plugin\Field\FieldType\EntityReferenceItem;
 use Drupal\entity_usage\EntityUsage;
 use Drupal\entity_usage\EntityUsageTrackBase;
@@ -29,6 +31,13 @@ class EntityReference extends EntityUsageTrackBase implements EntityUsageTrackIn
   protected $entityFieldManager;
 
   /**
+   * Entity type manager service.
+   *
+   * @var \Drupal\Core\Entity\EntityTypeManagerInterface
+   */
+  protected $entityTypeManager;
+
+  /**
    * Constructs display plugin.
    *
    * @param array $configuration
@@ -41,16 +50,20 @@ class EntityReference extends EntityUsageTrackBase implements EntityUsageTrackIn
    *   The usage tracking service.
    * @param \Drupal\Core\Entity\EntityFieldManagerInterface $entity_field_manager
    *   The EntityFieldManager service.
+   * @param \Drupal\Core\Entity\EntityTypeManagerInterface $entity_type_manager
+   *   The EntityTypeManager service.
    */
   public function __construct(
     array $configuration,
     $plugin_id,
     $plugin_definition,
     EntityUsage $usage_service,
-    EntityFieldManagerInterface $entity_field_manager
+    EntityFieldManagerInterface $entity_field_manager,
+    EntityTypeManagerInterface $entity_type_manager
   ) {
     parent::__construct($configuration, $plugin_id, $plugin_definition, $usage_service);
     $this->entityFieldManager = $entity_field_manager;
+    $this->entityTypeManager = $entity_type_manager;
   }
 
   /**
@@ -62,7 +75,8 @@ class EntityReference extends EntityUsageTrackBase implements EntityUsageTrackIn
       $plugin_id,
       $plugin_definition,
       $container->get('entity_usage.usage'),
-      $container->get('entity_field.manager')
+      $container->get('entity_field.manager'),
+      $container->get('entity_type.manager')
     );
   }
 
@@ -133,7 +147,7 @@ class EntityReference extends EntityUsageTrackBase implements EntityUsageTrackIn
    *   The entity object.
    *
    * @return array
-   *   An array of field_names that could reference to other entities.
+   *   An array of field_names that could reference to other content entities.
    */
   private function entityReferenceFieldsAvailable(EntityInterface $entity) {
     $return_fields = [];
@@ -147,6 +161,16 @@ class EntityReference extends EntityUsageTrackBase implements EntityUsageTrackIn
     $basefields = $this->entityFieldManager->getBaseFieldDefinitions($entity->getEntityTypeId());
     $entityref_on_this_bundle = array_diff_key($entityref_on_this_bundle, $basefields);
     if (!empty($entityref_on_this_bundle)) {
+      // Make sure we only leave the fields that are referencing content
+      // entities.
+      foreach ($entityref_on_this_bundle as $key => $entityref) {
+        $target_type = $entityref_on_this_bundle[$key]->getItemDefinition()->getSettings()['target_type'];
+        $entity_type = $this->entityTypeManager->getStorage($target_type)->getEntityType();
+        if ($entity_type instanceof ConfigEntityTypeInterface) {
+          unset($entityref_on_this_bundle[$key]);
+        }
+      }
+
       $return_fields = array_keys($entityref_on_this_bundle);
     }
     return $return_fields;
