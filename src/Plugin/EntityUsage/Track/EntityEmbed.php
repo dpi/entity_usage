@@ -212,7 +212,9 @@ class EntityEmbed extends EntityUsageTrackBase implements EntityUsageTrackInterf
    */
   private function incrementEmbeddedUsage(EntityInterface $entity, $t_type, $uuid) {
     $target_entity = $this->entityRepository->loadEntityByUuid($t_type, $uuid);
-    $this->usageService->add($target_entity->id(), $t_type, $entity->id(), $entity->getEntityTypeId(), $this->pluginId);
+    if ($target_entity) {
+      $this->usageService->add($target_entity->id(), $t_type, $entity->id(), $entity->getEntityTypeId(), $this->pluginId);
+    }
   }
 
   /**
@@ -227,7 +229,9 @@ class EntityEmbed extends EntityUsageTrackBase implements EntityUsageTrackInterf
    */
   private function decrementEmbeddedUsage(EntityInterface $entity, $t_type, $uuid) {
     $target_entity = $this->entityRepository->loadEntityByUuid($t_type, $uuid);
-    $this->usageService->delete($target_entity->id(), $t_type, $entity->id(), $entity->getEntityTypeId());
+    if ($target_entity) {
+      $this->usageService->delete($target_entity->id(), $t_type, $entity->id(), $entity->getEntityTypeId());
+    }
   }
 
 }
