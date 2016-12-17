@@ -1,6 +1,8 @@
 langcode: en
 status: true
-dependencies: {  }
+dependencies:
+  module:
+    - node
 name: eu_test_ct
 type: eu_test_ct
 description: 'Entity Usage test content type'
