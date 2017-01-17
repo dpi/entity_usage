@@ -3,6 +3,8 @@
 namespace Drupal\Tests\entity_usage\Kernel;
 
 use Drupal\entity_test\Entity\EntityTest;
+use Drupal\entity_usage\Events\EntityUsageEvent;
+use Drupal\entity_usage\Events\Events;
 use Drupal\KernelTests\Core\Entity\EntityKernelTestBase;
 
 /**
@@ -57,6 +59,13 @@ class EntityUsageTest extends EntityKernelTestBase {
   protected $tableName;
 
   /**
+   * State service for recording information received by event listeners.
+   *
+   * @var \Drupal\Core\State\State
+   */
+  protected $state;
+
+  /**
    * {@inheritdoc}
    */
   protected function setUp() {
@@ -70,6 +79,15 @@ class EntityUsageTest extends EntityKernelTestBase {
     // Create two test entities.
     $this->testEntities = $this->getTestEntities();
 
+    $this->state = \Drupal::state();
+    \Drupal::service('event_dispatcher')->addListener(Events::USAGE_ADD,
+      [$this, 'usageAddEventRecorder']);
+    \Drupal::service('event_dispatcher')->addListener(Events::USAGE_DELETE,
+      [$this, 'usageDeleteEventRecorder']);
+    \Drupal::service('event_dispatcher')->addListener(Events::BULK_TARGETS_DELETE,
+      [$this, 'usageBulkTargetDeleteEventRecorder']);
+    \Drupal::service('event_dispatcher')->addListener(Events::BULK_HOSTS_DELETE,
+      [$this, 'usageBulkHostsDeleteEventRecorder']);
   }
 
   /**
@@ -115,6 +133,16 @@ class EntityUsageTest extends EntityKernelTestBase {
     $entity_usage = $this->container->get('entity_usage.usage');
     $entity_usage->add($entity->id(), $entity->getEntityTypeId(), '1', 'foo', 'entity_reference', 1);
 
+    $event = \Drupal::state()->get('entity_usage_events_test.usage_add', []);
+
+    $this->assertSame($event['event_name'], Events::USAGE_ADD);
+    $this->assertSame($event['target_id'], $entity->id());
+    $this->assertSame($event['target_type'], $entity->getEntityTypeId());
+    $this->assertSame($event['referencing_id'], '1');
+    $this->assertSame($event['referencing_type'], 'foo');
+    $this->assertSame($event['method'], 'entity_reference');
+    $this->assertSame($event['count'], 1);
+
     $real_usage = $this->injectedDatabase->select($this->tableName, 'e')
       ->fields('e', ['count'])
       ->condition('e.t_id', $entity->id())
@@ -151,6 +179,17 @@ class EntityUsageTest extends EntityKernelTestBase {
 
     // Normal decrement.
     $entity_usage->delete($entity->id(), $entity->getEntityTypeId(), 1, 'foo', 1);
+
+    $event = \Drupal::state()->get('entity_usage_events_test.usage_delete', []);
+
+    $this->assertSame($event['event_name'], Events::USAGE_DELETE);
+    $this->assertSame($event['target_id'], $entity->id());
+    $this->assertSame($event['target_type'], $entity->getEntityTypeId());
+    $this->assertSame($event['referencing_id'], 1);
+    $this->assertSame($event['referencing_type'], 'foo');
+    $this->assertSame($event['method'], NULL);
+    $this->assertSame($event['count'], 1);
+
     $count = $this->injectedDatabase->select($this->tableName, 'e')
       ->fields('e', ['count'])
       ->condition('e.t_id', $entity->id())
@@ -210,6 +249,16 @@ class EntityUsageTest extends EntityKernelTestBase {
     $entity_usage = $this->container->get('entity_usage.usage');
     $entity_usage->bulkDeleteTargets($entity_type);
 
+    $event = \Drupal::state()->get('entity_usage_events_test.usage_bulk_target_delete', []);
+
+    $this->assertSame($event['event_name'], Events::BULK_TARGETS_DELETE);
+    $this->assertSame($event['target_id'], NULL);
+    $this->assertSame($event['target_type'], $entity_type);
+    $this->assertSame($event['referencing_id'], NULL);
+    $this->assertSame($event['referencing_type'], NULL);
+    $this->assertSame($event['method'], NULL);
+    $this->assertSame($event['count'], NULL);
+
     // Check if there are no records left.
     $count = $this->injectedDatabase->select($this->tableName, 'e')
       ->fields('e', ['count'])
@@ -249,6 +298,16 @@ class EntityUsageTest extends EntityKernelTestBase {
     $entity_usage = $this->container->get('entity_usage.usage');
     $entity_usage->bulkDeleteHosts($entity_type);
 
+    $event = \Drupal::state()->get('entity_usage_events_test.usage_bulk_hosts_delete', []);
+
+    $this->assertSame($event['event_name'], Events::BULK_HOSTS_DELETE);
+    $this->assertSame($event['target_id'], NULL);
+    $this->assertSame($event['target_type'], NULL);
+    $this->assertSame($event['referencing_id'], NULL);
+    $this->assertSame($event['referencing_type'], $entity_type);
+    $this->assertSame($event['method'], NULL);
+    $this->assertSame($event['count'], NULL);
+
     // Check if there are no records left.
     $count = $this->injectedDatabase->select($this->tableName, 'e')
       ->fields('e', ['count'])
@@ -278,6 +337,86 @@ class EntityUsageTest extends EntityKernelTestBase {
       $content_entity_1,
       $content_entity_2,
     ];
+  }
+
+  /**
+   * Reacts to save event.
+   *
+   * @param \Drupal\entity_usage\Events\EntityUsageEvent $event
+   *    The entity usage event.
+   * @param string $name
+   *    The name of the event.
+   */
+  public function usageAddEventRecorder(EntityUsageEvent $event, $name) {
+    $this->state->set('entity_usage_events_test.usage_add', [
+      'event_name' => $name,
+      'target_id' => $event->getTargetEntityId(),
+      'target_type' => $event->getTargetEntityType(),
+      'referencing_id' => $event->getReferencingEntityId(),
+      'referencing_type' => $event->getReferencingEntityType(),
+      'method' => $event->getReferencingMethod(),
+      'count' => $event->getCount(),
+    ]);
+  }
+
+  /**
+   * Reacts to delete event.
+   *
+   * @param \Drupal\entity_usage\Events\EntityUsageEvent $event
+   *    The entity usage event.
+   * @param string $name
+   *    The name of the event.
+   */
+  public function usageDeleteEventRecorder(EntityUsageEvent $event, $name) {
+    $this->state->set('entity_usage_events_test.usage_delete', [
+      'event_name' => $name,
+      'target_id' => $event->getTargetEntityId(),
+      'target_type' => $event->getTargetEntityType(),
+      'referencing_id' => $event->getReferencingEntityId(),
+      'referencing_type' => $event->getReferencingEntityType(),
+      'method' => $event->getReferencingMethod(),
+      'count' => $event->getCount(),
+    ]);
+  }
+
+  /**
+   * Reacts to bulk target delete event.
+   *
+   * @param \Drupal\entity_usage\Events\EntityUsageEvent $event
+   *    The entity usage event.
+   * @param string $name
+   *    The name of the event.
+   */
+  public function usageBulkTargetDeleteEventRecorder(EntityUsageEvent $event, $name) {
+    $this->state->set('entity_usage_events_test.usage_bulk_target_delete', [
+      'event_name' => $name,
+      'target_id' => $event->getTargetEntityId(),
+      'target_type' => $event->getTargetEntityType(),
+      'referencing_id' => $event->getReferencingEntityId(),
+      'referencing_type' => $event->getReferencingEntityType(),
+      'method' => $event->getReferencingMethod(),
+      'count' => $event->getCount(),
+    ]);
+  }
+
+  /**
+   * Reacts to bulk hosts delete event.
+   *
+   * @param \Drupal\entity_usage\Events\EntityUsageEvent $event
+   *    The entity usage event.
+   * @param string $name
+   *    The name of the event.
+   */
+  public function usageBulkHostsDeleteEventRecorder(EntityUsageEvent $event, $name) {
+    $this->state->set('entity_usage_events_test.usage_bulk_hosts_delete', [
+      'event_name' => $name,
+      'target_id' => $event->getTargetEntityId(),
+      'target_type' => $event->getTargetEntityType(),
+      'referencing_id' => $event->getReferencingEntityId(),
+      'referencing_type' => $event->getReferencingEntityType(),
+      'method' => $event->getReferencingMethod(),
+      'count' => $event->getCount(),
+    ]);
   }
 
 }

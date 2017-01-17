@@ -4,6 +4,9 @@ namespace Drupal\entity_usage;
 
 use Drupal\Core\Database\Connection;
 use Drupal\Core\Entity\EntityInterface;
+use Drupal\entity_usage\Events\Events;
+use Drupal\entity_usage\Events\EntityUsageEvent;
+use Symfony\Component\EventDispatcher\EventDispatcherInterface;
 
 /**
  * Defines the entity usage base class.
@@ -25,20 +28,29 @@ class EntityUsage implements EntityUsageInterface {
   protected $tableName;
 
   /**
+   * An event dispatcher instance.
+   *
+   * @var \Symfony\Component\EventDispatcher\EventDispatcherInterface
+   */
+  protected $eventDispatcher;
+
+  /**
    * Construct the EntityUsage object.
    *
    * @param \Drupal\Core\Database\Connection $connection
    *   The database connection which will be used to store the entity usage
    *   information.
+   * @param \Symfony\Component\EventDispatcher\EventDispatcherInterface $event_dispatcher
+   *   An event dispatcher instance to use for events.
    * @param string $table
    *   (optional) The table to store the entity usage info. Defaults to
    *   'entity_usage'.
    */
-  public function __construct(Connection $connection, $table = 'entity_usage') {
+  public function __construct(Connection $connection, EventDispatcherInterface $event_dispatcher, $table = 'entity_usage') {
 
     $this->connection = $connection;
     $this->tableName = $table;
-
+    $this->eventDispatcher = $event_dispatcher;
   }
 
   /**
@@ -57,6 +69,9 @@ class EntityUsage implements EntityUsageInterface {
       ->fields(['count' => $count])
       ->expression('count', 'count + :count', [':count' => $count])
       ->execute();
+
+    $event = new EntityUsageEvent($t_id, $t_type, $re_id, $re_type, $method, $count);
+    $this->eventDispatcher->dispatch(Events::USAGE_ADD, $event);
 
   }
 
@@ -92,6 +107,8 @@ class EntityUsage implements EntityUsageInterface {
       $query->expression('count', 'count - :count', [':count' => $count]);
       $query->execute();
     }
+    $event = new EntityUsageEvent($t_id, $t_type, $re_id, $re_type, NULL, $count);
+    $this->eventDispatcher->dispatch(Events::USAGE_DELETE, $event);
 
   }
 
@@ -105,6 +122,9 @@ class EntityUsage implements EntityUsageInterface {
       ->condition('t_type', $t_type);
     $query->execute();
 
+    $event = new EntityUsageEvent(NULL, $t_type, NULL, NULL, NULL, NULL);
+    $this->eventDispatcher->dispatch(Events::BULK_TARGETS_DELETE, $event);
+
   }
 
   /**
@@ -116,6 +136,9 @@ class EntityUsage implements EntityUsageInterface {
     $query = $this->connection->delete($this->tableName)
       ->condition('re_type', $re_type);
     $query->execute();
+
+    $event = new EntityUsageEvent(NULL, NULL, NULL, $re_type, NULL, NULL);
+    $this->eventDispatcher->dispatch(Events::BULK_HOSTS_DELETE, $event);
 
   }
 
