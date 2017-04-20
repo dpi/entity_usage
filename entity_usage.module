@@ -26,17 +26,6 @@ function entity_usage_help($route_name, RouteMatchInterface $route_match) {
 }
 
 /**
- * Implements hook_modules_installed().
- */
-function entity_usage_modules_installed($modules) {
-  if (in_array('entity_usage', $modules)) {
-    drupal_set_message(t('The module entity_usage will track all entity usages from this moment on.<br />If you want to have statistics for the existing entities, you need to do so on the @link page',
-      ['@link' => \Drupal::service('link_generator')->generate('Bulk Update', Url::fromRoute('entity_usage.batch_update'))]
-    ));
-  }
-}
-
-/**
  * Implements hook_entity_insert().
  */
 function entity_usage_entity_insert(EntityInterface $entity) {
