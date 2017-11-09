@@ -39,7 +39,7 @@ class IntegrationTest extends EntityUsageJavascriptTestBase {
     // Create node 1.
     $this->drupalGet('/node/add/eu_test_ct');
     $page->fillField('title[0][value]', 'Node 1');
-    $page->pressButton('Save and publish');
+    $page->pressButton('Save');
     $this->assertSession()->pageTextContains('eu_test_ct Node 1 has been created.');
     $this->saveHtmlOutput();
     $node1 = Node::load(1);
@@ -48,7 +48,7 @@ class IntegrationTest extends EntityUsageJavascriptTestBase {
     $this->drupalGet('/node/add/eu_test_ct');
     $page->fillField('title[0][value]', 'Node 2');
     $page->fillField('field_eu_test_related_nodes[0][target_id]', 'Node 1 (1)');
-    $page->pressButton('Save and publish');
+    $page->pressButton('Save');
     $this->assertSession()->pageTextContains('eu_test_ct Node 2 has been created.');
     $this->saveHtmlOutput();
     $node2 = Node::load(2);
