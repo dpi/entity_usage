@@ -3,7 +3,7 @@
 namespace Drupal\entity_usage;
 
 use Drupal\Component\Plugin\PluginInspectionInterface;
-use Drupal\Core\Entity\EntityInterface;
+use Drupal\Core\Entity\ContentEntityInterface;
 
 /**
  * Defines the interface for entity_usage track methods.
@@ -44,25 +44,25 @@ interface EntityUsageTrackInterface extends PluginInspectionInterface {
   /**
    * Track usage updates on the creation of entities.
    *
-   * @param \Drupal\Core\Entity\EntityInterface $entity
+   * @param \Drupal\Core\Entity\ContentEntityInterface $entity
    *   The entity we are dealing with.
    */
-  public function trackOnEntityCreation(EntityInterface $entity);
+  public function trackOnEntityCreation(ContentEntityInterface $entity);
 
   /**
    * Track usage updates on the edition of entities.
    *
-   * @param \Drupal\Core\Entity\EntityInterface $entity
+   * @param \Drupal\Core\Entity\ContentEntityInterface $entity
    *   The entity we are dealing with.
    */
-  public function trackOnEntityUpdate(EntityInterface $entity);
+  public function trackOnEntityUpdate(ContentEntityInterface $entity);
 
   /**
    * Track usage updates on the deletion of entities.
    *
-   * @param \Drupal\Core\Entity\EntityInterface $entity
+   * @param \Drupal\Core\Entity\ContentEntityInterface $entity
    *   The entity we are dealing with.
    */
-  public function trackOnEntityDeletion(EntityInterface $entity);
+  public function trackOnEntityDeletion(ContentEntityInterface $entity);
 
 }

@@ -3,7 +3,7 @@
 namespace Drupal\entity_usage\Controller;
 
 use Drupal\Core\Controller\ControllerBase;
-use Drupal\Core\Entity\EntityInterface;
+use Drupal\Core\Entity\ContentEntityInterface;
 use Drupal\Core\Entity\EntityTypeManagerInterface;
 use Drupal\entity_usage\EntityUsageInterface;
 use Symfony\Component\DependencyInjection\ContainerInterface;
@@ -138,7 +138,7 @@ class ListUsageController extends ControllerBase {
   /**
    * Retrieve a link to the referencing entity.
    *
-   * @param \Drupal\Core\Entity\EntityInterface $referencing_entity
+   * @param \Drupal\Core\Entity\ContentEntityInterface $referencing_entity
    *   The fully-loaded referencing entity.
    * @param string|null $text
    *   (optional) The link text for the anchor tag as a translated string.
@@ -151,7 +151,7 @@ class ListUsageController extends ControllerBase {
    *   return the link to its parent entity, relying on the fact that paragraphs
    *   have only one single parent and don't have canonical template.
    */
-  private function getReferencingEntityLink(EntityInterface $referencing_entity, $text = NULL) {
+  private function getReferencingEntityLink(ContentEntityInterface $referencing_entity, $text = NULL) {
     if ($referencing_entity->hasLinkTemplate('canonical')) {
       return $referencing_entity->toLink($text);
     }

@@ -3,7 +3,6 @@
 namespace Drupal\entity_usage;
 
 use Drupal\Core\Entity\ContentEntityInterface;
-use Drupal\Core\Entity\EntityInterface;
 
 /**
  * Class EntityUpdateManager.
@@ -45,10 +44,10 @@ class EntityUpdateManager {
   /**
    * Track updates on creation of potential host entities.
    *
-   * @param \Drupal\Core\Entity\EntityInterface $entity
+   * @param \Drupal\Core\Entity\ContentEntityInterface $entity
    *   The entity we are dealing with.
    */
-  public function trackUpdateOnCreation(EntityInterface $entity) {
+  public function trackUpdateOnCreation(ContentEntityInterface $entity) {
 
     // Only act on content entities.
     if (!($entity instanceof ContentEntityInterface)) {
@@ -67,10 +66,10 @@ class EntityUpdateManager {
   /**
    * Track updates on deletion of potential host entities.
    *
-   * @param \Drupal\Core\Entity\EntityInterface $entity
+   * @param \Drupal\Core\Entity\ContentEntityInterface $entity
    *   The entity we are dealing with.
    */
-  public function trackUpdateOnDeletion(EntityInterface $entity) {
+  public function trackUpdateOnDeletion(ContentEntityInterface $entity) {
 
     // Only act on content entities.
     if (!($entity instanceof ContentEntityInterface)) {
@@ -92,10 +91,10 @@ class EntityUpdateManager {
   /**
    * Track updates on edit / update of potential host entities.
    *
-   * @param \Drupal\Core\Entity\EntityInterface $entity
+   * @param \Drupal\Core\Entity\ContentEntityInterface $entity
    *   The entity we are dealing with.
    */
-  public function trackUpdateOnEdition(EntityInterface $entity) {
+  public function trackUpdateOnEdition(ContentEntityInterface $entity) {
 
     // Only act on content entities.
     if (!($entity instanceof ContentEntityInterface)) {

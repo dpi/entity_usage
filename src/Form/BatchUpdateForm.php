@@ -2,6 +2,7 @@
 
 namespace Drupal\entity_usage\Form;
 
+use Drupal\Core\Entity\ContentEntityInterface;
 use Drupal\Core\Entity\EntityFieldManagerInterface;
 use Drupal\Core\Entity\EntityTypeBundleInfoInterface;
 use Drupal\Core\Entity\EntityTypeManagerInterface;
@@ -9,7 +10,6 @@ use Drupal\Core\Form\FormBase;
 use Drupal\Core\Form\FormStateInterface;
 use Drupal\entity_usage\EntityUsageInterface;
 use Symfony\Component\DependencyInjection\ContainerInterface;
-use Drupal\Core\Entity\EntityInterface;
 
 /**
  * Form to launch batch tracking of existing entities.
@@ -187,14 +187,14 @@ class BatchUpdateForm extends FormBase {
   /**
    * Batch operation worker for re-creating statistics for entities when host.
    *
-   * @param EntityInterface $entity
+   * @param ContentEntityInterface $entity
    *   The entity object.
    * @param string $operation_details
    *   Operation details information.
    * @param array $context
    *   The context array.
    */
-  public static function updateHostsBatchWorker(EntityInterface $entity, $operation_details, &$context) {
+  public static function updateHostsBatchWorker(ContentEntityInterface $entity, $operation_details, &$context) {
 
     // Hosts are tracked as if they were new entities.
     \Drupal::service('entity_usage.entity_update_manager')->trackUpdateOnCreation($entity);

@@ -2,10 +2,10 @@
 
 namespace Drupal\entity_usage;
 
+use Drupal\Core\Entity\ContentEntityInterface;
 use Drupal\Core\Plugin\ContainerFactoryPluginInterface;
 use Drupal\Core\Plugin\PluginBase;
 use Symfony\Component\DependencyInjection\ContainerInterface;
-use Drupal\Core\Entity\EntityInterface;
 
 /**
  * Base implementation for track plugins.
@@ -85,21 +85,21 @@ abstract class EntityUsageTrackBase extends PluginBase implements EntityUsageTra
   /**
    * {@inheritdoc}
    */
-  public function trackOnEntityCreation(EntityInterface $entity) {
+  public function trackOnEntityCreation(ContentEntityInterface $entity) {
 
   }
 
   /**
    * {@inheritdoc}
    */
-  public function trackOnEntityUpdate(EntityInterface $entity) {
+  public function trackOnEntityUpdate(ContentEntityInterface $entity) {
 
   }
 
   /**
    * {@inheritdoc}
    */
-  public function trackOnEntityDeletion(EntityInterface $entity) {
+  public function trackOnEntityDeletion(ContentEntityInterface $entity) {
 
   }
 

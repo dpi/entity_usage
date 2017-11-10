@@ -3,13 +3,12 @@
 namespace Drupal\entity_usage\Plugin\EntityUsage\Track;
 
 use Drupal\Core\Config\Entity\ConfigEntityTypeInterface;
+use Drupal\Core\Entity\ContentEntityInterface;
 use Drupal\Core\Entity\EntityFieldManagerInterface;
 use Drupal\Core\Entity\EntityTypeManagerInterface;
-use Drupal\Core\Field\Plugin\Field\FieldType\EntityReferenceItem;
 use Drupal\entity_usage\EntityUsage;
 use Drupal\entity_usage\EntityUsageTrackBase;
 use Drupal\entity_usage\EntityUsageTrackInterface;
-use Drupal\Core\Entity\EntityInterface;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 
 /**
@@ -83,13 +82,13 @@ class EntityReference extends EntityUsageTrackBase implements EntityUsageTrackIn
   /**
    * {@inheritdoc}
    */
-  public function trackOnEntityCreation(EntityInterface $entity) {
+  public function trackOnEntityCreation(ContentEntityInterface $entity) {
     foreach ($this->entityReferenceFieldsAvailable($entity) as $field_name) {
       if (!$entity->$field_name->isEmpty()) {
         /** @var \Drupal\Core\Field\Plugin\Field\FieldType\EntityReferenceItem $field_item */
         foreach ($entity->$field_name as $field_item) {
           // This item got added. Track the usage up.
-          $this->incrementEntityReferenceUsage($entity, $field_name, $field_item);
+          $this->incrementEntityReferenceUsage($entity, $field_name, $field_item->target_id);
         }
       }
     }
@@ -98,29 +97,58 @@ class EntityReference extends EntityUsageTrackBase implements EntityUsageTrackIn
   /**
    * {@inheritdoc}
    */
-  public function trackOnEntityUpdate(EntityInterface $entity) {
+  public function trackOnEntityUpdate(ContentEntityInterface $entity) {
+    // The assumption here is that an entity that is referenced by any
+    // translation of another entity should be tracked, and only once
+    // (regardless if many translations point to the same entity). So the
+    // process to identify them is quite simple: we build a list of all entity
+    // ids referenced before the update by all translations (original included),
+    // and compare it with the list of ids referenced by all translations after
+    // the update.
+    $translations = [];
+    $originals = [];
+    $languages = $entity->getTranslationLanguages();
+    foreach ($languages as $langcode => $language) {
+      if (!$entity->hasTranslation($langcode)) {
+        continue;
+      }
+      $translations[] = $entity->getTranslation($langcode);
+      if (!$entity->original->hasTranslation($langcode)) {
+        continue;
+      }
+      $originals[] = $entity->original->getTranslation($langcode);
+    }
+
     foreach ($this->entityReferenceFieldsAvailable($entity) as $field_name) {
-      // Original entity had some values on the field.
-      if (!$entity->original->$field_name->isEmpty()) {
-        /** @var \Drupal\Core\Field\Plugin\Field\FieldType\EntityReferenceItem $field_item */
-        foreach ($entity->original->$field_name as $field_item) {
-          // Check if this item is still present on the updated entity.
-          if (!$this->targetIdIsReferencedInEntity($entity, $field_item->target_id, $field_name)) {
-            // This item got removed. Track the usage down.
-            $this->decrementEntityReferenceUsage($entity, $field_name, $field_item);
+      $current_target_ids = [];
+      foreach ($translations as $translation) {
+        if (!$translation->{$field_name}->isEmpty()) {
+          foreach ($translation->{$field_name} as $field_item) {
+            $current_target_ids[] = $field_item->target_id;
           }
         }
       }
-      // Current entity has some values on the field.
-      if (!$entity->$field_name->isEmpty()) {
-        /** @var \Drupal\Core\Field\Plugin\Field\FieldType\EntityReferenceItem $field_item */
-        foreach ($entity->$field_name as $field_item) {
-          // Check if this item was present on the original entity.
-          if (!$this->targetIdIsReferencedInEntity($entity->original, $field_item->target_id, $field_name)) {
-            // This item got added. Track the usage up.
-            $this->incrementEntityReferenceUsage($entity, $field_name, $field_item);
+      $original_target_ids = [];
+      foreach ($originals as $original) {
+        if (!$original->{$field_name}->isEmpty()) {
+          foreach ($original->{$field_name} as $field_item) {
+            $original_target_ids[] = $field_item->target_id;
           }
         }
+      }
+      // If more than one translation references the same target entity, we
+      // record only one usage.
+      $original_target_ids = array_unique($original_target_ids);
+      $current_target_ids = array_unique($current_target_ids);
+
+      $added_ids = array_diff($current_target_ids, $original_target_ids);
+      $removed_ids = array_diff($original_target_ids, $current_target_ids);
+
+      foreach ($added_ids as $id) {
+        $this->incrementEntityReferenceUsage($entity, $field_name, $id);
+      }
+      foreach ($removed_ids as $id) {
+        $this->decrementEntityReferenceUsage($entity, $field_name, $id);
       }
     }
   }
@@ -128,13 +156,33 @@ class EntityReference extends EntityUsageTrackBase implements EntityUsageTrackIn
   /**
    * {@inheritdoc}
    */
-  public function trackOnEntityDeletion(EntityInterface $entity) {
+  public function trackOnEntityDeletion(ContentEntityInterface $entity) {
+    $translations = [];
+    // When deleting the main (untranslated) entity, loop over all translations
+    // as well to release referenced entities there too.
+    if ($entity === $entity->getUntranslated()) {
+      $languages = $entity->getTranslationLanguages();
+      foreach ($languages as $langcode => $language) {
+        if (!$entity->hasTranslation($langcode)) {
+          continue;
+        }
+        $translations[] = $entity->getTranslation($langcode);
+      }
+    }
+    else {
+      // Otherwise, this is a single translation being deleted, so we just need
+      // to release usage reflected here.
+      $translations = [$entity];
+    }
+
     foreach ($this->entityReferenceFieldsAvailable($entity) as $field_name) {
-      if (!$entity->$field_name->isEmpty()) {
-        /** @var \Drupal\Core\Field\Plugin\Field\FieldType\EntityReferenceItem $field_item */
-        foreach ($entity->$field_name as $field_item) {
-          // This item got deleted. Track the usage down.
-          $this->decrementEntityReferenceUsage($entity, $field_name, $field_item);
+      foreach ($translations as $translation) {
+        if (!$translation->{$field_name}->isEmpty()) {
+          /** @var \Drupal\Core\Field\Plugin\Field\FieldType\EntityReferenceItem $field_item */
+          foreach ($translation->{$field_name} as $field_item) {
+            // This item got deleted. Track the usage down.
+            $this->decrementEntityReferenceUsage($entity, $field_name, $field_item->target_id);
+          }
         }
       }
     }
@@ -143,13 +191,13 @@ class EntityReference extends EntityUsageTrackBase implements EntityUsageTrackIn
   /**
    * Retrieve the entity_reference fields on a given entity.
    *
-   * @param \Drupal\Core\Entity\EntityInterface $entity
+   * @param \Drupal\Core\Entity\ContentEntityInterface $entity
    *   The entity object.
    *
    * @return array
    *   An array of field_names that could reference to other content entities.
    */
-  private function entityReferenceFieldsAvailable(EntityInterface $entity) {
+  private function entityReferenceFieldsAvailable(ContentEntityInterface $entity) {
     $return_fields = [];
     $fields_on_entity = $this->entityFieldManager->getFieldDefinitions($entity->getEntityTypeId(), $entity->bundle());
     $entityref_fields_on_this_entity_type = [];
@@ -177,61 +225,37 @@ class EntityReference extends EntityUsageTrackBase implements EntityUsageTrackIn
   }
 
   /**
-   * Check the presence of target ids in an entity object, for a given field.
-   *
-   * @param \Drupal\Core\Entity\EntityInterface $host_entity
-   *   The host entity object.
-   * @param int $referenced_entity_id
-   *   The referenced entity id.
-   * @param string $field_name
-   *   The field name where to check this information.
-   *
-   * @return TRUE if the $host_entity has the $referenced_entity_id "target_id"
-   *   value in any delta of the $field_name, FALSE otherwise.
-   */
-  private function targetIdIsReferencedInEntity(EntityInterface $host_entity, $referenced_entity_id, $field_name) {
-    if (!$host_entity->$field_name->isEmpty()) {
-      foreach ($host_entity->get($field_name) as $field_delta) {
-        if ($field_delta->target_id == $referenced_entity_id) {
-          return TRUE;
-        }
-      }
-    }
-    return FALSE;
-  }
-
-  /**
    * Helper method to increment the usage in entity_reference fields.
    *
-   * @param \Drupal\Core\Entity\EntityInterface $entity
+   * @param \Drupal\Core\Entity\ContentEntityInterface $entity
    *   The host entity object.
    * @param string $field_name
    *   The name of the entity_reference field, present in $entity.
-   * @param \Drupal\Core\Field\Plugin\Field\FieldType\EntityReferenceItem $field_item
-   *   The field item containing the values of the target entity.
+   * @param int $target_id
+   *   The id of the target entity.
    */
-  private function incrementEntityReferenceUsage(EntityInterface $entity, $field_name, EntityReferenceItem $field_item) {
+  private function incrementEntityReferenceUsage(ContentEntityInterface $entity, $field_name, $target_id) {
     /** @var \Drupal\field\Entity\FieldConfig $definition */
     $definition = $this->entityFieldManager->getFieldDefinitions($entity->getEntityTypeId(), $entity->bundle())[$field_name];
     $referenced_entity_type = $definition->getSetting('target_type');
-    $this->usageService->add($field_item->target_id, $referenced_entity_type, $entity->id(), $entity->getEntityTypeId(), $this->pluginId);
+    $this->usageService->add($target_id, $referenced_entity_type, $entity->id(), $entity->getEntityTypeId(), $this->pluginId);
   }
 
   /**
    * Helper method to decrement the usage in entity_reference fields.
    *
-   * @param \Drupal\Core\Entity\EntityInterface $entity
+   * @param \Drupal\Core\Entity\ContentEntityInterface $entity
    *   The host entity object.
    * @param string $field_name
    *   The name of the entity_reference field, present in $entity.
-   * @param \Drupal\Core\Field\Plugin\Field\FieldType\EntityReferenceItem $field_item
-   *   The field item containing the values of the target entity.
+   * @param int $target_id
+   *   The id of the target entity.
    */
-  private function decrementEntityReferenceUsage(EntityInterface $entity, $field_name, EntityReferenceItem $field_item) {
+  private function decrementEntityReferenceUsage(ContentEntityInterface $entity, $field_name, $target_id) {
     /** @var \Drupal\field\Entity\FieldConfig $definition */
     $definition = $this->entityFieldManager->getFieldDefinitions($entity->getEntityTypeId(), $entity->bundle())[$field_name];
     $referenced_entity_type = $definition->getSetting('target_type');
-    $this->usageService->delete($field_item->target_id, $referenced_entity_type, $entity->id(), $entity->getEntityTypeId());
+    $this->usageService->delete($target_id, $referenced_entity_type, $entity->id(), $entity->getEntityTypeId());
   }
 
 }
