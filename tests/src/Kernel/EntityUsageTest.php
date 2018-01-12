@@ -94,15 +94,17 @@ class EntityUsageTest extends EntityKernelTestBase {
    * Tests the listUsage() method.
    *
    * @covers \Drupal\entity_usage\EntityUsage::listUsage
+   * @covers \Drupal\entity_usage\EntityUsage::listReferencedEntities
    */
   public function testGetUsage() {
-    $entity = $this->testEntities[0];
+    $target_entity = $this->testEntities[0];
+    $referencing_entity = $this->testEntities[1];
     $this->injectedDatabase->insert($this->tableName)
       ->fields([
-        't_id' => $entity->id(),
-        't_type' => $entity->getEntityTypeId(),
-        're_id' => 1,
-        're_type' => 'foo',
+        't_id' => $target_entity->id(),
+        't_type' => $target_entity->getEntityTypeId(),
+        're_id' => $referencing_entity->id(),
+        're_type' => $referencing_entity->getEntityTypeId(),
         'method' => 'entity_reference',
         'count' => 1,
       ])
@@ -110,13 +112,17 @@ class EntityUsageTest extends EntityKernelTestBase {
 
     /** @var \Drupal\entity_usage\EntityUsage $entity_usage */
     $entity_usage = $this->container->get('entity_usage.usage');
-    $complete_usage = $entity_usage->listUsage($entity);
-    $usage = $complete_usage['foo'][1];
+    $complete_usage = $entity_usage->listUsage($target_entity);
+    $usage = $complete_usage[$referencing_entity->getEntityTypeId()][$referencing_entity->id()];
     $this->assertEquals(1, $usage, 'Returned the correct count, without tracking method.');
 
-    $complete_usage = $entity_usage->listUsage($entity, TRUE);
-    $usage = $complete_usage['entity_reference']['foo'][1];
+    $complete_usage = $entity_usage->listUsage($target_entity, TRUE);
+    $usage = $complete_usage['entity_reference'][$referencing_entity->getEntityTypeId()][$referencing_entity->id()];
     $this->assertEquals(1, $usage, 'Returned the correct count, with tracking method.');
+
+    $complete_references_entities = $entity_usage->listReferencedEntities($referencing_entity);
+    $usage = $complete_references_entities[$target_entity->getEntityTypeId()][$target_entity->id()];
+    $this->assertEquals(1, $usage, 'Returned the correct count.');
 
     // Clean back the environment.
     $this->injectedDatabase->truncate($this->tableName);

@@ -106,4 +106,17 @@ interface EntityUsageInterface {
    */
   public function listUsage(EntityInterface $entity, $include_method = FALSE);
 
+  /**
+   * Determines referenced entities.
+   *
+   * @param \Drupal\Core\Entity\EntityInterface $entity
+   *   The entity to check for references.
+   *
+   * @return array
+   *   A nested array with usage data. The first level is keyed by the type of
+   *   the referencing entities, the second by the referencing objects id. The
+   *   value of the second level contains the usage count.
+   */
+  public function listReferencedEntities(EntityInterface $entity);
+
 }

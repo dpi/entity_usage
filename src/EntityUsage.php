@@ -172,4 +172,27 @@ class EntityUsage implements EntityUsageInterface {
 
   }
 
+  /**
+   * {@inheritdoc}
+   */
+  public function listReferencedEntities(EntityInterface $entity) {
+    $result = $this->connection->select($this->tableName, 'e')
+      ->fields('e', ['t_id', 't_type', 'count'])
+      ->condition('re_id', $entity->id())
+      ->condition('re_type', $entity->getEntityTypeId())
+      ->condition('count', 0, '>')
+      ->execute();
+    $references = [];
+    foreach ($result as $usage) {
+      $count = $usage->count;
+      // If there were previous usages recorded for this same pair of entities
+      // (with different methods), sum on the top of it.
+      if (!empty($references[$usage->t_type][$usage->t_id])) {
+        $count += $references[$usage->t_type][$usage->t_id];
+      }
+      $references[$usage->t_type][$usage->t_id] = $count;
+    }
+    return $references;
+  }
+
 }
