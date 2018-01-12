@@ -2,26 +2,16 @@
 
 namespace Drupal\entity_usage\Form;
 
-use Drupal\Core\Entity\ContentEntityInterface;
-use Drupal\Core\Entity\EntityFieldManagerInterface;
-use Drupal\Core\Entity\EntityTypeBundleInfoInterface;
+use Drupal\Component\Render\FormattableMarkup;
 use Drupal\Core\Entity\EntityTypeManagerInterface;
 use Drupal\Core\Form\FormBase;
 use Drupal\Core\Form\FormStateInterface;
-use Drupal\entity_usage\EntityUsageInterface;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 
 /**
  * Form to launch batch tracking of existing entities.
  */
 class BatchUpdateForm extends FormBase {
-
-  /**
-   * The EntityFieldManager service.
-   *
-   * @var \Drupal\Core\Entity\EntityFieldManagerInterface
-   */
-  protected $entityFieldManager;
 
   /**
    * The EntityTypeManager service.
@@ -31,57 +21,21 @@ class BatchUpdateForm extends FormBase {
   protected $entityTypeManager;
 
   /**
-   * The EntityUsage service.
-   *
-   * @var \Drupal\entity_usage\EntityUsageInterface
-   */
-  protected $entityUsage;
-
-  /**
-   * The EntityTypeBundleInfo service.
-   *
-   * @var \Drupal\Core\Entity\EntityTypeBundleInfoInterface
-   */
-  protected $bundleInfo;
-
-  /**
    * BatchUpdateForm constructor.
    *
-   * @param \Drupal\Core\Entity\EntityFieldManagerInterface $field_manager
-   *   The EntityFieldManager service.
    * @param \Drupal\Core\Entity\EntityTypeManagerInterface $entity_manager
    *   The EntityTypeManager service.
-   * @param \Drupal\entity_usage\EntityUsageInterface $entity_usage
-   *   The EntityUsage service.
-   * @param \Drupal\Core\Entity\EntityTypeBundleInfoInterface $bundle_info
-   *   The EntityTypeBundleInfo service.
    */
-  public function __construct(
-      EntityFieldManagerInterface $field_manager,
-      EntityTypeManagerInterface $entity_manager,
-      EntityUsageInterface $entity_usage,
-      EntityTypeBundleInfoInterface $bundle_info
-  ) {
-    $this->entityFieldManager = $field_manager;
+  public function __construct(EntityTypeManagerInterface $entity_manager) {
     $this->entityTypeManager = $entity_manager;
-    $this->entityUsage = $entity_usage;
-    $this->bundleInfo = $bundle_info;
   }
 
   /**
-   * Plugin create function.
-   *
-   * @param \Symfony\Component\DependencyInjection\ContainerInterface $container
-   *   The container for injecting our services.
-   *
-   * @return static
+   * {@inheritdoc}
    */
   public static function create(ContainerInterface $container) {
     return new static(
-      $container->get('entity_field.manager'),
-      $container->get('entity_type.manager'),
-      $container->get('entity_usage.usage'),
-      $container->get('entity_type.bundle.info')
+      $container->get('entity_type.manager')
     );
   }
 
@@ -101,25 +55,28 @@ class BatchUpdateForm extends FormBase {
     $types = [];
     foreach ($entity_types as $type => $entity_type) {
       // Only look for content entities.
-      if ($entity_type->isSubclassOf('\Drupal\Core\Entity\ContentEntityInterface')) {
-        $types[$type] = $type;
+      if ($entity_type->entityClassImplements('\Drupal\Core\Entity\ContentEntityInterface')) {
+        $types[$type] = new FormattableMarkup('@label (@machine_name)', [
+          '@label' => $entity_type->getLabel(),
+          '@machine_name' => $type,
+        ]);
       }
     }
 
     $form['description'] = [
-      '#type' => 'markup',
-      '#markup' => t("This form allows you to reset and track again all entity usages in your system.<br /> It may be useful if you want to have available the information about the relationships between entities before installing the module.<br /><b>Be aware though that using this operation will delete all tracked statistics and re-create everything again.</b>"),
+      '#markup' => $this->t("This form allows you to reset and track again all entity usages in your system.<br /> It may be useful if you want to have available the information about the relationships between entities before installing the module.<br /><b>Be aware though that using this operation will delete all tracked statistics and recreate everything again.</b>"),
     ];
     $form['host_entity_types'] = [
       '#type' => 'checkboxes',
-      '#title' => t('Delete and re-create all usage statistics for these entity types:'),
+      '#title' => $this->t('Delete and recreate all usage statistics for these entity types:'),
       '#options' => $types,
-      '#default_value' => $types,
-      '#disabled' => TRUE,
+      '#default_value' => array_keys($types),
     ];
-    $form['submit'] = [
+    $form['actions'] = ['#type' => 'actions'];
+    $form['actions']['submit'] = [
       '#type' => 'submit',
-      '#value' => 'Go',
+      '#button_type' => 'primary',
+      '#value' => $this->t('Recreate entity usage statistics'),
     ];
 
     return $form;
@@ -132,12 +89,8 @@ class BatchUpdateForm extends FormBase {
   public function submitForm(array &$form, FormStateInterface $form_state) {
 
     $host_entity_types = array_filter($form_state->getValue('host_entity_types'));
-    // Delete current usage statistics for these entities.
-    foreach ($host_entity_types as $type) {
-      $this->entityUsage->bulkDeleteHosts($type);
-    }
 
-    // Generate a batch to re-create the statistics for all entities.
+    // Generate a batch to recreate the statistics for all entities.
     // Note that if we force all statistics to be created, there is no need to
     // separate them between host / target cases. If all entities are going to
     // be re-tracked, tracking all of them as hosts is enough, because there
@@ -147,12 +100,10 @@ class BatchUpdateForm extends FormBase {
   }
 
   /**
-   * Create a batch to process the entities in bulk.
+   * Create a batch to process the entity types in bulk.
    *
-   * @param array $types
-   *   An array containing two arrays, keyed each by 'hosts' or 'targets'. Each
-   *   sub-array is an array of entity_types to be trated in the corresponding
-   *   condition (host or target) as defined in its first level key.
+   * @param string[] $types
+   *   An array of entity types ids.
    *
    * @return array
    *   The batch array.
@@ -161,23 +112,14 @@ class BatchUpdateForm extends FormBase {
     $operations = [];
 
     foreach ($types as $type) {
-      $entities = $this->entityTypeManager->getStorage($type)->loadMultiple();
-      foreach ($entities as $id => $entity) {
-        $operations[] = [
-          'Drupal\entity_usage\Form\BatchUpdateForm::updateHostsBatchWorker',
-          [
-            $entity,
-            $this->t('Host operation in @name', ['@name' => $entity->getEntityTypeId() . ':' . $entity->id()]),
-          ],
-        ];
-      }
+      $operations[] = ['Drupal\entity_usage\Form\BatchUpdateForm::updateHostsBatchWorker', [$type]];
     }
 
     $batch = [
       'operations' => $operations,
       'finished' => 'Drupal\entity_usage\Form\BatchUpdateForm::batchFinished',
-      'title' => $this->t('Processing batch update.'),
-      'progress_message' => $this->t('Processed @current out of @total.'),
+      'title' => $this->t('Updating entity usage statistics.'),
+      'progress_message' => $this->t('Processed @current of @total entity types.'),
       'error_message' => $this->t('This batch encountered an error.'),
     ];
 
@@ -185,23 +127,59 @@ class BatchUpdateForm extends FormBase {
   }
 
   /**
-   * Batch operation worker for re-creating statistics for entities when host.
+   * Batch operation worker for recreating statistics for host entities.
    *
-   * @param ContentEntityInterface $entity
-   *   The entity object.
-   * @param string $operation_details
-   *   Operation details information.
+   * @param string $entity_type_id
+   *   The entity type id, for example 'node'.
    * @param array $context
    *   The context array.
    */
-  public static function updateHostsBatchWorker(ContentEntityInterface $entity, $operation_details, &$context) {
+  public static function updateHostsBatchWorker($entity_type_id, array &$context) {
+    $entity_storage = \Drupal::entityTypeManager()->getStorage($entity_type_id);
+    $entity_type = \Drupal::entityTypeManager()->getDefinition($entity_type_id);
+    $entity_type_key = $entity_type->getKey('id');
 
-    // Hosts are tracked as if they were new entities.
-    \Drupal::service('entity_usage.entity_update_manager')->trackUpdateOnCreation($entity);
+    if (empty($context['sandbox']['total'])) {
+      // Delete current usage statistics for these entities.
+      \Drupal::service('entity_usage.usage')->bulkDeleteHosts($entity_type_id);
 
-    $context['results'][] = $entity->getEntityTypeId() . ':' . $entity->id();
+      $context['sandbox']['progress'] = 0;
+      $context['sandbox']['current_id'] = -1;
+      $context['sandbox']['total'] = (int) $entity_storage->getQuery()
+        ->accessCheck(FALSE)
+        ->count()
+        ->execute();
+    }
 
-    $context['message'] = t('Running batch for entity @details', ['@details' => $operation_details]);
+    $entity_ids = $entity_storage->getQuery()
+      ->condition($entity_type_key, $context['sandbox']['current_id'], '>')
+      ->range(0, 10)
+      ->accessCheck(FALSE)
+      ->sort($entity_type_key)
+      ->execute();
+
+    $entities = $entity_storage->loadMultiple($entity_ids);
+    foreach ($entities as $entity) {
+      // Hosts are tracked as if they were new entities.
+      \Drupal::service('entity_usage.entity_update_manager')->trackUpdateOnCreation($entity);
+
+      $context['sandbox']['progress']++;
+      $context['sandbox']['current_id'] = $entity->id();
+      $context['results'][] = $entity_type_id . ':' . $entity->id();
+    }
+
+    if ($context['sandbox']['progress'] < $context['sandbox']['total']) {
+      $context['finished'] = $context['sandbox']['progress'] / $context['sandbox']['total'];
+    }
+    else {
+      $context['finished'] = 1;
+    }
+
+    $context['message'] = t('Updating entity usage for @entity_type: @current of @total', [
+      '@entity_type' => $entity_type_id,
+      '@current' => $context['sandbox']['progress'],
+      '@total' => $context['sandbox']['total'],
+    ]);
   }
 
   /**
@@ -214,9 +192,9 @@ class BatchUpdateForm extends FormBase {
    * @param array $operations
    *   The operations array.
    */
-  public static function batchFinished($success, $results, $operations) {
+  public static function batchFinished($success, array $results, array $operations) {
     if ($success) {
-      drupal_set_message(t('@count operations processed.', ['@count' => count($results)]));
+      drupal_set_message(t('Recreated entity usage for @count entities.', ['@count' => count($results)]));
     }
     else {
       // An error occurred.

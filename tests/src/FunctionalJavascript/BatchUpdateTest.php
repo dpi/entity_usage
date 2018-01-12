@@ -69,10 +69,10 @@ class BatchUpdateTest extends EntityUsageJavascriptTestBase {
     $this->drupalGet('/admin/config/entity-usage/batch-update');
     $this->assertSession()->pageTextContains('Batch Update');
     $this->assertSession()->pageTextContains('This form allows you to reset and track again all entity usages in your system.');
-    $page->pressButton('Go');
+    $page->pressButton('Recreate entity usage statistics');
     $this->getSession()->wait(5000);
     $this->saveHtmlOutput();
-    $this->assertSession()->pageTextContains(' operations processed.');
+    $this->assertSession()->pageTextContains('Recreated entity usage for');
 
     // Check if the resulting usage is the expected.
     $usage = $usage_service->listUsage($node1);
