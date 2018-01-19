@@ -162,8 +162,8 @@ class ListUsageController extends ControllerBase {
     // entity. For this reason we will use the link to the parent's entity,
     // adding a note that the parent uses this entity through a paragraph.
     // @see #2414865 and related issues for more info.
-    if ($referencing_entity->getEntityTypeId() == 'paragraph') {
-      return $this->getReferencingEntityLink($referencing_entity->getParentEntity(), $referencing_entity->label());
+    if ($referencing_entity->getEntityTypeId() == 'paragraph' && $parent = $referencing_entity->getParentEntity()) {
+      return $this->getReferencingEntityLink($parent, $referencing_entity->label());
     }
 
     // As a fallback just return a non-linked label.
