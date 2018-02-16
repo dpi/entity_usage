@@ -128,10 +128,10 @@ class ListUsageController extends ControllerBase {
   public function getTitle($type, $id) {
     $entity = $this->entityTypeManager->getStorage($type)->load($id);
     if ($entity) {
-      return t('Entity usage information for @entity_label', ['@entity_label' => $entity->label()]);
+      return $this->t('Entity usage information for %entity_label', ['%entity_label' => $entity->label()]);
     }
     else {
-      return t('Entity Usage List');
+      return $this->t('Entity Usage List');
     }
   }
 
