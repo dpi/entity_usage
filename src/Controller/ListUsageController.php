@@ -2,6 +2,7 @@
 
 namespace Drupal\entity_usage\Controller;
 
+use Drupal\Core\Access\AccessResult;
 use Drupal\Core\Controller\ControllerBase;
 use Drupal\Core\Entity\ContentEntityInterface;
 use Drupal\Core\Entity\EntityTypeManagerInterface;
@@ -152,8 +153,12 @@ class ListUsageController extends ControllerBase {
    *   have only one single parent and don't have canonical template.
    */
   private function getReferencingEntityLink(ContentEntityInterface $referencing_entity, $text = NULL) {
+    $entity_label = ($referencing_entity->access('view label')) ? $referencing_entity->label() : $this->t('- Restricted access -');
     if ($referencing_entity->hasLinkTemplate('canonical')) {
-      return $referencing_entity->toLink($text);
+      $link_text = $text ?: $entity_label;
+      // Prevent 404s by exposing the text unlinked if the user has no access
+      // to view the entity.
+      return $referencing_entity->access('view') ? $referencing_entity->toLink($link_text) : $link_text;
     }
 
     // Treat paragraph entities in a special manner. Once the current paragraphs
@@ -163,11 +168,30 @@ class ListUsageController extends ControllerBase {
     // adding a note that the parent uses this entity through a paragraph.
     // @see #2414865 and related issues for more info.
     if ($referencing_entity->getEntityTypeId() == 'paragraph' && $parent = $referencing_entity->getParentEntity()) {
-      return $this->getReferencingEntityLink($parent, $referencing_entity->label());
+      return $this->getReferencingEntityLink($parent, $entity_label);
     }
 
     // As a fallback just return a non-linked label.
-    return $referencing_entity->label();
+    return $entity_label;
+  }
+
+  /**
+   * Checks access based on whether the user can view the current entity.
+   *
+   * @param string $type
+   *   The entity type.
+   * @param int $id
+   *   The entity ID.
+   *
+   * @return \Drupal\Core\Access\AccessResultInterface
+   *   The access result.
+   */
+  public function checkAccess($type, $id) {
+    $entity = $this->entityTypeManager->getStorage($type)->load($id);
+    if (!$entity || !$entity->access('view')) {
+      return AccessResult::forbidden();
+    }
+    return AccessResult::allowed();
   }
 
 }

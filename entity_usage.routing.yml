@@ -5,6 +5,7 @@ entity_usage.usage_list:
     _title_callback: 'Drupal\entity_usage\Controller\ListUsageController::getTitle'
   requirements:
     _permission: 'access entity usage statistics'
+    _custom_access: '\Drupal\entity_usage\Controller\ListUsageController::checkAccess'
 entity_usage.batch_update:
   path: '/admin/config/entity-usage/batch-update'
   defaults:
