@@ -5,27 +5,13 @@ namespace Drupal\Tests\entity_usage\FunctionalJavascript;
 use Drupal\node\Entity\Node;
 
 /**
- * Basic tests for the entity_reference and entity_embed tracking plugins.
+ * Basic functional tests for the usage tracking plugins.
  *
  * @package Drupal\Tests\entity_usage\FunctionalJavascript
  *
  * @group entity_usage
  */
 class IntegrationTest extends EntityUsageJavascriptTestBase {
-
-  /**
-   * Modules to enable.
-   *
-   * @var array
-   */
-  public static $modules = [];
-
-  /**
-   * {@inheritdoc}
-   */
-  public function setUp() {
-    parent::setUp();
-  }
 
   /**
    * Tests the tracking of nodes in some simple CRUD operations.
@@ -120,6 +106,23 @@ class IntegrationTest extends EntityUsageJavascriptTestBase {
       ->fetchField();
     $this->assertSame(FALSE, $count, 'Usage for node2 correctly cleaned up.');
 
+    // Create node 5 referencing node 4 using a linkit markup.
+    $embedded_text = '<p>foo <a data-entity-substitution="canonical" data-entity-type="node" data-entity-uuid="' . $node4->uuid() . '">linked text</a> bar</p>';
+    $node5 = Node::create([
+      'type' => 'eu_test_ct',
+      'title' => 'Node 5',
+      'field_eu_test_rich_text' => [
+        'value' => $embedded_text,
+        'format' => 'eu_test_text_format',
+      ],
+    ]);
+    $node5->save();
+    // Check that we registered correctly the relation between N5 and N2.
+    $usage = $usage_service->listUsage($node4);
+    $this->assertEquals($usage['node'], ['5' => '1'], 'Correct usage found.');
+    // Check that the method stored for the tracking is "linkit".
+    $usage = $usage_service->listUsage($node4, TRUE);
+    $this->assertEquals($usage['linkit']['node'], ['5' => '1'], 'Correct usage found.');
   }
 
 }

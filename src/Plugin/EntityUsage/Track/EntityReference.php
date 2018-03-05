@@ -20,7 +20,7 @@ use Symfony\Component\DependencyInjection\ContainerInterface;
  *   description = @Translation("Tracks usage of entities related in entity_reference fields."),
  * )
  */
-class EntityReference extends EntityUsageTrackBase implements EntityUsageTrackInterface {
+class EntityReference extends EntityUsageTrackBase {
 
   /**
    * Entity field manager service.

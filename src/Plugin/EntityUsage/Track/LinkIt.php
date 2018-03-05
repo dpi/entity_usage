@@ -8,12 +8,12 @@ use Drupal\Component\Utility\Html;
  * Tracks usage of entities related in entity_reference fields.
  *
  * @EntityUsageTrack(
- *   id = "entity_embed",
- *   label = @Translation("Entities embedded with Entity Embed"),
- *   description = @Translation("Tracks usage of entities related when embedded with Entity Embed."),
+ *   id = "linkit",
+ *   label = @Translation("Entities embedded with LinkIt"),
+ *   description = @Translation("Tracks usage of entities related when embedded with the LinkIt module."),
  * )
  */
-class EntityEmbed extends EmbedBase {
+class LinkIt extends EmbedBase {
 
   /**
    * {@inheritdoc}
@@ -22,7 +22,7 @@ class EntityEmbed extends EmbedBase {
     $dom = Html::load($text);
     $xpath = new \DOMXPath($dom);
     $entities = [];
-    foreach ($xpath->query('//drupal-entity[@data-entity-type and @data-entity-uuid]') as $node) {
+    foreach ($xpath->query('//a[@data-entity-type and @data-entity-uuid]') as $node) {
       // Note that this does not cover 100% of the situations. In the (unlikely
       // but possible) use case where the user embeds the same entity twice in
       // the same field, we are just recording 1 usage for this target entity,

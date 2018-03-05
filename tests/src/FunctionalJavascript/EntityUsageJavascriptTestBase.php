@@ -16,7 +16,7 @@ abstract class EntityUsageJavascriptTestBase extends JavascriptTestBase {
    *
    * @var array
    */
-  public static $modules = [
+  protected static $modules = [
     'node',
     'field_ui',
     'system',
