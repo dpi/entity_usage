@@ -12,9 +12,7 @@ use Drupal\FunctionalJavascriptTests\JavascriptTestBase;
 abstract class EntityUsageJavascriptTestBase extends JavascriptTestBase {
 
   /**
-   * Modules to enable.
-   *
-   * @var array
+   * {@inheritdoc}
    */
   protected static $modules = [
     'node',

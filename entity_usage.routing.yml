@@ -13,3 +13,10 @@ entity_usage.batch_update:
     _title: 'Batch Update'
   requirements:
     _permission: 'perform batch updates entity usage'
+entity_usage.settings.form:
+  path: '/admin/config/entity-usage/settings'
+  defaults:
+    _form: '\Drupal\entity_usage\Form\EntityUsageSettingsForm'
+    _title: 'Entity Usage Settings'
+  requirements:
+    _permission: 'administer entity usage'

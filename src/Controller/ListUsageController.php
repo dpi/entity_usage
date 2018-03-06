@@ -59,6 +59,9 @@ class ListUsageController extends ControllerBase {
    *   The entity type.
    * @param int $id
    *   The entity ID.
+   *
+   * @return array
+   *   The page build to be rendered.
    */
   public function listUsagePage($type, $id) {
     $entity_types = array_keys($this->entityTypeManager->getDefinitions());
@@ -109,7 +112,7 @@ class ListUsageController extends ControllerBase {
     else {
       // Non-existing entity in database.
       $build = [
-        '#markup' => t('Could not find the entity of type: @type with id: @id', ['@type' => $type, '@id' => $id]),
+        '#markup' => $this->t('Could not find the entity of type: @type with id: @id', ['@type' => $type, '@id' => $id]),
       ];
     }
     return $build;
