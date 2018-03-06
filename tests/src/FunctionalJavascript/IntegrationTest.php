@@ -2,6 +2,10 @@
 
 namespace Drupal\Tests\entity_usage\FunctionalJavascript;
 
+use Drupal\Core\Field\FieldStorageDefinitionInterface;
+use Drupal\field\Entity\FieldConfig;
+use Drupal\field\Entity\FieldStorageConfig;
+use Drupal\link\LinkItemInterface;
 use Drupal\node\Entity\Node;
 
 /**
@@ -14,11 +18,19 @@ use Drupal\node\Entity\Node;
 class IntegrationTest extends EntityUsageJavascriptTestBase {
 
   /**
+   * {@inheritdoc}
+   */
+  protected static $modules = [
+    'link',
+  ];
+
+  /**
    * Tests the tracking of nodes in some simple CRUD operations.
    */
   public function testCrudTracking() {
-
     $page = $this->getSession()->getPage();
+    $assert_session = $this->assertSession();
+
     /** @var \Drupal\entity_usage\EntityUsage $usage_service */
     $usage_service = \Drupal::service('entity_usage.usage');
 
@@ -26,7 +38,7 @@ class IntegrationTest extends EntityUsageJavascriptTestBase {
     $this->drupalGet('/node/add/eu_test_ct');
     $page->fillField('title[0][value]', 'Node 1');
     $page->pressButton('Save');
-    $this->assertSession()->pageTextContains('eu_test_ct Node 1 has been created.');
+    $assert_session->pageTextContains('eu_test_ct Node 1 has been created.');
     $this->saveHtmlOutput();
     $node1 = Node::load(1);
 
@@ -35,7 +47,7 @@ class IntegrationTest extends EntityUsageJavascriptTestBase {
     $page->fillField('title[0][value]', 'Node 2');
     $page->fillField('field_eu_test_related_nodes[0][target_id]', 'Node 1 (1)');
     $page->pressButton('Save');
-    $this->assertSession()->pageTextContains('eu_test_ct Node 2 has been created.');
+    $assert_session->pageTextContains('eu_test_ct Node 2 has been created.');
     $this->saveHtmlOutput();
     $node2 = Node::load(2);
     // Check that we registered correctly the relation between N2 and N1.
@@ -123,6 +135,103 @@ class IntegrationTest extends EntityUsageJavascriptTestBase {
     // Check that the method stored for the tracking is "linkit".
     $usage = $usage_service->listUsage($node4, TRUE);
     $this->assertEquals($usage['linkit']['node'], ['5' => '1'], 'Correct usage found.');
+  }
+
+  /**
+   * Tests the tracking of nodes in link fields.
+   */
+  public function testLinkTracking() {
+    $page = $this->getSession()->getPage();
+    $assert_session = $this->assertSession();
+
+    /** @var \Drupal\entity_usage\EntityUsage $usage_service */
+    $usage_service = \Drupal::service('entity_usage.usage');
+
+    // Add a link field to our test content type.
+    $field_storage = FieldStorageConfig::create([
+      'field_name' => 'field_link1',
+      'entity_type' => 'node',
+      'type' => 'link',
+      'cardinality' => FieldStorageDefinitionInterface::CARDINALITY_UNLIMITED,
+      'settings' => [],
+    ]);
+    $field_storage->save();
+    $field = FieldConfig::create([
+      'field_storage' => $field_storage,
+      'bundle' => 'eu_test_ct',
+      'settings' => [
+        'title' => DRUPAL_OPTIONAL,
+        'link_type' => LinkItemInterface::LINK_GENERIC,
+      ],
+    ]);
+    $field->save();
+
+    entity_get_form_display('node', 'eu_test_ct', 'default')
+      ->setComponent('field_link1', ['type' => 'link_default'])
+      ->save();
+
+    entity_get_display('node', 'eu_test_ct', 'default')
+      ->setComponent('field_link1', ['type' => 'link'])
+      ->save();
+
+    // Create Node 1.
+    $this->drupalGet('/node/add/eu_test_ct');
+    $page->fillField('title[0][value]', 'Node 1');
+    $page->pressButton('Save');
+    $assert_session->pageTextContains('eu_test_ct Node 1 has been created.');
+    $this->saveHtmlOutput();
+    $node1_id = \Drupal::entityQuery('node')
+      ->sort('changed', 'DESC')
+      ->execute();
+    $node1_id = reset($node1_id);
+    $this->assertNotNull($node1_id);
+    $node1 = \Drupal::entityTypeManager()->getStorage('node')
+      ->loadUnchanged($node1_id);
+
+    // Create Node 2, referencing Node 1.
+    $this->drupalGet('/node/add/eu_test_ct');
+    $page->fillField('title[0][value]', 'Node 2');
+    $page->fillField('field_link1[0][uri]', "Node 1 ($node1_id)");
+    $page->fillField('field_link1[0][title]', "Linked text");
+    $page->pressButton('Save');
+    $assert_session->pageTextContains('eu_test_ct Node 2 has been created.');
+    $this->saveHtmlOutput();
+    $node2_id = \Drupal::entityQuery('node')
+      ->sort('changed', 'DESC')
+      ->execute();
+    $node2_id = reset($node2_id);
+    $this->assertNotNull($node2_id);
+    $node2 = \Drupal::entityTypeManager()->getStorage('node')
+      ->loadUnchanged($node2_id);
+    // Check that the usage of Node 1 points to Node 2.
+    $usage = $usage_service->listUsage($node1, TRUE);
+    $this->assertEquals([$node2_id => '1'], $usage['link']['node']);
+
+    // Edit Node 2, remove reference.
+    $this->drupalGet("/node/{$node2_id}/edit");
+    $page->fillField('field_link1[0][uri]', '');
+    $page->fillField('field_link1[0][title]', '');
+    $page->pressButton('Save');
+    $assert_session->pageTextContains('eu_test_ct Node 2 has been updated.');
+    $this->saveHtmlOutput();
+    // Verify the usage was released.
+    $usage = $usage_service->listUsage($node1);
+    $this->assertEquals([], $usage);
+
+    // Reference Node 1 again, and then delete the host node.
+    $this->drupalGet("/node/{$node2_id}/edit");
+    $page->fillField('field_link1[0][uri]', "Node 1 ($node1_id)");
+    $page->fillField('field_link1[0][title]', "Linked text");
+    $page->pressButton('Save');
+    $assert_session->pageTextContains('eu_test_ct Node 2 has been updated.');
+    $this->saveHtmlOutput();
+    // Usage now should be there.
+    $usage = $usage_service->listUsage($node1, TRUE);
+    $this->assertEquals([$node2_id => '1'], $usage['link']['node']);
+    // Delete the host and usage should be released.
+    $node2->delete();
+    $usage = $usage_service->listUsage($node1);
+    $this->assertEquals([], $usage);
   }
 
 }
