@@ -78,6 +78,7 @@ class EntityUsageSettingsForm extends ConfigFormBase {
    */
   public function buildForm(array $form, FormStateInterface $form_state) {
     $config = $this->config('entity_usage.settings');
+    $configured_types = $config->get('local_task_enabled_entity_types') ?: [];
 
     $form['local_task_enabled_entity_types'] = [
       '#type' => 'details',
@@ -93,7 +94,7 @@ class EntityUsageSettingsForm extends ConfigFormBase {
         $form['local_task_enabled_entity_types'][$entity_type_id] = [
           '#type' => 'checkbox',
           '#title' => $entity_type->getLabel(),
-          '#default_value' => in_array($entity_type_id, $config->get('local_task_enabled_entity_types')),
+          '#default_value' => in_array($entity_type_id, $configured_types),
         ];
       }
     }

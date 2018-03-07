@@ -46,7 +46,7 @@ class RouteSubscriber extends RouteSubscriberBase {
    * {@inheritdoc}
    */
   protected function alterRoutes(RouteCollection $collection) {
-    $configured_types = $this->config->get('entity_usage.settings')->get('local_task_enabled_entity_types');
+    $configured_types = $this->config->get('entity_usage.settings')->get('local_task_enabled_entity_types') ?: [];
 
     foreach ($this->entityTypeManager->getDefinitions() as $entity_type_id => $entity_type) {
       if (($entity_type instanceof ContentEntityTypeInterface) && $canonical = $entity_type->getLinkTemplate('canonical')) {
