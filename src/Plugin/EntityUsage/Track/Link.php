@@ -89,8 +89,10 @@ class Link extends EntityUsageTrackBase {
         foreach ($entity->{$field_name} as $field_item) {
           // This item got added. Track the usage up.
           $target_entity = $this->getTargetEntity($field_item);
-          list($target_type, $target_id) = explode('|', $target_entity);
-          $this->usageService->add($target_id, $target_type, $entity->id(), $entity->getEntityTypeId(), $this->pluginId);
+          if ($target_entity) {
+            list($target_type, $target_id) = explode('|', $target_entity);
+            $this->usageService->add($target_id, $target_type, $entity->id(), $entity->getEntityTypeId(), $this->pluginId);
+          }
         }
       }
     }
@@ -192,8 +194,10 @@ class Link extends EntityUsageTrackBase {
           foreach ($translation->{$field_name} as $field_item) {
             // This item got deleted. Track the usage down.
             $target_entity = $this->getTargetEntity($field_item);
-            list($target_type, $target_id) = explode('|', $target_entity);
-            $this->usageService->delete($target_id, $target_type, $entity->id(), $entity->getEntityTypeId());
+            if ($target_entity) {
+              list($target_type, $target_id) = explode('|', $target_entity);
+              $this->usageService->delete($target_id, $target_type, $entity->id(), $entity->getEntityTypeId());
+            }
           }
         }
       }
