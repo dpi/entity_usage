@@ -10,83 +10,87 @@ use Drupal\Core\Entity\EntityInterface;
 interface EntityUsageInterface {
 
   /**
-   * Records that an entity is referencing another entity.
+   * Records that a source entity is referencing a target entity.
    *
    * Examples:
    * - A node that references another node using an entityreference field.
    *
-   * @param int $t_id
-   *   The identifier of the target entity.
-   * @param string $t_type
-   *   The type of the target entity.
-   * @param int $re_id
-   *   The identifier of the referencing entity.
-   * @param string $re_type
-   *   The type of the entity that is referencing.
+   * @param int $target_id
+   *   The target entity ID.
+   * @param string $target_type
+   *   The target entity type.
+   * @param int $source_id
+   *   The source entity ID.
+   * @param string $source_type
+   *   The source entity type.
    * @param string $method
-   *   (optional) The method or way the two entities are being referenced.
+   *   (optional) The method the target entities is being referenced.
    *   Defaults to 'entity_reference'.
    * @param string $field_name
-   *   (optional) The name of the field in the referencing entity using the
+   *   (optional) The name of the field in the source entity using the
    *   target entity. Defaults to NULL.
    * @param int $count
    *   (optional) The number of references to add to the object. Defaults to 1.
    */
-  public function add($t_id, $t_type, $re_id, $re_type, $method = 'entity_reference', $field_name = NULL, $count = 1);
+  public function add($target_id, $target_type, $source_id, $source_type, $method = 'entity_reference', $field_name = NULL, $count = 1);
 
   /**
-   * Remove a record indicating that the entity is not being referenced anymore.
+   * Records that a source entity is no longer referencing a target entity.
    *
-   * @param int $t_id
-   *   The identifier of the target entity.
-   * @param string $t_type
-   *   The type of the target entity.
-   * @param int $re_id
-   *   (optional) The unique, numerid ID of the object containing the referenced
-   *   entity. May be omitted if all references to an entity are being deleted.
-   *   Defaults to NULL.
-   * @param string $re_type
-   *   (optional) The type of the object containing the referenced entity. May
-   *   be omitted if all entity-type references to a file are being deleted.
-   *   Defaults to NULL.
+   * @param int $target_id
+   *   The target entity ID.
+   * @param string $target_type
+   *   The target entity type.
+   * @param int $source_id
+   *   (optional) The source entity ID. May be omitted if all references to an
+   *   entity are being deleted. Defaults to NULL.
+   * @param string $source_type
+   *   (optional) The source entity type. May be omitted if all entity type
+   *   references to a target are being deleted. Defaults to NULL.
    * @param string $field_name
-   *   (optional) The name of the field in the referencing entity using the
+   *   (optional) The name of the field in the source entity using the
    *   target entity. Defaults to NULL.
    * @param int $count
    *   (optional) The number of references to delete from the object. Defaults
    *   to 1. Zero may be specified to delete all references to the entity within
    *   a specific object.
    */
-  public function delete($t_id, $t_type, $re_id = NULL, $re_type = NULL, $field_name = NULL, $count = 1);
+  public function delete($target_id, $target_type, $source_id = NULL, $source_type = NULL, $field_name = NULL, $count = 1);
 
   /**
-   * Remove all records of a given entity_type (target).
+   * Remove all records of a given target entity type.
    *
-   * @param string $t_type
-   *   The type of the target entity (referenced).
+   * @param string $target_type
+   *   The target entity type.
    */
-  public function bulkDeleteTargets($t_type);
+  public function bulkDeleteTargets($target_type);
 
   /**
-   * Remove all records of a given entity_type (host).
+   * Remove all records of a given source entity type.
    *
-   * @param string $re_type
-   *   The type of the referencing entity (host).
+   * @param string $source_type
+   *   The source entity type.
    */
-  public function bulkDeleteHosts($re_type);
+  public function bulkDeleteSources($source_type);
 
   /**
-   * Determines where an entity is used.
+   * Provide a list of all referencing source entities for a target entity.
    *
    * Examples:
    *  - Return example 1:
    *  [
    *    'node' => [
-   *      123 => 1,
-   *      124 => 1,
+   *      123 => [
+   *        'field_name' => 1,
+   *      ],
+   *      124 => [
+   *        'field_name' => 1,
+   *      ],
    *    ],
    *    'user' => [
-   *      2 => 1,
+   *      2 => [
+   *        'field_name' => 1,
+   *      ],
    *    ],
    *  ]
    *  - Return example 2:
@@ -97,32 +101,34 @@ interface EntityUsageInterface {
    *    ]
    *  ]
    *
-   * @param \Drupal\Core\Entity\EntityInterface $entity
-   *   A target (referenced) entity.
+   * @param \Drupal\Core\Entity\EntityInterface $target_entity
+   *   A target entity.
    * @param bool $include_method
    *   (optional) Whether the results must be wrapped into an additional array
    *   level, by the reference method. Defaults to FALSE.
    *
    * @return array
    *   A nested array with usage data. The first level is keyed by the type of
-   *   the referencing entities, the second by the referencing objects id. The
-   *   value of the second level contains the usage count.
+   *   the source entities, the second by the source id and the third the field
+   *   name. The value of the third level contains the usage count.
    *   Note that if $include_method is TRUE, the first level is keyed by the
    *   reference method, and the second level will continue as explained above.
    */
-  public function listUsage(EntityInterface $entity, $include_method = FALSE);
+  public function listUsage(EntityInterface $target_entity, $include_method = FALSE);
 
   /**
-   * Determines referenced entities.
+   * Provide a list of all referenced target entities for a source entity.
    *
-   * @param \Drupal\Core\Entity\EntityInterface $entity
-   *   The entity to check for references.
+   * @param \Drupal\Core\Entity\EntityInterface $source_entity
+   *   The source entity to check for references.
    *
    * @return array
    *   A nested array with usage data. The first level is keyed by the type of
-   *   the referencing entities, the second by the referencing objects id. The
-   *   value of the second level contains the usage count.
+   *   the target entities, the second by the target id and the third
+   *   the field name. The value of the third level contains the usage count.
+   *
+   * @see \Drupal\entity_usage\EntityUsageInterface::listUsage()
    */
-  public function listReferencedEntities(EntityInterface $entity);
+  public function listReferencedEntities(EntityInterface $source_entity);
 
 }

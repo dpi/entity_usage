@@ -106,7 +106,6 @@ class EntityUsageSettingsForm extends ConfigFormBase {
    * {@inheritdoc}
    */
   public function submitForm(array &$form, FormStateInterface $form_state) {
-
     $config = $this->config('entity_usage.settings');
 
     $form_state->cleanValues();

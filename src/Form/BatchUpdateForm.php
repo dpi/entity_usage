@@ -50,7 +50,6 @@ class BatchUpdateForm extends FormBase {
    * {@inheritdoc}
    */
   public function buildForm(array $form, FormStateInterface $form_state) {
-
     $entity_types = $this->entityTypeManager->getDefinitions();
     $types = [];
     foreach ($entity_types as $type => $entity_type) {
@@ -66,7 +65,7 @@ class BatchUpdateForm extends FormBase {
     $form['description'] = [
       '#markup' => $this->t("This form allows you to reset and track again all entity usages in your system.<br /> It may be useful if you want to have available the information about the relationships between entities before installing the module.<br /><b>Be aware though that using this operation will delete all tracked statistics and recreate everything again.</b>"),
     ];
-    $form['host_entity_types'] = [
+    $form['source_entity_types'] = [
       '#type' => 'checkboxes',
       '#title' => $this->t('Delete and recreate all usage statistics for these entity types:'),
       '#options' => $types,
@@ -80,22 +79,20 @@ class BatchUpdateForm extends FormBase {
     ];
 
     return $form;
-
   }
 
   /**
    * {@inheritdoc}
    */
   public function submitForm(array &$form, FormStateInterface $form_state) {
-
-    $host_entity_types = array_filter($form_state->getValue('host_entity_types'));
+    $source_entity_types = array_filter($form_state->getValue('source_entity_types'));
 
     // Generate a batch to recreate the statistics for all entities.
     // Note that if we force all statistics to be created, there is no need to
-    // separate them between host / target cases. If all entities are going to
-    // be re-tracked, tracking all of them as hosts is enough, because there
-    // could never be a target without host.
-    $batch = $this->generateBatch($host_entity_types);
+    // separate them between source / target cases. If all entities are
+    // going to be re-tracked, tracking all of them as source is enough, because
+    // there could never be a target without a source.
+    $batch = $this->generateBatch($source_entity_types);
     batch_set($batch);
   }
 
@@ -112,7 +109,7 @@ class BatchUpdateForm extends FormBase {
     $operations = [];
 
     foreach ($types as $type) {
-      $operations[] = ['Drupal\entity_usage\Form\BatchUpdateForm::updateHostsBatchWorker', [$type]];
+      $operations[] = ['Drupal\entity_usage\Form\BatchUpdateForm::updateSourcesBatchWorker', [$type]];
     }
 
     $batch = [
@@ -127,21 +124,21 @@ class BatchUpdateForm extends FormBase {
   }
 
   /**
-   * Batch operation worker for recreating statistics for host entities.
+   * Batch operation worker for recreating statistics for source entities.
    *
    * @param string $entity_type_id
    *   The entity type id, for example 'node'.
    * @param array $context
    *   The context array.
    */
-  public static function updateHostsBatchWorker($entity_type_id, array &$context) {
+  public static function updateSourcesBatchWorker($entity_type_id, array &$context) {
     $entity_storage = \Drupal::entityTypeManager()->getStorage($entity_type_id);
     $entity_type = \Drupal::entityTypeManager()->getDefinition($entity_type_id);
     $entity_type_key = $entity_type->getKey('id');
 
     if (empty($context['sandbox']['total'])) {
       // Delete current usage statistics for these entities.
-      \Drupal::service('entity_usage.usage')->bulkDeleteHosts($entity_type_id);
+      \Drupal::service('entity_usage.usage')->bulkDeleteSources($entity_type_id);
 
       $context['sandbox']['progress'] = 0;
       $context['sandbox']['current_id'] = -1;
@@ -160,7 +157,7 @@ class BatchUpdateForm extends FormBase {
 
     $entities = $entity_storage->loadMultiple($entity_ids);
     foreach ($entities as $entity) {
-      // Hosts are tracked as if they were new entities.
+      // Sources are tracked as if they were new entities.
       \Drupal::service('entity_usage.entity_update_manager')->trackUpdateOnCreation($entity);
 
       $context['sandbox']['progress']++;

@@ -33,22 +33,18 @@ class EntityUpdateManager {
    * @param \Drupal\entity_usage\EntityUsageTrackManager $track_manager
    *   The PluginManager track service.
    */
-  public function __construct(
-    EntityUsage $usage_service,
-    EntityUsageTrackManager $track_manager
-  ) {
+  public function __construct(EntityUsage $usage_service, EntityUsageTrackManager $track_manager) {
     $this->usageService = $usage_service;
     $this->trackManager = $track_manager;
   }
 
   /**
-   * Track updates on creation of potential host entities.
+   * Track updates on creation of potential source entities.
    *
    * @param \Drupal\Core\Entity\ContentEntityInterface $entity
    *   The entity we are dealing with.
    */
   public function trackUpdateOnCreation(ContentEntityInterface $entity) {
-
     // Only act on content entities.
     if (!($entity instanceof ContentEntityInterface)) {
       return;
@@ -60,17 +56,15 @@ class EntityUpdateManager {
       $instance = $this->trackManager->createInstance($plugin_id);
       $instance->trackOnEntityCreation($entity);
     }
-
   }
 
   /**
-   * Track updates on deletion of potential host entities.
+   * Track updates on deletion of potential source entities.
    *
    * @param \Drupal\Core\Entity\ContentEntityInterface $entity
    *   The entity we are dealing with.
    */
   public function trackUpdateOnDeletion(ContentEntityInterface $entity) {
-
     // Only act on content entities.
     if (!($entity instanceof ContentEntityInterface)) {
       return;
@@ -83,19 +77,16 @@ class EntityUpdateManager {
       $instance->trackOnEntityDeletion($entity);
     }
 
-    // Now clean the possible usage of the entity that was deleted when target.
     $this->usageService->delete($entity->id(), $entity->getEntityTypeId());
-
   }
 
   /**
-   * Track updates on edit / update of potential host entities.
+   * Track updates on edit / update of potential source entities.
    *
    * @param \Drupal\Core\Entity\ContentEntityInterface $entity
    *   The entity we are dealing with.
    */
   public function trackUpdateOnEdition(ContentEntityInterface $entity) {
-
     // Only act on content entities.
     if (!($entity instanceof ContentEntityInterface)) {
       return;
@@ -107,7 +98,6 @@ class EntityUpdateManager {
       $instance = $this->trackManager->createInstance($plugin_id);
       $instance->trackOnEntityUpdate($entity);
     }
-
   }
 
 }

@@ -32,7 +32,6 @@ class ListControllerTest extends EntityUsageJavascriptTestBase {
    * @covers \Drupal\entity_usage\Controller\ListUsageController::listUsagePage
    */
   public function testListController() {
-
     $page = $this->getSession()->getPage();
 
     // Create node 1.
@@ -70,10 +69,10 @@ class ListControllerTest extends EntityUsageJavascriptTestBase {
     $this->assertSession()->pageTextContains('Entity usage information for Node 1');
 
     // Check table headers are present.
-    $this->assertSession()->pageTextContains('Referencing entity');
-    $this->assertSession()->pageTextContains('Referencing entity type');
-    $this->assertSession()->pageTextContains('Referencing method');
-    $this->assertSession()->pageTextContains('Referencing field');
+    $this->assertSession()->pageTextContains('Entity');
+    $this->assertSession()->pageTextContains('Entity type');
+    $this->assertSession()->pageTextContains('Method');
+    $this->assertSession()->pageTextContains('Field');
     $this->assertSession()->pageTextContains('Count');
 
     // Check both referencing nodes are linked.
@@ -86,7 +85,7 @@ class ListControllerTest extends EntityUsageJavascriptTestBase {
     $first_row_title = $this->xpath('//table/tbody/tr[1]/td[1]')[0];
     $this->assertEquals('Node 2', $first_row_title->getText());
     $first_row_type = $this->xpath('//table/tbody/tr[1]/td[2]')[0];
-    $this->assertEquals('node', $first_row_type->getText());
+    $this->assertEquals('Content', $first_row_type->getText());
     $first_row_method = $this->xpath('//table/tbody/tr[1]/td[3]')[0];
     $this->assertEquals('entity_reference', $first_row_method->getText());
     $first_row_field_label = $this->xpath('//table/tbody/tr[1]/td[4]')[0];
@@ -97,7 +96,7 @@ class ListControllerTest extends EntityUsageJavascriptTestBase {
     $second_row_title = $this->xpath('//table/tbody/tr[2]/td[1]')[0];
     $this->assertEquals('Node 3', $second_row_title->getText());
     $second_row_type = $this->xpath('//table/tbody/tr[2]/td[2]')[0];
-    $this->assertEquals('node', $second_row_type->getText());
+    $this->assertEquals('Content', $second_row_type->getText());
     $second_row_method = $this->xpath('//table/tbody/tr[2]/td[3]')[0];
     $this->assertEquals('entity_embed', $second_row_method->getText());
     $second_row_field_label = $this->xpath('//table/tbody/tr[2]/td[4]')[0];

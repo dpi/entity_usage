@@ -1,5 +1,5 @@
 entity_usage.usage_list:
-  path: '/admin/content/entity-usage/{type}/{id}'
+  path: '/admin/content/entity-usage/{entity_type}/{entity_id}'
   defaults:
     _controller: 'Drupal\entity_usage\Controller\ListUsageController::listUsagePage'
     _title_callback: 'Drupal\entity_usage\Controller\ListUsageController::getTitle'

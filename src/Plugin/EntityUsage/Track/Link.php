@@ -213,7 +213,7 @@ class Link extends EntityUsageTrackBase {
    * @return array
    *   An array of field_names that could reference to other content entities.
    */
-  private function linkFieldsAvailable(ContentEntityInterface $entity) {
+  protected function linkFieldsAvailable(ContentEntityInterface $entity) {
     $return_fields = [];
     $fields_on_entity = $this->entityFieldManager->getFieldDefinitions($entity->getEntityTypeId(), $entity->bundle());
     $link_fields_on_this_entity_type = [];
@@ -234,13 +234,13 @@ class Link extends EntityUsageTrackBase {
    * Gets the target entity of a link item.
    *
    * @param \Drupal\link\LinkItemInterface $link
-   *   The LinkItem to get the target from.
+   *   The LinkItem to get the target entity from.
    *
    * @return string|null
    *   Target Type and ID glued together with a '|' or NULL if no entity linked.
    */
-  private function getTargetEntity(LinkItemInterface $link) {
-    // Check if LinkItem is linking to an entity.
+  protected function getTargetEntity(LinkItemInterface $link) {
+    // Check if the link is referencing an entity.
     $url = $link->getUrl();
     if (!$url->isRouted() || !preg_match('/^entity\./', $url->getRouteName())) {
       return NULL;

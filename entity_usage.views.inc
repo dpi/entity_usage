@@ -14,7 +14,7 @@ function entity_usage_views_data() {
 
   $data['entity_usage']['count'] = [
     'title' => t('Usage count'),
-    'help' => t('How many times the target entity is referenced by the referencing entity.'),
+    'help' => t('How many times the target entity is referenced by the source entity.'),
     'field' => [
       'id' => 'numeric',
     ],
@@ -52,13 +52,13 @@ function entity_usage_views_data_alter(array &$data) {
         'help' => t('Creates a relationship about this <em>@entity_type</em> and the entity_usage information that relates to it.', ['@entity_type' => $entity_type->getLabel()]),
         'relationship' => [
           'base' => 'entity_usage',
-          'base field' => 't_id',
+          'base field' => 'target_id',
           'field' => $entity_type->getKey('id'),
           'id' => 'standard',
           'label' => t('Usage information (@entity_type)', ['@entity_type' => $entity_type->getLabel()]),
           'extra' => [
             [
-              'field' => 't_type',
+              'field' => 'target_type',
               'value' => $type,
             ],
           ],
@@ -71,13 +71,13 @@ function entity_usage_views_data_alter(array &$data) {
         'help' => t('Creates a relationship about this <em>@entity_type</em> and the entity_usage information that relates to it.', ['@entity_type' => $entity_type->getLabel()]),
         'relationship' => [
           'base' => 'entity_usage',
-          'base field' => 't_id',
+          'base field' => 'target_id',
           'field' => $entity_type->getKey('id'),
           'id' => 'standard',
           'label' => t('Usage information (@entity_type)', ['@entity_type' => $entity_type->getLabel()]),
           'extra' => [
             [
-              'field' => 't_type',
+              'field' => 'target_type',
               'value' => $type,
             ],
           ],

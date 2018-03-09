@@ -61,51 +61,52 @@ class ListUsageController extends ControllerBase {
   /**
    * Lists the usage of a given entity.
    *
-   * @param string $type
+   * @param string $entity_type
    *   The entity type.
-   * @param int $id
+   * @param int $entity_id
    *   The entity ID.
    *
    * @return array
    *   The page build to be rendered.
+   *
+   * @throws \Symfony\Component\HttpKernel\Exception\NotFoundHttpException
    */
-  public function listUsagePage($type, $id) {
-    $entity_types = array_keys($this->entityTypeManager->getDefinitions());
-    if (!is_string($type) || !is_numeric($id) || !in_array($type, $entity_types)) {
+  public function listUsagePage($entity_type, $entity_id) {
+    $entity_types = $this->entityTypeManager->getDefinitions();
+
+    if (!is_string($entity_type) || !is_numeric($entity_id) || !array_key_exists($entity_type, $entity_types)) {
       throw new NotFoundHttpException();
     }
-    $entity = $this->entityTypeManager->getStorage($type)->load($id);
+
+    $entity = $this->entityTypeManager->getStorage($entity_type)->load($entity_id);
     if ($entity) {
       $usages = $this->entityUsage->listUsage($entity, TRUE);
       if (empty($usages)) {
-        // Entity exists but not used.
         $build = [
-          '#markup' => $this->t('There are no recorded usages for entity of type: @type with id: @id', ['@type' => $type, '@id' => $id]),
+          '#markup' => $this->t('There are no recorded usages for entity of type: @type with id: @id', ['@type' => $entity_type, '@id' => $entity_id]),
         ];
       }
       else {
-        // Entity is being used.
         $header = [
-          $this->t('Referencing entity'),
-          $this->t('Referencing entity type'),
-          $this->t('Referencing method'),
-          $this->t('Referencing field'),
+          $this->t('Entity'),
+          $this->t('Type'),
+          $this->t('Method'),
+          $this->t('Field'),
           $this->t('Count'),
         ];
         $rows = [];
         foreach ($usages as $method => $method_usages) {
-          foreach ($method_usages as $re_type => $type_usages) {
-            foreach ($type_usages as $re_id => $field_names) {
-              $referencing_entity = $this->entityTypeManager->getStorage($re_type)
-                ->load($re_id);
-              if ($referencing_entity) {
-                $field_definitions = $this->entityFieldManager->getFieldDefinitions($referencing_entity->getEntityTypeId(), $referencing_entity->bundle());
+          foreach ($method_usages as $source_type => $source_type_usages) {
+            foreach ($source_type_usages as $source_id => $field_names) {
+              $source_entity = $this->entityTypeManager->getStorage($source_type)->load($source_id);
+              if ($source_entity) {
+                $field_definitions = $this->entityFieldManager->getFieldDefinitions($source_entity->getEntityTypeId(), $source_entity->bundle());
                 foreach ($field_names as $field_name => $count) {
-                  $link = $this->getReferencingEntityLink($referencing_entity);
+                  $link = $this->getSourceEntityLink($source_entity);
                   $field_label = isset($field_definitions[$field_name]) ? $field_definitions[$field_name]->getLabel() : $this->t('Unknown');
                   $rows[] = [
                     $link,
-                    $re_type,
+                    $entity_types[$source_type]->getLabel(),
                     $method,
                     $field_label,
                     $count,
@@ -125,7 +126,7 @@ class ListUsageController extends ControllerBase {
     else {
       // Non-existing entity in database.
       $build = [
-        '#markup' => $this->t('Could not find the entity of type: @type with id: @id', ['@type' => $type, '@id' => $id]),
+        '#markup' => $this->t('Could not find the entity of type: @type with id: @id', ['@type' => $entity_type, '@id' => $entity_id]),
       ];
     }
     return $build;
@@ -134,29 +135,27 @@ class ListUsageController extends ControllerBase {
   /**
    * Title page callback.
    *
-   * @param string $type
+   * @param string $entity_type
    *   The entity type.
-   * @param int $id
+   * @param int $entity_id
    *   The entity id.
    *
    * @return string
    *   The title to be used on this page.
    */
-  public function getTitle($type, $id) {
-    $entity = $this->entityTypeManager->getStorage($type)->load($id);
+  public function getTitle($entity_type, $entity_id) {
+    $entity = $this->entityTypeManager->getStorage($entity_type)->load($entity_id);
     if ($entity) {
       return $this->t('Entity usage information for %entity_label', ['%entity_label' => $entity->label()]);
     }
-    else {
-      return $this->t('Entity Usage List');
-    }
+    return $this->t('Entity Usage List');
   }
 
   /**
-   * Retrieve a link to the referencing entity.
+   * Retrieve a link to the source entity.
    *
-   * @param \Drupal\Core\Entity\ContentEntityInterface $referencing_entity
-   *   The fully-loaded referencing entity.
+   * @param \Drupal\Core\Entity\ContentEntityInterface $source_entity
+   *   The source entity.
    * @param string|null $text
    *   (optional) The link text for the anchor tag as a translated string.
    *   If NULL, it will use the entity's label. Defaults to NULL.
@@ -168,13 +167,13 @@ class ListUsageController extends ControllerBase {
    *   return the link to its parent entity, relying on the fact that paragraphs
    *   have only one single parent and don't have canonical template.
    */
-  private function getReferencingEntityLink(ContentEntityInterface $referencing_entity, $text = NULL) {
-    $entity_label = ($referencing_entity->access('view label')) ? $referencing_entity->label() : $this->t('- Restricted access -');
-    if ($referencing_entity->hasLinkTemplate('canonical')) {
+  protected function getSourceEntityLink(ContentEntityInterface $source_entity, $text = NULL) {
+    $entity_label = $source_entity->access('view label') ? $source_entity->label() : $this->t('- Restricted access -');
+    if ($source_entity->hasLinkTemplate('canonical')) {
       $link_text = $text ?: $entity_label;
       // Prevent 404s by exposing the text unlinked if the user has no access
       // to view the entity.
-      return $referencing_entity->access('view') ? $referencing_entity->toLink($link_text) : $link_text;
+      return $source_entity->access('view') ? $source_entity->toLink($link_text) : $link_text;
     }
 
     // Treat paragraph entities in a special manner. Once the current paragraphs
@@ -183,8 +182,8 @@ class ListUsageController extends ControllerBase {
     // entity. For this reason we will use the link to the parent's entity,
     // adding a note that the parent uses this entity through a paragraph.
     // @see #2414865 and related issues for more info.
-    if ($referencing_entity->getEntityTypeId() == 'paragraph' && $parent = $referencing_entity->getParentEntity()) {
-      return $this->getReferencingEntityLink($parent, $entity_label);
+    if ($source_entity->getEntityTypeId() == 'paragraph' && $parent = $source_entity->getParentEntity()) {
+      return $this->getSourceEntityLink($parent, $entity_label);
     }
 
     // As a fallback just return a non-linked label.
@@ -194,16 +193,16 @@ class ListUsageController extends ControllerBase {
   /**
    * Checks access based on whether the user can view the current entity.
    *
-   * @param string $type
+   * @param string $entity_type
    *   The entity type.
-   * @param int $id
+   * @param int $entity_id
    *   The entity ID.
    *
    * @return \Drupal\Core\Access\AccessResultInterface
    *   The access result.
    */
-  public function checkAccess($type, $id) {
-    $entity = $this->entityTypeManager->getStorage($type)->load($id);
+  public function checkAccess($entity_type, $entity_id) {
+    $entity = $this->entityTypeManager->getStorage($entity_type)->load($entity_id);
     if (!$entity || !$entity->access('view')) {
       return AccessResult::forbidden();
     }

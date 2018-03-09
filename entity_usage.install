@@ -12,59 +12,59 @@ function entity_usage_schema() {
   $schema['entity_usage'] = [
     'description' => 'Track entities that reference other entities.',
     'fields' => [
-      't_id' => [
-        'description' => 'Target entity ID.',
+      'target_id' => [
+        'description' => 'The target entity ID.',
         'type' => 'int',
         'unsigned' => TRUE,
         'not null' => TRUE,
       ],
-      't_type' => [
-        'description' => 'The type of the target entity.',
+      'target_type' => [
+        'description' => 'The target entity type.',
         'type' => 'varchar_ascii',
         'length' => 128,
         'not null' => TRUE,
         'default' => '',
       ],
-      're_id' => [
-        'description' => 'Referencing entity ID.',
+      'source_id' => [
+        'description' => 'The source entity ID.',
         'type' => 'varchar_ascii',
         'length' => 64,
         'not null' => TRUE,
         'default' => 0,
       ],
-      're_type' => [
-        'description' => 'The type of the referencing entity.',
+      'source_type' => [
+        'description' => 'The source entity type.',
         'type' => 'varchar_ascii',
         'length' => 128,
         'not null' => TRUE,
         'default' => '',
       ],
       'method' => [
-        'description' => 'The method used to reference both entities, generally the plugin ID.',
+        'description' => 'The method used to track the target, generally the plugin ID.',
         'type' => 'varchar_ascii',
         'length' => 128,
         'not null' => TRUE,
         'default' => '',
       ],
       'field_name' => [
-        'description' => 'The field in the referencing entity containing the target entity.',
+        'description' => 'The field in the source entity containing the target entity.',
         'type' => 'varchar_ascii',
         'length' => 128,
         'not null' => FALSE,
         'default' => '',
       ],
       'count' => [
-        'description' => 'The number of times this entity is referenced in this case.',
+        'description' => 'The number of times the target entity is referenced in this case.',
         'type' => 'int',
         'unsigned' => TRUE,
         'not null' => TRUE,
         'default' => 0,
       ],
     ],
-    'primary key' => ['t_id', 't_type', 're_id', 're_type', 'method', 'field_name'],
+    'primary key' => ['target_id', 'target_type', 'source_id', 'source_type', 'method', 'field_name'],
     'indexes' => [
-      'ttype_tid' => ['t_type', 't_id'],
-      'tid_ttype_count' => ['t_id', 't_type', 'count'],
+      'target_entity' => ['target_type', 'target_id'],
+      'target_entity_count' => ['target_id', 'target_type', 'count'],
     ],
   ];
   return $schema;
@@ -81,22 +81,11 @@ function entity_usage_update_8001(&$sandbox) {
 }
 
 /**
- * Add a field_name column to the entity_usage table and primary key.
+ * Recreate the entity usage table with the new schema.
  */
 function entity_usage_update_8002() {
-  $database = \Drupal::database();
-  $schema = $database->schema();
-
-  $spec = array(
-    'description' => 'The field in the referencing entity containing the target entity.',
-    'type' => 'varchar_ascii',
-    'length' => 128,
-    'not null' => FALSE,
-    'default' => '',
-  );
-  $schema->addField('entity_usage', 'field_name', $spec);
-
-  $new_primary_keys = ['t_id', 't_type', 're_id', 're_type', 'method', 'field_name'];
-  $schema->dropPrimaryKey('entity_usage');
-  $schema->addPrimaryKey('entity_usage', $new_primary_keys);
+  $schema = \Drupal::database()->schema();
+  $schema->dropTable('entity_usage');
+  $new_table_schema = entity_usage_schema();
+  $schema->createTable('entity_usage', $new_table_schema['entity_usage']);
 }

@@ -2,7 +2,6 @@
 
 namespace Drupal\entity_usage\Controller;
 
-use Drupal\Core\Access\AccessResult;
 use Drupal\Core\Routing\RouteMatchInterface;
 
 /**
@@ -63,8 +62,7 @@ class LocalTaskUsageController extends ListUsageController {
    */
   protected function getEntityFromRouteMatch(RouteMatchInterface $route_match) {
     $parameter_name = $route_match->getRouteObject()->getOption('_entity_usage_entity_type_id');
-    $entity = $route_match->getParameter($parameter_name);
-    return $entity;
+    return $route_match->getParameter($parameter_name);
   }
 
 }

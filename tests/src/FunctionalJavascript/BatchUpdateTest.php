@@ -30,7 +30,6 @@ class BatchUpdateTest extends EntityUsageJavascriptTestBase {
    * Tests the batch update.
    */
   public function testBatchUpdate() {
-
     $page = $this->getSession()->getPage();
     /** @var \Drupal\entity_usage\EntityUsage $usage_service */
     $usage_service = \Drupal::service('entity_usage.usage');
@@ -84,7 +83,6 @@ class BatchUpdateTest extends EntityUsageJavascriptTestBase {
         'field_eu_test_related_nodes' => '1',
       ],
     ]);
-
   }
 
 }

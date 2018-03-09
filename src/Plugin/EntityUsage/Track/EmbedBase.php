@@ -216,38 +216,38 @@ abstract class EmbedBase extends EntityUsageTrackBase implements EmbedTrackInter
   /**
    * Helper method to increment the usage for embedded entities.
    *
-   * @param \Drupal\Core\Entity\ContentEntityInterface $entity
-   *   The host entity object.
-   * @param string $t_type
+   * @param \Drupal\Core\Entity\ContentEntityInterface $source_entity
+   *   The source entity object.
+   * @param string $target_type
    *   The type of the target entity.
    * @param string $uuid
    *   The UUID of the target entity.
    * @param string $field_name
    *   The name of the field referencing the target entity.
    */
-  protected function incrementEmbeddedUsage(ContentEntityInterface $entity, $t_type, $uuid, $field_name) {
-    $target_entity = $this->entityRepository->loadEntityByUuid($t_type, $uuid);
+  protected function incrementEmbeddedUsage(ContentEntityInterface $source_entity, $target_type, $uuid, $field_name) {
+    $target_entity = $this->entityRepository->loadEntityByUuid($target_type, $uuid);
     if ($target_entity) {
-      $this->usageService->add($target_entity->id(), $t_type, $entity->id(), $entity->getEntityTypeId(), $this->pluginId, $field_name);
+      $this->usageService->add($target_entity->id(), $target_type, $source_entity->id(), $source_entity->getEntityTypeId(), $this->pluginId, $field_name);
     }
   }
 
   /**
    * Helper method to decrement the usage for embedded entities.
    *
-   * @param \Drupal\Core\Entity\ContentEntityInterface $entity
-   *   The host entity object.
-   * @param string $t_type
+   * @param \Drupal\Core\Entity\ContentEntityInterface $source_entity
+   *   The source entity object.
+   * @param string $target_type
    *   The type of the target entity.
    * @param string $uuid
    *   The UUID of the target entity.
    * @param string $field_name
    *   The name of the field referencing the target entity.
    */
-  protected function decrementEmbeddedUsage(ContentEntityInterface $entity, $t_type, $uuid, $field_name) {
-    $target_entity = $this->entityRepository->loadEntityByUuid($t_type, $uuid);
+  protected function decrementEmbeddedUsage(ContentEntityInterface $source_entity, $target_type, $uuid, $field_name) {
+    $target_entity = $this->entityRepository->loadEntityByUuid($target_type, $uuid);
     if ($target_entity) {
-      $this->usageService->delete($target_entity->id(), $t_type, $entity->id(), $entity->getEntityTypeId(), $field_name);
+      $this->usageService->delete($target_entity->id(), $target_type, $source_entity->id(), $source_entity->getEntityTypeId(), $field_name);
     }
   }
 

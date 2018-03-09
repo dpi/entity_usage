@@ -10,32 +10,32 @@ use Symfony\Component\EventDispatcher\Event;
 class EntityUsageEvent extends Event {
 
   /**
-   * The identifier of the target entity.
+   * The target entity ID.
    *
    * @var string
    */
   protected $targetEntityId;
 
   /**
-   * The type of the target entity.
+   * The target entity type.
    *
    * @var string
    */
   protected $targetEntityType;
 
   /**
-   * The identifier of the referencing entity.
+   * The identifier of the source entity.
    *
    * @var string
    */
-  protected $referencingEntityId;
+  protected $sourceEntityId;
 
   /**
-   * The type of the entity that is referencing.
+   * The type of the entity that is source.
    *
    * @var string
    */
-  protected $referencingEntityType;
+  protected $sourceEntityType;
 
   /**
    * The method or way the two entities are being referenced.
@@ -45,7 +45,7 @@ class EntityUsageEvent extends Event {
   protected $method;
 
   /**
-   * The name of the field in the referencing entity using the target entity.
+   * The name of the field in the source entity using the target entity.
    *
    * @var string
    */
@@ -61,26 +61,26 @@ class EntityUsageEvent extends Event {
   /**
    * EntityUsageEvents constructor.
    *
-   * @param int $t_id
+   * @param int $target_id
    *   The identifier of the target entity.
-   * @param string $t_type
+   * @param string $target_type
    *   The type of the target entity.
-   * @param int $re_id
-   *   The identifier of the referencing entity.
-   * @param string $re_type
-   *   The type of the entity that is referencing.
+   * @param int $source_id
+   *   The identifier of the source entity.
+   * @param string $source_type
+   *   The type of the entity that is source.
    * @param string $method
    *   The method or way the two entities are being referenced.
    * @param string $field_name
-   *   The name of the field in the referencing entity using the target entity.
+   *   The name of the field in the source entity using the target entity.
    * @param int $count
    *   The number of references to add or remove.
    */
-  public function __construct($t_id = NULL, $t_type = NULL, $re_id = NULL, $re_type = NULL, $method = NULL, $field_name = NULL, $count = NULL) {
-    $this->targetEntityId = $t_id;
-    $this->targetEntityType = $t_type;
-    $this->referencingEntityId = $re_id;
-    $this->referencingEntityType = $re_type;
+  public function __construct($target_id = NULL, $target_type = NULL, $source_id = NULL, $source_type = NULL, $method = NULL, $field_name = NULL, $count = NULL) {
+    $this->targetEntityId = $target_id;
+    $this->targetEntityType = $target_type;
+    $this->sourceEntityId = $source_id;
+    $this->sourceEntityType = $source_type;
     $this->method = $method;
     $this->fieldName = $field_name;
     $this->count = $count;
@@ -107,32 +107,32 @@ class EntityUsageEvent extends Event {
   }
 
   /**
-   * Sets the referencing entity id.
+   * Sets the source entity id.
    *
    * @param int $id
-   *   The referencing entity id.
+   *   The source entity id.
    */
-  public function setReferencingEntityId($id) {
-    $this->referencingEntityId = $id;
+  public function setSourceEntityId($id) {
+    $this->sourceEntityId = $id;
   }
 
   /**
-   * Sets the referencing entity type.
+   * Sets the source entity type.
    *
    * @param string $type
-   *   The referencing entity type.
+   *   The source entity type.
    */
-  public function setReferencingEntityType($type) {
-    $this->referencingEntityType = $type;
+  public function setSourceEntityType($type) {
+    $this->sourceEntityType = $type;
   }
 
   /**
-   * Sets the referencing method.
+   * Sets the source method.
    *
    * @param string $method
-   *   The referencing method.
+   *   The source method.
    */
-  public function setReferencingMethod($method) {
+  public function setSourceMethod($method) {
     $this->method = $method;
   }
 
@@ -167,42 +167,42 @@ class EntityUsageEvent extends Event {
   }
 
   /**
-   * Gets the referencing entity id.
+   * Gets the source entity id.
    *
    * @return int|null
-   *   The referencing entity id or NULL.
+   *   The source entity id or NULL.
    */
-  public function getReferencingEntityId() {
-    return $this->referencingEntityId;
+  public function getSourceEntityId() {
+    return $this->sourceEntityId;
   }
 
   /**
-   * Gets the referencing entity type.
+   * Gets the source entity type.
    *
    * @return null|string
-   *   The referencing entity type or NULL.
+   *   The source entity type or NULL.
    */
-  public function getReferencingEntityType() {
-    return $this->referencingEntityType;
+  public function getSourceEntityType() {
+    return $this->sourceEntityType;
   }
 
   /**
-   * Gets the referencing method.
+   * Gets the source method.
    *
    * @return null|string
-   *   The referencing method or NULL.
+   *   The source method or NULL.
    */
-  public function getReferencingMethod() {
+  public function getSourceMethod() {
     return $this->method;
   }
 
   /**
-   * Gets the referencing field name.
+   * Gets the source field name.
    *
    * @return null|string
-   *   The referencing field name or NULL.
+   *   The source field name or NULL.
    */
-  public function getReferencingFieldName() {
+  public function getSourceFieldName() {
     return $this->fieldName;
   }
 

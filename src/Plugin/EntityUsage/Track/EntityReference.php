@@ -180,7 +180,6 @@ class EntityReference extends EntityUsageTrackBase {
         if (!$translation->{$field_name}->isEmpty()) {
           /** @var \Drupal\Core\Field\Plugin\Field\FieldType\EntityReferenceItem $field_item */
           foreach ($translation->{$field_name} as $field_item) {
-            // This item got deleted. Track the usage down.
             $this->decrementEntityReferenceUsage($entity, $field_name, $field_item->target_id);
           }
         }
@@ -197,17 +196,20 @@ class EntityReference extends EntityUsageTrackBase {
    * @return array
    *   An array of field_names that could reference to other content entities.
    */
-  private function entityReferenceFieldsAvailable(ContentEntityInterface $entity) {
+  protected function entityReferenceFieldsAvailable(ContentEntityInterface $entity) {
     $return_fields = [];
     $fields_on_entity = $this->entityFieldManager->getFieldDefinitions($entity->getEntityTypeId(), $entity->bundle());
+
     $entityref_fields_on_this_entity_type = [];
     if (!empty($this->entityFieldManager->getFieldMapByFieldType('entity_reference')[$entity->getEntityTypeId()])) {
       $entityref_fields_on_this_entity_type = $this->entityFieldManager->getFieldMapByFieldType('entity_reference')[$entity->getEntityTypeId()];
     }
     $entityref_on_this_bundle = array_intersect_key($fields_on_entity, $entityref_fields_on_this_entity_type);
+
     // Clean out basefields.
     $basefields = $this->entityFieldManager->getBaseFieldDefinitions($entity->getEntityTypeId());
     $entityref_on_this_bundle = array_diff_key($entityref_on_this_bundle, $basefields);
+
     if (!empty($entityref_on_this_bundle)) {
       // Make sure we only leave the fields that are referencing content
       // entities.
@@ -221,41 +223,42 @@ class EntityReference extends EntityUsageTrackBase {
 
       $return_fields = array_keys($entityref_on_this_bundle);
     }
+
     return $return_fields;
   }
 
   /**
    * Helper method to increment the usage in entity_reference fields.
    *
-   * @param \Drupal\Core\Entity\ContentEntityInterface $entity
-   *   The host entity object.
+   * @param \Drupal\Core\Entity\ContentEntityInterface $source_entity
+   *   The source entity object.
    * @param string $field_name
    *   The name of the entity_reference field, present in $entity.
    * @param int $target_id
    *   The id of the target entity.
    */
-  private function incrementEntityReferenceUsage(ContentEntityInterface $entity, $field_name, $target_id) {
+  protected function incrementEntityReferenceUsage(ContentEntityInterface $source_entity, $field_name, $target_id) {
     /** @var \Drupal\field\Entity\FieldConfig $definition */
-    $definition = $this->entityFieldManager->getFieldDefinitions($entity->getEntityTypeId(), $entity->bundle())[$field_name];
+    $definition = $this->entityFieldManager->getFieldDefinitions($source_entity->getEntityTypeId(), $source_entity->bundle())[$field_name];
     $target_entity_type = $definition->getSetting('target_type');
-    $this->usageService->add($target_id, $target_entity_type, $entity->id(), $entity->getEntityTypeId(), $this->pluginId, $field_name);
+    $this->usageService->add($target_id, $target_entity_type, $source_entity->id(), $source_entity->getEntityTypeId(), $this->pluginId, $field_name);
   }
 
   /**
    * Helper method to decrement the usage in entity_reference fields.
    *
-   * @param \Drupal\Core\Entity\ContentEntityInterface $entity
-   *   The host entity object.
+   * @param \Drupal\Core\Entity\ContentEntityInterface $source_entity
+   *   The source entity object.
    * @param string $field_name
    *   The name of the entity_reference field, present in $entity.
    * @param int $target_id
    *   The id of the target entity.
    */
-  private function decrementEntityReferenceUsage(ContentEntityInterface $entity, $field_name, $target_id) {
+  protected function decrementEntityReferenceUsage(ContentEntityInterface $source_entity, $field_name, $target_id) {
     /** @var \Drupal\field\Entity\FieldConfig $definition */
-    $definition = $this->entityFieldManager->getFieldDefinitions($entity->getEntityTypeId(), $entity->bundle())[$field_name];
+    $definition = $this->entityFieldManager->getFieldDefinitions($source_entity->getEntityTypeId(), $source_entity->bundle())[$field_name];
     $target_entity_type = $definition->getSetting('target_type');
-    $this->usageService->delete($target_id, $target_entity_type, $entity->id(), $entity->getEntityTypeId(), $field_name);
+    $this->usageService->delete($target_id, $target_entity_type, $source_entity->id(), $source_entity->getEntityTypeId(), $field_name);
   }
 
 }

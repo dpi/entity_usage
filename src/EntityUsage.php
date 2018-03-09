@@ -47,7 +47,6 @@ class EntityUsage implements EntityUsageInterface {
    *   'entity_usage'.
    */
   public function __construct(Connection $connection, EventDispatcherInterface $event_dispatcher, $table = 'entity_usage') {
-
     $this->connection = $connection;
     $this->tableName = $table;
     $this->eventDispatcher = $event_dispatcher;
@@ -56,14 +55,13 @@ class EntityUsage implements EntityUsageInterface {
   /**
    * {@inheritdoc}
    */
-  public function add($t_id, $t_type, $re_id, $re_type, $method = 'entity_reference', $field_name = NULL, $count = 1) {
-
+  public function add($target_id, $target_type, $source_id, $source_type, $method = 'entity_reference', $field_name = NULL, $count = 1) {
     $this->connection->merge($this->tableName)
       ->keys([
-        't_id' => $t_id,
-        't_type' => $t_type,
-        're_id' => $re_id,
-        're_type' => $re_type,
+        'target_id' => $target_id,
+        'target_type' => $target_type,
+        'source_id' => $source_id,
+        'source_type' => $source_type,
         'method' => $method,
         'field_name' => $field_name,
       ])
@@ -71,24 +69,21 @@ class EntityUsage implements EntityUsageInterface {
       ->expression('count', 'count + :count', [':count' => $count])
       ->execute();
 
-    $event = new EntityUsageEvent($t_id, $t_type, $re_id, $re_type, $method, $field_name, $count);
+    $event = new EntityUsageEvent($target_id, $target_type, $source_id, $source_type, $method, $field_name, $count);
     $this->eventDispatcher->dispatch(Events::USAGE_ADD, $event);
-
   }
 
   /**
    * {@inheritdoc}
    */
-  public function delete($t_id, $t_type, $re_id = NULL, $re_type = NULL, $field_name = NULL, $count = 1) {
-
-    // Delete rows that have an exact or less value to prevent empty rows.
+  public function delete($target_id, $target_type, $source_id = NULL, $source_type = NULL, $field_name = NULL, $count = 1) {
     $query = $this->connection->delete($this->tableName)
-      ->condition('t_type', $t_type)
-      ->condition('t_id', $t_id);
-    if ($re_type && $re_id) {
+      ->condition('target_type', $target_type)
+      ->condition('target_id', $target_id);
+    if ($source_type && $source_id) {
       $query
-        ->condition('re_type', $re_type)
-        ->condition('re_id', $re_id);
+        ->condition('source_type', $source_type)
+        ->condition('source_id', $source_id);
     }
     if ($field_name) {
       $query
@@ -102,12 +97,12 @@ class EntityUsage implements EntityUsageInterface {
     // If the row has more than the specified count decrement it by that number.
     if (!$result && $count > 0) {
       $query = $this->connection->update($this->tableName)
-        ->condition('t_type', $t_type)
-        ->condition('t_id', $t_id);
-      if ($re_type && $re_id) {
+        ->condition('target_type', $target_type)
+        ->condition('target_id', $target_id);
+      if ($source_type && $source_id) {
         $query
-          ->condition('re_type', $re_type)
-          ->condition('re_id', $re_id);
+          ->condition('source_type', $source_type)
+          ->condition('source_id', $source_id);
       }
       if ($field_name) {
         $query
@@ -116,93 +111,89 @@ class EntityUsage implements EntityUsageInterface {
       $query->expression('count', 'count - :count', [':count' => $count]);
       $query->execute();
     }
-    $event = new EntityUsageEvent($t_id, $t_type, $re_id, $re_type, NULL, NULL, $count);
+
+    $event = new EntityUsageEvent($target_id, $target_type, $source_id, $source_type, NULL, NULL, $count);
     $this->eventDispatcher->dispatch(Events::USAGE_DELETE, $event);
-
   }
 
   /**
    * {@inheritdoc}
    */
-  public function bulkDeleteTargets($t_type) {
-
-    // Delete all rows of this given type.
+  public function bulkDeleteTargets($target_type) {
     $query = $this->connection->delete($this->tableName)
-      ->condition('t_type', $t_type);
+      ->condition('target_type', $target_type);
     $query->execute();
 
-    $event = new EntityUsageEvent(NULL, $t_type, NULL, NULL, NULL, NULL, NULL);
-    $this->eventDispatcher->dispatch(Events::BULK_TARGETS_DELETE, $event);
-
+    $event = new EntityUsageEvent(NULL, $target_type, NULL, NULL, NULL, NULL, NULL);
+    $this->eventDispatcher->dispatch(Events::BULK_DELETE_DESTINATIONS, $event);
   }
 
   /**
    * {@inheritdoc}
    */
-  public function bulkDeleteHosts($re_type) {
-
-    // Delete all rows of this given type.
+  public function bulkDeleteSources($source_type) {
     $query = $this->connection->delete($this->tableName)
-      ->condition('re_type', $re_type);
+      ->condition('source_type', $source_type);
     $query->execute();
 
-    $event = new EntityUsageEvent(NULL, NULL, NULL, $re_type, NULL, NULL, NULL);
-    $this->eventDispatcher->dispatch(Events::BULK_HOSTS_DELETE, $event);
-
+    $event = new EntityUsageEvent(NULL, NULL, NULL, $source_type, NULL, NULL, NULL);
+    $this->eventDispatcher->dispatch(Events::BULK_DELETE_SOURCES, $event);
   }
 
   /**
    * {@inheritdoc}
    */
-  public function listUsage(EntityInterface $entity, $include_method = FALSE) {
-
+  public function listUsage(EntityInterface $target_entity, $include_method = FALSE) {
     $result = $this->connection->select($this->tableName, 'e')
-      ->fields('e', ['re_id', 're_type', 'method', 'field_name', 'count'])
-      ->condition('t_id', $entity->id())
-      ->condition('t_type', $entity->getEntityTypeId())
+      ->fields('e', ['source_id', 'source_type', 'method', 'field_name', 'count'])
+      ->condition('target_id', $target_entity->id())
+      ->condition('target_type', $target_entity->getEntityTypeId())
       ->condition('count', 0, '>')
       ->execute();
+
     $references = [];
     foreach ($result as $usage) {
       $field_name = $usage->field_name ?: '_unknown';
       if ($include_method) {
-        $references[$usage->method][$usage->re_type][$usage->re_id][$field_name] = $usage->count;
+        $references[$usage->method][$usage->source_type][$usage->source_id][$field_name] = $usage->count;
       }
       else {
         $count = $usage->count;
         // If there were previous usages recorded for this same pair of entities
         // (with different methods), sum on the top of it.
-        if (!empty($references[$usage->re_type][$usage->re_id][$field_name])) {
-          $count += $references[$usage->re_type][$usage->re_id][$field_name];
+        if (!empty($references[$usage->source_type][$usage->source_id][$field_name])) {
+          $count += $references[$usage->source_type][$usage->source_id][$field_name];
         }
-        $references[$usage->re_type][$usage->re_id][$field_name] = $count;
+        $references[$usage->source_type][$usage->source_id][$field_name] = $count;
       }
     }
-    return $references;
 
+    return $references;
   }
 
   /**
    * {@inheritdoc}
    */
-  public function listReferencedEntities(EntityInterface $entity) {
+  public function listReferencedEntities(EntityInterface $source_entity) {
     $result = $this->connection->select($this->tableName, 'e')
-      ->fields('e', ['t_id', 't_type', 'field_name', 'count'])
-      ->condition('re_id', $entity->id())
-      ->condition('re_type', $entity->getEntityTypeId())
+      ->fields('e', ['target_id', 'target_type', 'field_name', 'count'])
+      ->condition('source_id', $source_entity->id())
+      ->condition('source_type', $source_entity->getEntityTypeId())
       ->condition('count', 0, '>')
       ->execute();
+
     $references = [];
     foreach ($result as $usage) {
       $count = $usage->count;
       $field_name = $usage->field_name ?: '_unknown';
       // If there were previous usages recorded for this same pair of entities
       // (with different methods), sum on the top of it.
-      if (!empty($references[$usage->t_type][$usage->t_id][$field_name])) {
-        $count += $references[$usage->t_type][$usage->t_id][$field_name];
+      if (!empty($references[$usage->target_type][$usage->target_id][$field_name])) {
+        $count += $references[$usage->target_type][$usage->target_id][$field_name];
       }
-      $references[$usage->t_type][$usage->t_id][$field_name] = $count;
+      $references[$usage->target_type][$usage->target_id][$field_name] = $count;
     }
+
     return $references;
   }
 

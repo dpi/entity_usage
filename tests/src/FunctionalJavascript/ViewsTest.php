@@ -24,7 +24,6 @@ class ViewsTest extends EntityUsageJavascriptTestBase {
    * Tests the views integration.
    */
   public function testViewsIntegration() {
-
     $page = $this->getSession()->getPage();
 
     // Create node 1.
@@ -61,7 +60,6 @@ class ViewsTest extends EntityUsageJavascriptTestBase {
     $this->drupalGet('/eu-basic-test-view');
     $this->assertSession()->pageTextContains('Node 1');
     $this->assertSession()->responseContains('<td headers="view-count-table-column" class="views-field views-field-count">1          </td>');
-
   }
 
 }

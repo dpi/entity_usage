@@ -115,8 +115,8 @@ class IntegrationTest extends EntityUsageJavascriptTestBase {
     $database = \Drupal::database();
     $count = $database->select('entity_usage', 'e')
       ->fields('e', ['count'])
-      ->condition('e.t_type', 'node')
-      ->condition('e.t_id', '2')
+      ->condition('e.target_type', 'node')
+      ->condition('e.target_id', '2')
       ->execute()
       ->fetchField();
     $this->assertSame(FALSE, $count, 'Usage for node2 correctly cleaned up.');
@@ -221,7 +221,7 @@ class IntegrationTest extends EntityUsageJavascriptTestBase {
     $usage = $usage_service->listUsage($node1);
     $this->assertEquals([], $usage);
 
-    // Reference Node 1 again, and then delete the host node.
+    // Reference Node 1 again, and then delete the source node.
     $this->drupalGet("/node/{$node2_id}/edit");
     $page->fillField('field_link1[0][uri]', "Node 1 ($node1_id)");
     $page->fillField('field_link1[0][title]', "Linked text");
@@ -231,7 +231,7 @@ class IntegrationTest extends EntityUsageJavascriptTestBase {
     // Usage now should be there.
     $usage = $usage_service->listUsage($node1, TRUE);
     $this->assertEquals([$node2_id => ['field_link1' => '1']], $usage['link']['node']);
-    // Delete the host and usage should be released.
+    // Delete the source and usage should be released.
     $node2->delete();
     $usage = $usage_service->listUsage($node1);
     $this->assertEquals([], $usage);
