@@ -51,10 +51,10 @@ class IntegrationTest extends EntityUsageJavascriptTestBase {
     $this->saveHtmlOutput();
     $node2 = Node::load(2);
     // Check that we registered correctly the relation between N2 and N1.
-    $usage = $usage_service->listUsage($node1);
+    $usage = $usage_service->listSources($node1);
     $this->assertEquals($usage['node'], ['2' => ['field_eu_test_related_nodes' => '1']], 'Correct usage found.');
     // Check that the method stored for the tracking is "entity_reference".
-    $usage = $usage_service->listUsage($node1, TRUE);
+    $usage = $usage_service->listSources($node1, TRUE);
     $this->assertEquals($usage['entity_reference']['node'], ['2' => ['field_eu_test_related_nodes' => '1']], 'Correct usage found.');
 
     // Create node 3 referencing node 2 using embedded text.
@@ -76,10 +76,10 @@ class IntegrationTest extends EntityUsageJavascriptTestBase {
     ]);
     $node3->save();
     // Check that we registered correctly the relation between N3 and N2.
-    $usage = $usage_service->listUsage($node2);
+    $usage = $usage_service->listSources($node2);
     $this->assertEquals($usage['node'], ['3' => ['field_eu_test_rich_text' => '1']], 'Correct usage found.');
     // Check that the method stored for the tracking is "entity_embed".
-    $usage = $usage_service->listUsage($node2, TRUE);
+    $usage = $usage_service->listSources($node2, TRUE);
     $this->assertEquals($usage['entity_embed']['node'], ['3' => ['field_eu_test_rich_text' => '1']], 'Correct usage found.');
 
     // Create node 4 referencing node 2 using both methods.
@@ -96,7 +96,7 @@ class IntegrationTest extends EntityUsageJavascriptTestBase {
     ]);
     $node4->save();
     // Check that we registered correctly the relation between N4 and N2.
-    $usage = $usage_service->listUsage($node2);
+    $usage = $usage_service->listSources($node2);
     $expected_count = [
       'node' => [
         '3' => ['field_eu_test_rich_text' => '1'],
@@ -110,7 +110,7 @@ class IntegrationTest extends EntityUsageJavascriptTestBase {
 
     // Delete node 2 and verify that we clean up usages.
     $node2->delete();
-    $usage = $usage_service->listUsage($node1);
+    $usage = $usage_service->listSources($node1);
     $this->assertEquals($usage, [], 'Usage for node1 correctly cleaned up.');
     $database = \Drupal::database();
     $count = $database->select('entity_usage', 'e')
@@ -133,10 +133,10 @@ class IntegrationTest extends EntityUsageJavascriptTestBase {
     ]);
     $node5->save();
     // Check that we registered correctly the relation between N5 and N2.
-    $usage = $usage_service->listUsage($node4);
+    $usage = $usage_service->listSources($node4);
     $this->assertEquals($usage['node'], ['5' => ['field_eu_test_rich_text' => '1']], 'Correct usage found.');
     // Check that the method stored for the tracking is "linkit".
-    $usage = $usage_service->listUsage($node4, TRUE);
+    $usage = $usage_service->listSources($node4, TRUE);
     $this->assertEquals($usage['linkit']['node'], ['5' => ['field_eu_test_rich_text' => '1']], 'Correct usage found.');
   }
 
@@ -207,7 +207,7 @@ class IntegrationTest extends EntityUsageJavascriptTestBase {
     $node2 = \Drupal::entityTypeManager()->getStorage('node')
       ->loadUnchanged($node2_id);
     // Check that the usage of Node 1 points to Node 2.
-    $usage = $usage_service->listUsage($node1, TRUE);
+    $usage = $usage_service->listSources($node1, TRUE);
     $this->assertEquals([$node2_id => ['field_link1' => '1']], $usage['link']['node']);
 
     // Edit Node 2, remove reference.
@@ -218,7 +218,7 @@ class IntegrationTest extends EntityUsageJavascriptTestBase {
     $assert_session->pageTextContains('eu_test_ct Node 2 has been updated.');
     $this->saveHtmlOutput();
     // Verify the usage was released.
-    $usage = $usage_service->listUsage($node1);
+    $usage = $usage_service->listSources($node1);
     $this->assertEquals([], $usage);
 
     // Reference Node 1 again, and then delete the source node.
@@ -229,11 +229,11 @@ class IntegrationTest extends EntityUsageJavascriptTestBase {
     $assert_session->pageTextContains('eu_test_ct Node 2 has been updated.');
     $this->saveHtmlOutput();
     // Usage now should be there.
-    $usage = $usage_service->listUsage($node1, TRUE);
+    $usage = $usage_service->listSources($node1, TRUE);
     $this->assertEquals([$node2_id => ['field_link1' => '1']], $usage['link']['node']);
     // Delete the source and usage should be released.
     $node2->delete();
-    $usage = $usage_service->listUsage($node1);
+    $usage = $usage_service->listSources($node1);
     $this->assertEquals([], $usage);
   }
 

@@ -142,13 +142,13 @@ class EntityReferenceKernelTest extends EntityKernelTestBase {
     $source_entity = $this->testEntities[0];
 
     // First check usage is 0 for the referenced entity.
-    $usage = $entity_usage->listUsage($this->referencedEntity);
+    $usage = $entity_usage->listSources($this->referencedEntity);
     $this->assertSame([], $usage, 'Initial usage is correctly empty.');
 
     // Reference from other entity and check that the usage increases to 1.
     $source_entity->{$field_name}->entity = $this->referencedEntity;
     $source_entity->save();
-    $usage = $entity_usage->listUsage($this->referencedEntity);
+    $usage = $entity_usage->listSources($this->referencedEntity);
     $this->assertEquals([
       $source_entity->getEntityTypeId() => [
         $source_entity->id() => [
@@ -163,7 +163,7 @@ class EntityReferenceKernelTest extends EntityKernelTestBase {
       'format' => 'full_html',
     ];
     $source_entity->save();
-    $usage = $entity_usage->listUsage($this->referencedEntity);
+    $usage = $entity_usage->listSources($this->referencedEntity);
     $this->assertEquals([
       $source_entity->getEntityTypeId() => [
         $source_entity->id() => [
@@ -176,13 +176,13 @@ class EntityReferenceKernelTest extends EntityKernelTestBase {
     // usage goes back to 0.
     $source_entity->{$field_name}->entity = $this->testEntities[1];
     $source_entity->save();
-    $usage = $entity_usage->listUsage($this->referencedEntity);
+    $usage = $entity_usage->listSources($this->referencedEntity);
     $this->assertSame([], $usage, 'Non-referenced usage is correctly empty.');
 
     // Create a reference again, check the value is back to 1.
     $source_entity->{$field_name}->entity = $this->referencedEntity;
     $source_entity->save();
-    $usage = $entity_usage->listUsage($this->referencedEntity);
+    $usage = $entity_usage->listSources($this->referencedEntity);
     $this->assertEquals([
       $source_entity->getEntityTypeId() => [
         $source_entity->id() => [
@@ -193,14 +193,14 @@ class EntityReferenceKernelTest extends EntityKernelTestBase {
 
     // Delete the whole source entity, check usage goes back to 0.
     $source_entity->delete();
-    $usage = $entity_usage->listUsage($this->referencedEntity);
+    $usage = $entity_usage->listSources($this->referencedEntity);
     $this->assertSame([], $usage, 'Non-referenced usage is correctly empty.');
 
     // Create a reference again, check the value is back to 1.
     $source_entity = $this->testEntities[1];
     $source_entity->{$field_name}->entity = $this->referencedEntity;
     $source_entity->save();
-    $usage = $entity_usage->listUsage($this->referencedEntity);
+    $usage = $entity_usage->listSources($this->referencedEntity);
     $this->assertEquals([
       $source_entity->getEntityTypeId() => [
         $source_entity->id() => [
@@ -214,7 +214,7 @@ class EntityReferenceKernelTest extends EntityKernelTestBase {
     /*
     $source_entity->status = FALSE;
     $source_entity->save();
-    $usage = $entity_usage->listUsage($this->referencedEntity);
+    $usage = $entity_usage->listSources($this->referencedEntity);
     $this->assertSame([], $usage, 'Non-referenced usage is correctly empty.');
      */
 

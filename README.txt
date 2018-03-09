@@ -41,7 +41,7 @@ The tracking information recorded by this module is stored at the "entity_usage"
 table.
 
 You can use the service
-  \Drupal::service('entity_usage.usage')->listUsage($entity);
+  \Drupal::service('entity_usage.usage')->listSources($entity);
 to get the statistics anywhere in your code.
 
 If you want to provide your own tracking method (additionally to the methods

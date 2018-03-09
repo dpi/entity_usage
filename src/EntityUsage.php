@@ -55,7 +55,7 @@ class EntityUsage implements EntityUsageInterface {
   /**
    * {@inheritdoc}
    */
-  public function add($target_id, $target_type, $source_id, $source_type, $method = 'entity_reference', $field_name = NULL, $count = 1) {
+  public function add($target_id, $target_type, $source_id, $source_type, $method, $field_name, $count = 1) {
     $this->connection->merge($this->tableName)
       ->keys([
         'target_id' => $target_id,
@@ -143,7 +143,7 @@ class EntityUsage implements EntityUsageInterface {
   /**
    * {@inheritdoc}
    */
-  public function listUsage(EntityInterface $target_entity, $include_method = FALSE) {
+  public function listSources(EntityInterface $target_entity, $include_method = FALSE) {
     $result = $this->connection->select($this->tableName, 'e')
       ->fields('e', ['source_id', 'source_type', 'method', 'field_name', 'count'])
       ->condition('target_id', $target_entity->id())
@@ -153,7 +153,7 @@ class EntityUsage implements EntityUsageInterface {
 
     $references = [];
     foreach ($result as $usage) {
-      $field_name = $usage->field_name ?: '_unknown';
+      $field_name = $usage->field_name;
       if ($include_method) {
         $references[$usage->method][$usage->source_type][$usage->source_id][$field_name] = $usage->count;
       }
@@ -174,7 +174,7 @@ class EntityUsage implements EntityUsageInterface {
   /**
    * {@inheritdoc}
    */
-  public function listReferencedEntities(EntityInterface $source_entity) {
+  public function listTargets(EntityInterface $source_entity) {
     $result = $this->connection->select($this->tableName, 'e')
       ->fields('e', ['target_id', 'target_type', 'field_name', 'count'])
       ->condition('source_id', $source_entity->id())

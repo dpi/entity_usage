@@ -38,7 +38,7 @@ class EntityUsageEvent extends Event {
   protected $sourceEntityType;
 
   /**
-   * The method or way the two entities are being referenced.
+   * The method used to relate source entity with the target entity.
    *
    * @var string
    */
@@ -127,13 +127,23 @@ class EntityUsageEvent extends Event {
   }
 
   /**
-   * Sets the source method.
+   * Sets the method used to relate source entity with the target entity.
    *
    * @param string $method
    *   The source method.
    */
-  public function setSourceMethod($method) {
+  public function setMethod($method) {
     $this->method = $method;
+  }
+
+  /**
+   * Sets the field name.
+   *
+   * @param string $field_name
+   *   The field name.
+   */
+  public function setFieldName($field_name) {
+    $this->fieldName = $field_name;
   }
 
   /**
@@ -169,7 +179,7 @@ class EntityUsageEvent extends Event {
   /**
    * Gets the source entity id.
    *
-   * @return int|null
+   * @return null|int
    *   The source entity id or NULL.
    */
   public function getSourceEntityId() {
@@ -187,29 +197,29 @@ class EntityUsageEvent extends Event {
   }
 
   /**
-   * Gets the source method.
+   * Gets the method used to relate source entity with the target entity.
    *
    * @return null|string
-   *   The source method or NULL.
+   *   The method or NULL.
    */
-  public function getSourceMethod() {
+  public function getMethod() {
     return $this->method;
   }
 
   /**
-   * Gets the source field name.
+   * Gets the field name.
    *
    * @return null|string
-   *   The source field name or NULL.
+   *   The field name or NULL.
    */
-  public function getSourceFieldName() {
+  public function getFieldName() {
     return $this->fieldName;
   }
 
   /**
    * Gets the count.
    *
-   * @return int|null
+   * @return null|int
    *   The number of references to add or remove or NULL.
    */
   public function getCount() {

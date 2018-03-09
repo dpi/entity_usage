@@ -50,7 +50,7 @@ function entity_usage_schema() {
         'description' => 'The field in the source entity containing the target entity.',
         'type' => 'varchar_ascii',
         'length' => 128,
-        'not null' => FALSE,
+        'not null' => TRUE,
         'default' => '',
       ],
       'count' => [
@@ -83,7 +83,7 @@ function entity_usage_update_8001(&$sandbox) {
 /**
  * Recreate the entity usage table with the new schema.
  */
-function entity_usage_update_8002() {
+function entity_usage_update_8201() {
   $schema = \Drupal::database()->schema();
   $schema->dropTable('entity_usage');
   $new_table_schema = entity_usage_schema();

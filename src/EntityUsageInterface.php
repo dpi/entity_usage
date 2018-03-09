@@ -24,15 +24,14 @@ interface EntityUsageInterface {
    * @param string $source_type
    *   The source entity type.
    * @param string $method
-   *   (optional) The method the target entities is being referenced.
-   *   Defaults to 'entity_reference'.
+   *   The method used to relate source entity with the target entity. Normally
+   *   the plugin id.
    * @param string $field_name
-   *   (optional) The name of the field in the source entity using the
-   *   target entity. Defaults to NULL.
+   *   The name of the field in the source entity using the target entity.
    * @param int $count
    *   (optional) The number of references to add to the object. Defaults to 1.
    */
-  public function add($target_id, $target_type, $source_id, $source_type, $method = 'entity_reference', $field_name = NULL, $count = 1);
+  public function add($target_id, $target_type, $source_id, $source_type, $method, $field_name, $count = 1);
 
   /**
    * Records that a source entity is no longer referencing a target entity.
@@ -114,7 +113,7 @@ interface EntityUsageInterface {
    *   Note that if $include_method is TRUE, the first level is keyed by the
    *   reference method, and the second level will continue as explained above.
    */
-  public function listUsage(EntityInterface $target_entity, $include_method = FALSE);
+  public function listSources(EntityInterface $target_entity, $include_method = FALSE);
 
   /**
    * Provide a list of all referenced target entities for a source entity.
@@ -127,8 +126,8 @@ interface EntityUsageInterface {
    *   the target entities, the second by the target id and the third
    *   the field name. The value of the third level contains the usage count.
    *
-   * @see \Drupal\entity_usage\EntityUsageInterface::listUsage()
+   * @see \Drupal\entity_usage\EntityUsageInterface::listSources()
    */
-  public function listReferencedEntities(EntityInterface $source_entity);
+  public function listTargets(EntityInterface $source_entity);
 
 }

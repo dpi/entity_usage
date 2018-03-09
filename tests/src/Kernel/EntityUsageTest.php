@@ -91,12 +91,12 @@ class EntityUsageTest extends EntityKernelTestBase {
   }
 
   /**
-   * Tests the listUsage() method.
+   * Tests the listSources() method.
    *
    * @covers \Drupal\entity_usage\EntityUsage::listUsage
-   * @covers \Drupal\entity_usage\EntityUsage::listReferencedEntities
+   * @covers \Drupal\entity_usage\EntityUsage::listTargets
    */
-  public function testGetUsage() {
+  public function testGetSources() {
     $target_entity = $this->testEntities[0];
     $source_entity = $this->testEntities[1];
     $field_name = 'body';
@@ -114,15 +114,15 @@ class EntityUsageTest extends EntityKernelTestBase {
 
     /** @var \Drupal\entity_usage\EntityUsage $entity_usage */
     $entity_usage = $this->container->get('entity_usage.usage');
-    $complete_usage = $entity_usage->listUsage($target_entity);
+    $complete_usage = $entity_usage->listSources($target_entity);
     $usage = $complete_usage[$source_entity->getEntityTypeId()][$source_entity->id()][$field_name];
     $this->assertEquals(1, $usage, 'Returned the correct count, without tracking method.');
 
-    $complete_usage = $entity_usage->listUsage($target_entity, TRUE);
+    $complete_usage = $entity_usage->listSources($target_entity, TRUE);
     $usage = $complete_usage['entity_reference'][$source_entity->getEntityTypeId()][$source_entity->id()][$field_name];
     $this->assertEquals(1, $usage, 'Returned the correct count, with tracking method.');
 
-    $complete_references_entities = $entity_usage->listReferencedEntities($source_entity);
+    $complete_references_entities = $entity_usage->listTargets($source_entity);
     $usage = $complete_references_entities[$target_entity->getEntityTypeId()][$target_entity->id()][$field_name];
     $this->assertEquals(1, $usage, 'Returned the correct count.');
 
@@ -372,8 +372,8 @@ class EntityUsageTest extends EntityKernelTestBase {
       'target_type' => $event->getTargetEntityType(),
       'source_id' => $event->getSourceEntityId(),
       'source_type' => $event->getSourceEntityType(),
-      'method' => $event->getSourceMethod(),
-      'field_name' => $event->getSourceFieldName(),
+      'method' => $event->getMethod(),
+      'field_name' => $event->getFieldName(),
       'count' => $event->getCount(),
     ]);
   }
@@ -393,8 +393,8 @@ class EntityUsageTest extends EntityKernelTestBase {
       'target_type' => $event->getTargetEntityType(),
       'source_id' => $event->getSourceEntityId(),
       'source_type' => $event->getSourceEntityType(),
-      'method' => $event->getSourceMethod(),
-      'field_name' => $event->getSourceFieldName(),
+      'method' => $event->getMethod(),
+      'field_name' => $event->getFieldName(),
       'count' => $event->getCount(),
     ]);
   }
@@ -414,8 +414,8 @@ class EntityUsageTest extends EntityKernelTestBase {
       'target_type' => $event->getTargetEntityType(),
       'source_id' => $event->getSourceEntityId(),
       'source_type' => $event->getSourceEntityType(),
-      'method' => $event->getSourceMethod(),
-      'field_name' => $event->getSourceFieldName(),
+      'method' => $event->getMethod(),
+      'field_name' => $event->getFieldName(),
       'count' => $event->getCount(),
     ]);
   }
@@ -435,8 +435,8 @@ class EntityUsageTest extends EntityKernelTestBase {
       'target_type' => $event->getTargetEntityType(),
       'source_id' => $event->getSourceEntityId(),
       'source_type' => $event->getSourceEntityType(),
-      'method' => $event->getSourceMethod(),
-      'field_name' => $event->getSourceFieldName(),
+      'method' => $event->getMethod(),
+      'field_name' => $event->getFieldName(),
       'count' => $event->getCount(),
     ]);
   }

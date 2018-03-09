@@ -80,7 +80,7 @@ class ListUsageController extends ControllerBase {
 
     $entity = $this->entityTypeManager->getStorage($entity_type)->load($entity_id);
     if ($entity) {
-      $usages = $this->entityUsage->listUsage($entity, TRUE);
+      $usages = $this->entityUsage->listSources($entity, TRUE);
       if (empty($usages)) {
         $build = [
           '#markup' => $this->t('There are no recorded usages for entity of type: @type with id: @id', ['@type' => $entity_type, '@id' => $entity_id]),

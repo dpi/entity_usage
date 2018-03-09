@@ -61,7 +61,7 @@ class BatchUpdateTest extends EntityUsageJavascriptTestBase {
     // Remove one of the records from the database to simulate an usage
     // non-tracked by the module.
     $usage_service->delete(1, 'node', 2, 'node');
-    $usage = $usage_service->listUsage($node1);
+    $usage = $usage_service->listSources($node1);
     $this->assertEquals($usage['node'], ['3' => ['field_eu_test_related_nodes' => '1']]);
 
     // Go to the batch update page and check the update.
@@ -74,7 +74,7 @@ class BatchUpdateTest extends EntityUsageJavascriptTestBase {
     $this->assertSession()->pageTextContains('Recreated entity usage for');
 
     // Check if the resulting usage is the expected.
-    $usage = $usage_service->listUsage($node1);
+    $usage = $usage_service->listSources($node1);
     $this->assertEquals($usage['node'], [
       '2' => [
         'field_eu_test_related_nodes' => '1',
