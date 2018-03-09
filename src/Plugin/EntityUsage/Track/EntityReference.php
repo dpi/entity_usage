@@ -2,13 +2,13 @@
 
 namespace Drupal\entity_usage\Plugin\EntityUsage\Track;
 
+use Drupal\Core\Config\ConfigFactoryInterface;
 use Drupal\Core\Config\Entity\ConfigEntityTypeInterface;
 use Drupal\Core\Entity\ContentEntityInterface;
 use Drupal\Core\Entity\EntityFieldManagerInterface;
 use Drupal\Core\Entity\EntityTypeManagerInterface;
 use Drupal\entity_usage\EntityUsage;
 use Drupal\entity_usage\EntityUsageTrackBase;
-use Drupal\entity_usage\EntityUsageTrackInterface;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 
 /**
@@ -23,14 +23,7 @@ use Symfony\Component\DependencyInjection\ContainerInterface;
 class EntityReference extends EntityUsageTrackBase {
 
   /**
-   * Entity field manager service.
-   *
-   * @var \Drupal\Core\Entity\EntityFieldManagerInterface
-   */
-  protected $entityFieldManager;
-
-  /**
-   * Entity type manager service.
+   * The entity type manager.
    *
    * @var \Drupal\Core\Entity\EntityTypeManagerInterface
    */
@@ -49,19 +42,13 @@ class EntityReference extends EntityUsageTrackBase {
    *   The usage tracking service.
    * @param \Drupal\Core\Entity\EntityFieldManagerInterface $entity_field_manager
    *   The EntityFieldManager service.
+   * @param \Drupal\Core\Config\ConfigFactoryInterface $config_factory
+   *   The config factory.
    * @param \Drupal\Core\Entity\EntityTypeManagerInterface $entity_type_manager
    *   The EntityTypeManager service.
    */
-  public function __construct(
-    array $configuration,
-    $plugin_id,
-    $plugin_definition,
-    EntityUsage $usage_service,
-    EntityFieldManagerInterface $entity_field_manager,
-    EntityTypeManagerInterface $entity_type_manager
-  ) {
-    parent::__construct($configuration, $plugin_id, $plugin_definition, $usage_service);
-    $this->entityFieldManager = $entity_field_manager;
+  public function __construct(array $configuration, $plugin_id, $plugin_definition, EntityUsage $usage_service, EntityFieldManagerInterface $entity_field_manager, ConfigFactoryInterface $config_factory, EntityTypeManagerInterface $entity_type_manager) {
+    parent::__construct($configuration, $plugin_id, $plugin_definition, $usage_service, $entity_field_manager, $config_factory);
     $this->entityTypeManager = $entity_type_manager;
   }
 
@@ -75,6 +62,7 @@ class EntityReference extends EntityUsageTrackBase {
       $plugin_definition,
       $container->get('entity_usage.usage'),
       $container->get('entity_field.manager'),
+      $container->get('config.factory'),
       $container->get('entity_type.manager')
     );
   }
@@ -197,31 +185,21 @@ class EntityReference extends EntityUsageTrackBase {
    *   An array of field_names that could reference to other content entities.
    */
   protected function entityReferenceFieldsAvailable(ContentEntityInterface $entity) {
+    /** @var \Drupal\Core\Field\FieldDefinitionInterface[] $fields */
+    $fields = $this->getReferencingFields($entity, ['entity_reference']);
+
     $return_fields = [];
-    $fields_on_entity = $this->entityFieldManager->getFieldDefinitions($entity->getEntityTypeId(), $entity->bundle());
-
-    $entityref_fields_on_this_entity_type = [];
-    if (!empty($this->entityFieldManager->getFieldMapByFieldType('entity_reference')[$entity->getEntityTypeId()])) {
-      $entityref_fields_on_this_entity_type = $this->entityFieldManager->getFieldMapByFieldType('entity_reference')[$entity->getEntityTypeId()];
-    }
-    $entityref_on_this_bundle = array_intersect_key($fields_on_entity, $entityref_fields_on_this_entity_type);
-
-    // Clean out basefields.
-    $basefields = $this->entityFieldManager->getBaseFieldDefinitions($entity->getEntityTypeId());
-    $entityref_on_this_bundle = array_diff_key($entityref_on_this_bundle, $basefields);
-
-    if (!empty($entityref_on_this_bundle)) {
+    if (!empty($fields)) {
       // Make sure we only leave the fields that are referencing content
       // entities.
-      foreach ($entityref_on_this_bundle as $key => $entityref) {
-        $target_type = $entityref_on_this_bundle[$key]->getItemDefinition()->getSettings()['target_type'];
+      foreach ($fields as $key => $entityref) {
+        $target_type = $entityref->getItemDefinition()->getSettings()['target_type'];
         $entity_type = $this->entityTypeManager->getStorage($target_type)->getEntityType();
         if ($entity_type instanceof ConfigEntityTypeInterface) {
-          unset($entityref_on_this_bundle[$key]);
+          unset($fields[$key]);
         }
       }
-
-      $return_fields = array_keys($entityref_on_this_bundle);
+      $return_fields = array_keys($fields);
     }
 
     return $return_fields;

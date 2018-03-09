@@ -1,8 +1,26 @@
 entity_usage.settings:
   type: config_object
   mapping:
+    track_enabled_base_fields:
+      type: boolean
+      label: Track referencing base fields
+    track_enabled_source_entity_types:
+      label: Track enabled source entity types
+      type: sequence
+      sequence:
+        type: string
+    track_enabled_target_entity_types:
+      label: Track enabled target entity types
+      type: sequence
+      sequence:
+        type: string
+    track_enabled_plugins:
+      label: Enabled tracking plugins
+      type: sequence
+      sequence:
+        type: string
     local_task_enabled_entity_types:
-      label: Local Task Enabled Entity Types
+      label: Local task enabled entity types
       type: sequence
       sequence:
         type: string

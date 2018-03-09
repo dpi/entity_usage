@@ -2,6 +2,7 @@
 
 namespace Drupal\entity_usage\Plugin\EntityUsage\Track;
 
+use Drupal\Core\Config\ConfigFactoryInterface;
 use Drupal\Core\Entity\ContentEntityInterface;
 use Drupal\Core\Entity\ContentEntityTypeInterface;
 use Drupal\Core\Entity\EntityFieldManagerInterface;
@@ -49,6 +50,8 @@ class Link extends EntityUsageTrackBase {
    *   The usage tracking service.
    * @param \Drupal\Core\Entity\EntityFieldManagerInterface $entity_field_manager
    *   The EntityFieldManager service.
+   * @param \Drupal\Core\Config\ConfigFactoryInterface $config_factory
+   *   The factory for configuration objects.
    * @param \Drupal\Core\Entity\EntityTypeManagerInterface $entity_type_manager
    *   The EntityTypeManager service.
    */
@@ -58,9 +61,10 @@ class Link extends EntityUsageTrackBase {
     $plugin_definition,
     EntityUsage $usage_service,
     EntityFieldManagerInterface $entity_field_manager,
+    ConfigFactoryInterface $config_factory,
     EntityTypeManagerInterface $entity_type_manager
   ) {
-    parent::__construct($configuration, $plugin_id, $plugin_definition, $usage_service);
+    parent::__construct($configuration, $plugin_id, $plugin_definition, $usage_service, $entity_field_manager, $config_factory);
     $this->entityFieldManager = $entity_field_manager;
     $this->entityTypeManager = $entity_type_manager;
   }
@@ -75,6 +79,7 @@ class Link extends EntityUsageTrackBase {
       $plugin_definition,
       $container->get('entity_usage.usage'),
       $container->get('entity_field.manager'),
+      $container->get('config.factory'),
       $container->get('entity_type.manager')
     );
   }
@@ -215,17 +220,9 @@ class Link extends EntityUsageTrackBase {
    */
   protected function linkFieldsAvailable(ContentEntityInterface $entity) {
     $return_fields = [];
-    $fields_on_entity = $this->entityFieldManager->getFieldDefinitions($entity->getEntityTypeId(), $entity->bundle());
-    $link_fields_on_this_entity_type = [];
-    if (!empty($this->entityFieldManager->getFieldMapByFieldType('link')[$entity->getEntityTypeId()])) {
-      $link_fields_on_this_entity_type = $this->entityFieldManager->getFieldMapByFieldType('link')[$entity->getEntityTypeId()];
-    }
-    $link_fields_on_this_bundle = array_intersect_key($fields_on_entity, $link_fields_on_this_entity_type);
-    // Clean out basefields.
-    $basefields = $this->entityFieldManager->getBaseFieldDefinitions($entity->getEntityTypeId());
-    $link_fields_on_this_bundle = array_diff_key($link_fields_on_this_bundle, $basefields);
-    if (!empty($link_fields_on_this_bundle)) {
-      $return_fields = array_keys($link_fields_on_this_bundle);
+    $fields = $this->getReferencingFields($entity, ['link']);
+    if (!empty($fields)) {
+      $return_fields = array_keys($fields);
     }
     return $return_fields;
   }

@@ -40,7 +40,12 @@ class EntityUsageSettingsForm extends ConfigFormBase {
   /**
    * {@inheritdoc}
    */
-  public function __construct(ConfigFactoryInterface $config_factory, EntityTypeManagerInterface $entity_type_manager, RouteBuilderInterface $router_builder, CacheBackendInterface $cache_render) {
+  public function __construct(
+    ConfigFactoryInterface $config_factory,
+    EntityTypeManagerInterface $entity_type_manager,
+    RouteBuilderInterface $router_builder,
+    CacheBackendInterface $cache_render
+  ) {
     parent::__construct($config_factory);
     $this->entityTypeManager = $entity_type_manager;
     $this->routerBuilder = $router_builder;
@@ -78,7 +83,82 @@ class EntityUsageSettingsForm extends ConfigFormBase {
    */
   public function buildForm(array $form, FormStateInterface $form_state) {
     $config = $this->config('entity_usage.settings');
-    $configured_types = $config->get('local_task_enabled_entity_types') ?: [];
+
+    $form['generic_settings'] = [
+      '#type' => 'details',
+      '#open' => TRUE,
+      '#title' => $this->t('Generic'),
+    ];
+    $form['generic_settings']['track_enabled_base_fields'] = [
+      '#type' => 'checkbox',
+      '#title' => $this->t('Track referencing base fields'),
+      '#description' => $this->t('Should the entity base (non-configurable) fields also be checked on referenced entities?'),
+      '#default_value' => (bool) $config->get('track_enabled_base_fields'),
+    ];
+
+    $entity_types = $this->entityTypeManager->getDefinitions();
+    // Filter the entity types.
+    /** @var \Drupal\Core\Entity\ContentEntityTypeInterface[] $entity_types */
+    $entity_types = array_filter(array_map(function ($entity_type) {
+      if ($entity_type instanceof ContentEntityTypeInterface) {
+        return $entity_type;
+      }
+      return NULL;
+    }, $entity_types));
+
+    $form['track_enabled_source_entity_types'] = [
+      '#type' => 'details',
+      '#open' => TRUE,
+      '#title' => $this->t('Track source entity types'),
+      '#description' => $this->t('Which entity types should be checked for referencing entities?'),
+      '#tree' => TRUE,
+    ];
+    $source_default = $config->get('track_enabled_source_entity_types') ?: array_keys($entity_types);
+    foreach ($entity_types as $entity_type_id => $entity_type) {
+      $form['track_enabled_source_entity_types'][$entity_type_id] = [
+        '#type' => 'checkbox',
+        '#title' => $entity_type->getLabel(),
+        '#default_value' => in_array($entity_type_id, $source_default, TRUE),
+      ];
+    }
+
+    $form['track_enabled_target_entity_types'] = [
+      '#type' => 'details',
+      '#open' => TRUE,
+      '#title' => $this->t('Track target entity types'),
+      '#description' => $this->t('For which entity types should the usage by other entities be tracked?'),
+      '#tree' => TRUE,
+    ];
+
+    $target_default = $config->get('track_enabled_target_entity_types') ?: array_keys($entity_types);
+    foreach ($entity_types as $entity_type_id => $entity_type) {
+      $form['track_enabled_target_entity_types'][$entity_type_id] = [
+        '#type' => 'checkbox',
+        '#title' => $entity_type->getLabel(),
+        '#default_value' => in_array($entity_type_id, $target_default, TRUE),
+      ];
+    }
+
+    $form['track_enabled_plugins'] = [
+      '#type' => 'details',
+      '#open' => TRUE,
+      '#title' => $this->t('Enabled tracking plugins.'),
+      '#description' => $this->t('Select the Plugins that should be used to find entity references.'),
+      '#tree' => TRUE,
+    ];
+
+    /** @var \Drupal\entity_usage\EntityUsageTrackManager $service */
+    $service = \Drupal::service('plugin.manager.entity_usage.track');
+    $plugins = $service->getDefinitions();
+    $plugins_default = $config->get('track_enabled_plugins') ?: array_keys($plugins);
+    foreach ($plugins as $plugin_id => $plugin) {
+      $form['track_enabled_plugins'][$plugin_id] = [
+        '#type' => 'checkbox',
+        '#title' => $plugin['label'],
+        '#description' => !empty($plugin['description']) ? $plugin['description'] : NULL,
+        '#default_value' => in_array($plugin_id, $plugins_default, TRUE),
+      ];
+    }
 
     $form['local_task_enabled_entity_types'] = [
       '#type' => 'details',
@@ -88,13 +168,13 @@ class EntityUsageSettingsForm extends ConfigFormBase {
       '#tree' => TRUE,
     ];
 
-    // Get all applicable entity types.
-    foreach ($this->entityTypeManager->getDefinitions() as $entity_type_id => $entity_type) {
-      if (($entity_type instanceof ContentEntityTypeInterface) && $entity_type->hasLinkTemplate('canonical')) {
+    $local_tabs_default = $config->get('local_task_enabled_entity_types') ?: [];
+    foreach ($entity_types as $entity_type_id => $entity_type) {
+      if ($entity_type->hasLinkTemplate('canonical')) {
         $form['local_task_enabled_entity_types'][$entity_type_id] = [
           '#type' => 'checkbox',
           '#title' => $entity_type->getLabel(),
-          '#default_value' => in_array($entity_type_id, $configured_types),
+          '#default_value' => in_array($entity_type_id, $local_tabs_default, TRUE),
         ];
       }
     }
@@ -111,14 +191,23 @@ class EntityUsageSettingsForm extends ConfigFormBase {
     $form_state->cleanValues();
 
     foreach ($form_state->getValues() as $key => $value) {
-      if ($key == 'local_task_enabled_entity_types') {
-        $enabled_entity_types = [];
-        foreach ($value as $entity_type_id => $enabled) {
-          if ($enabled) {
-            $enabled_entity_types[] = $entity_type_id;
+      switch ($key) {
+        case 'local_task_enabled_entity_types':
+        case 'track_enabled_source_entity_types':
+        case 'track_enabled_target_entity_types':
+        case 'track_enabled_plugins':
+          $enabled_entity_types = [];
+          foreach ($value as $entity_type_id => $enabled) {
+            if ($enabled) {
+              $enabled_entity_types[] = $entity_type_id;
+            }
           }
-        }
-        $value = $enabled_entity_types;
+          $value = $enabled_entity_types;
+          break;
+
+        case 'track_enabled_base_fields':
+          $value = (bool) $value;
+          break;
       }
       $config->set($key, $value);
     }

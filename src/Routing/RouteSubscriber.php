@@ -50,7 +50,7 @@ class RouteSubscriber extends RouteSubscriberBase {
 
     foreach ($this->entityTypeManager->getDefinitions() as $entity_type_id => $entity_type) {
       if (($entity_type instanceof ContentEntityTypeInterface) && $canonical = $entity_type->getLinkTemplate('canonical')) {
-        if (!in_array($entity_type_id, $configured_types)) {
+        if (!in_array($entity_type_id, $configured_types, TRUE)) {
           continue;
         }
         $options = [

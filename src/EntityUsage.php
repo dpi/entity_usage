@@ -2,6 +2,7 @@
 
 namespace Drupal\entity_usage;
 
+use Drupal\Core\Config\ConfigFactoryInterface;
 use Drupal\Core\Database\Connection;
 use Drupal\Core\Entity\EntityInterface;
 use Drupal\entity_usage\Events\Events;
@@ -35,6 +36,13 @@ class EntityUsage implements EntityUsageInterface {
   protected $eventDispatcher;
 
   /**
+   * The config factory.
+   *
+   * @var \Drupal\Core\Config\ImmutableConfig
+   */
+  protected $config;
+
+  /**
    * Construct the EntityUsage object.
    *
    * @param \Drupal\Core\Database\Connection $connection
@@ -42,20 +50,30 @@ class EntityUsage implements EntityUsageInterface {
    *   information.
    * @param \Symfony\Component\EventDispatcher\EventDispatcherInterface $event_dispatcher
    *   An event dispatcher instance to use for events.
+   * @param \Drupal\Core\Config\ConfigFactoryInterface $config_factory
+   *   The config factory.
    * @param string $table
    *   (optional) The table to store the entity usage info. Defaults to
    *   'entity_usage'.
    */
-  public function __construct(Connection $connection, EventDispatcherInterface $event_dispatcher, $table = 'entity_usage') {
+  public function __construct(Connection $connection, EventDispatcherInterface $event_dispatcher, ConfigFactoryInterface $config_factory, $table = 'entity_usage') {
     $this->connection = $connection;
     $this->tableName = $table;
     $this->eventDispatcher = $event_dispatcher;
+    $this->config = $config_factory->get('entity_usage.settings');
   }
 
   /**
    * {@inheritdoc}
    */
   public function add($target_id, $target_type, $source_id, $source_type, $method, $field_name, $count = 1) {
+    // Check if target entity type is enabled, all entity types are enabled by
+    // default.
+    $enabled_target_entity_types = $this->config->get('track_enabled_target_entity_types');
+    if ($enabled_target_entity_types && !in_array($target_type, $enabled_target_entity_types, TRUE)) {
+      return;
+    }
+
     $this->connection->merge($this->tableName)
       ->keys([
         'target_id' => $target_id,

@@ -62,7 +62,7 @@ class EntityUsageLocalTask extends DeriverBase implements ContainerDeriverInterf
 
     foreach ($this->entityTypeManager->getDefinitions() as $entity_type_id => $entity_type) {
       if ($entity_type->hasLinkTemplate('canonical')) {
-        if (!in_array($entity_type_id, $configured_types)) {
+        if (!in_array($entity_type_id, $configured_types, TRUE)) {
           continue;
         }
         $this->derivatives["$entity_type_id.entity_usage"] = [

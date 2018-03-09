@@ -65,4 +65,17 @@ interface EntityUsageTrackInterface extends PluginInspectionInterface {
    */
   public function trackOnEntityDeletion(ContentEntityInterface $entity);
 
+  /**
+   * Retrieve fields of the given types on an entity.
+   *
+   * @param \Drupal\Core\Entity\ContentEntityInterface $entity
+   *   The entity object.
+   * @param string[] $field_types
+   *   A list of field types.
+   *
+   * @return \Drupal\Core\Field\FieldDefinitionInterface[]
+   *   An array of fields that could reference to other content entities.
+   */
+  public function getReferencingFields(ContentEntityInterface $entity, array $field_types);
+
 }

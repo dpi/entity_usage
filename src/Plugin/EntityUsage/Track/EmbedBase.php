@@ -2,6 +2,8 @@
 
 namespace Drupal\entity_usage\Plugin\EntityUsage\Track;
 
+use Drupal\Core\Config\ConfigFactoryInterface;
+use Drupal\Core\Entity\EntityFieldManagerInterface;
 use Drupal\Core\Entity\EntityRepositoryInterface;
 use Drupal\Core\Extension\ModuleHandlerInterface;
 use Drupal\entity_usage\EmbedTrackInterface;
@@ -40,20 +42,17 @@ abstract class EmbedBase extends EntityUsageTrackBase implements EmbedTrackInter
    *   The plugin implementation definition.
    * @param \Drupal\entity_usage\EntityUsage $usage_service
    *   The usage tracking service.
+   * @param \Drupal\Core\Entity\EntityFieldManagerInterface $entity_field_manager
+   *   The EntityFieldManager service.
+   * @param \Drupal\Core\Config\ConfigFactoryInterface $config_factory
+   *   The factory for configuration objects.
    * @param \Drupal\Core\Extension\ModuleHandlerInterface $module_handler
    *   The ModuleHandler service.
    * @param \Drupal\Core\Entity\EntityRepositoryInterface $entity_repository
    *   The EntityRepositoryInterface service.
    */
-  public function __construct(
-    array $configuration,
-    $plugin_id,
-    $plugin_definition,
-    EntityUsage $usage_service,
-    ModuleHandlerInterface $module_handler,
-    EntityRepositoryInterface $entity_repository
-  ) {
-    parent::__construct($configuration, $plugin_id, $plugin_definition, $usage_service);
+  public function __construct(array $configuration, $plugin_id, $plugin_definition, EntityUsage $usage_service, EntityFieldManagerInterface $entity_field_manager, ConfigFactoryInterface $config_factory, ModuleHandlerInterface $module_handler, EntityRepositoryInterface $entity_repository) {
+    parent::__construct($configuration, $plugin_id, $plugin_definition, $usage_service, $entity_field_manager, $config_factory);
     $this->moduleHandler = $module_handler;
     $this->entityRepository = $entity_repository;
   }
@@ -67,6 +66,8 @@ abstract class EmbedBase extends EntityUsageTrackBase implements EmbedTrackInter
       $plugin_id,
       $plugin_definition,
       $container->get('entity_usage.usage'),
+      $container->get('entity_field.manager'),
+      $container->get('config.factory'),
       $container->get('module_handler'),
       $container->get('entity.repository')
     );
@@ -202,7 +203,7 @@ abstract class EmbedBase extends EntityUsageTrackBase implements EmbedTrackInter
         $field_items = $entity->get($formatted_text_field_name);
         foreach ($field_items as $field_item) {
           $text .= $field_item->value;
-          if ($field_item->getFieldDefinition()->getType() == 'text_with_summary') {
+          if ($field_item->getFieldDefinition()->getType() === 'text_with_summary') {
             $text .= $field_item->summary;
           }
         }
