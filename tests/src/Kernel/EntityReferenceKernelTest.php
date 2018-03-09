@@ -151,7 +151,9 @@ class EntityReferenceKernelTest extends EntityKernelTestBase {
     $usage = $entity_usage->listUsage($this->referencedEntity);
     $this->assertEquals([
       $referencing_entity->getEntityTypeId() => [
-        $referencing_entity->id() => 1,
+        $referencing_entity->id() => [
+          $field_name => 1,
+        ],
       ],
     ], $usage, 'The usage count is correct.');
 
@@ -164,7 +166,9 @@ class EntityReferenceKernelTest extends EntityKernelTestBase {
     $usage = $entity_usage->listUsage($this->referencedEntity);
     $this->assertEquals([
       $referencing_entity->getEntityTypeId() => [
-        $referencing_entity->id() => 1,
+        $referencing_entity->id() => [
+          $field_name => 1,
+        ],
       ],
     ], $usage, 'The usage count is correct.');
 
@@ -181,7 +185,9 @@ class EntityReferenceKernelTest extends EntityKernelTestBase {
     $usage = $entity_usage->listUsage($this->referencedEntity);
     $this->assertEquals([
       $referencing_entity->getEntityTypeId() => [
-        $referencing_entity->id() => 1,
+        $referencing_entity->id() => [
+          $field_name => 1,
+        ],
       ],
     ], $usage, 'The usage count is correct.');
 
@@ -197,7 +203,9 @@ class EntityReferenceKernelTest extends EntityKernelTestBase {
     $usage = $entity_usage->listUsage($this->referencedEntity);
     $this->assertEquals([
       $referencing_entity->getEntityTypeId() => [
-        $referencing_entity->id() => 1,
+        $referencing_entity->id() => [
+          $field_name => 1,
+        ],
       ],
     ], $usage, 'The usage count is correct.');
 

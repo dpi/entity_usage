@@ -237,8 +237,8 @@ class EntityReference extends EntityUsageTrackBase {
   private function incrementEntityReferenceUsage(ContentEntityInterface $entity, $field_name, $target_id) {
     /** @var \Drupal\field\Entity\FieldConfig $definition */
     $definition = $this->entityFieldManager->getFieldDefinitions($entity->getEntityTypeId(), $entity->bundle())[$field_name];
-    $referenced_entity_type = $definition->getSetting('target_type');
-    $this->usageService->add($target_id, $referenced_entity_type, $entity->id(), $entity->getEntityTypeId(), $this->pluginId);
+    $target_entity_type = $definition->getSetting('target_type');
+    $this->usageService->add($target_id, $target_entity_type, $entity->id(), $entity->getEntityTypeId(), $this->pluginId, $field_name);
   }
 
   /**
@@ -254,8 +254,8 @@ class EntityReference extends EntityUsageTrackBase {
   private function decrementEntityReferenceUsage(ContentEntityInterface $entity, $field_name, $target_id) {
     /** @var \Drupal\field\Entity\FieldConfig $definition */
     $definition = $this->entityFieldManager->getFieldDefinitions($entity->getEntityTypeId(), $entity->bundle())[$field_name];
-    $referenced_entity_type = $definition->getSetting('target_type');
-    $this->usageService->delete($target_id, $referenced_entity_type, $entity->id(), $entity->getEntityTypeId());
+    $target_entity_type = $definition->getSetting('target_type');
+    $this->usageService->delete($target_id, $target_entity_type, $entity->id(), $entity->getEntityTypeId(), $field_name);
   }
 
 }

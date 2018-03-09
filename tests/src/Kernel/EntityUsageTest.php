@@ -99,6 +99,7 @@ class EntityUsageTest extends EntityKernelTestBase {
   public function testGetUsage() {
     $target_entity = $this->testEntities[0];
     $referencing_entity = $this->testEntities[1];
+    $field_name = 'body';
     $this->injectedDatabase->insert($this->tableName)
       ->fields([
         't_id' => $target_entity->id(),
@@ -106,6 +107,7 @@ class EntityUsageTest extends EntityKernelTestBase {
         're_id' => $referencing_entity->id(),
         're_type' => $referencing_entity->getEntityTypeId(),
         'method' => 'entity_reference',
+        'field_name' => $field_name,
         'count' => 1,
       ])
       ->execute();
@@ -113,15 +115,15 @@ class EntityUsageTest extends EntityKernelTestBase {
     /** @var \Drupal\entity_usage\EntityUsage $entity_usage */
     $entity_usage = $this->container->get('entity_usage.usage');
     $complete_usage = $entity_usage->listUsage($target_entity);
-    $usage = $complete_usage[$referencing_entity->getEntityTypeId()][$referencing_entity->id()];
+    $usage = $complete_usage[$referencing_entity->getEntityTypeId()][$referencing_entity->id()][$field_name];
     $this->assertEquals(1, $usage, 'Returned the correct count, without tracking method.');
 
     $complete_usage = $entity_usage->listUsage($target_entity, TRUE);
-    $usage = $complete_usage['entity_reference'][$referencing_entity->getEntityTypeId()][$referencing_entity->id()];
+    $usage = $complete_usage['entity_reference'][$referencing_entity->getEntityTypeId()][$referencing_entity->id()][$field_name];
     $this->assertEquals(1, $usage, 'Returned the correct count, with tracking method.');
 
     $complete_references_entities = $entity_usage->listReferencedEntities($referencing_entity);
-    $usage = $complete_references_entities[$target_entity->getEntityTypeId()][$target_entity->id()];
+    $usage = $complete_references_entities[$target_entity->getEntityTypeId()][$target_entity->id()][$field_name];
     $this->assertEquals(1, $usage, 'Returned the correct count.');
 
     // Clean back the environment.
@@ -135,9 +137,10 @@ class EntityUsageTest extends EntityKernelTestBase {
    */
   public function testAddUsage() {
     $entity = $this->testEntities[0];
+    $field_name = 'body';
     /** @var \Drupal\entity_usage\EntityUsage $entity_usage */
     $entity_usage = $this->container->get('entity_usage.usage');
-    $entity_usage->add($entity->id(), $entity->getEntityTypeId(), '1', 'foo', 'entity_reference', 1);
+    $entity_usage->add($entity->id(), $entity->getEntityTypeId(), '1', 'foo', 'entity_reference', $field_name, 1);
 
     $event = \Drupal::state()->get('entity_usage_events_test.usage_add', []);
 
@@ -147,6 +150,7 @@ class EntityUsageTest extends EntityKernelTestBase {
     $this->assertSame($event['referencing_id'], '1');
     $this->assertSame($event['referencing_type'], 'foo');
     $this->assertSame($event['method'], 'entity_reference');
+    $this->assertSame($event['field_name'], $field_name);
     $this->assertSame($event['count'], 1);
 
     $real_usage = $this->injectedDatabase->select($this->tableName, 'e')
@@ -169,6 +173,7 @@ class EntityUsageTest extends EntityKernelTestBase {
    */
   public function testRemoveUsage() {
     $entity = $this->testEntities[0];
+    $field_name = 'body';
     /** @var \Drupal\entity_usage\EntityUsage $entity_usage */
     $entity_usage = $this->container->get('entity_usage.usage');
 
@@ -179,12 +184,13 @@ class EntityUsageTest extends EntityKernelTestBase {
         're_id' => 1,
         're_type' => 'foo',
         'method' => 'entity_reference',
+        'field_name' => $field_name,
         'count' => 3,
       ])
       ->execute();
 
     // Normal decrement.
-    $entity_usage->delete($entity->id(), $entity->getEntityTypeId(), 1, 'foo', 1);
+    $entity_usage->delete($entity->id(), $entity->getEntityTypeId(), 1, 'foo', $field_name, 1);
 
     $event = \Drupal::state()->get('entity_usage_events_test.usage_delete', []);
 
@@ -194,32 +200,36 @@ class EntityUsageTest extends EntityKernelTestBase {
     $this->assertSame($event['referencing_id'], 1);
     $this->assertSame($event['referencing_type'], 'foo');
     $this->assertSame($event['method'], NULL);
+    $this->assertSame($event['field_name'], NULL);
     $this->assertSame($event['count'], 1);
 
     $count = $this->injectedDatabase->select($this->tableName, 'e')
       ->fields('e', ['count'])
       ->condition('e.t_id', $entity->id())
       ->condition('e.t_type', $entity->getEntityTypeId())
+      ->condition('e.field_name', $field_name)
       ->execute()
       ->fetchField();
     $this->assertEquals(2, $count, 'The count was decremented correctly.');
 
     // Multiple decrement and removal.
-    $entity_usage->delete($entity->id(), $entity->getEntityTypeId(), 1, 'foo', 2);
+    $entity_usage->delete($entity->id(), $entity->getEntityTypeId(), 1, 'foo', $field_name, 2);
     $count = $this->injectedDatabase->select($this->tableName, 'e')
       ->fields('e', ['count'])
       ->condition('e.t_id', $entity->id())
       ->condition('e.t_type', $entity->getEntityTypeId())
+      ->condition('e.field_name', $field_name)
       ->execute()
       ->fetchField();
     $this->assertSame(FALSE, $count, 'The count was removed entirely when empty.');
 
     // Non-existent decrement.
-    $entity_usage->delete($entity->id(), $entity->getEntityTypeId(), 1, 'foo', 2);
+    $entity_usage->delete($entity->id(), $entity->getEntityTypeId(), 1, 'foo', $field_name, 2);
     $count = $this->injectedDatabase->select($this->tableName, 'e')
       ->fields('e', ['count'])
       ->condition('e.t_id', $entity->id())
       ->condition('e.t_type', $entity->getEntityTypeId())
+      ->condition('e.field_name', $field_name)
       ->execute()
       ->fetchField();
     $this->assertSame(FALSE, $count, 'Decrementing non-existing record complete.');
@@ -246,6 +256,7 @@ class EntityUsageTest extends EntityKernelTestBase {
           're_id' => 1,
           're_type' => 'foo',
           'method' => 'entity_reference',
+          'field_name' => 'body',
           'count' => 1,
         ])
         ->execute();
@@ -263,6 +274,7 @@ class EntityUsageTest extends EntityKernelTestBase {
     $this->assertSame($event['referencing_id'], NULL);
     $this->assertSame($event['referencing_type'], NULL);
     $this->assertSame($event['method'], NULL);
+    $this->assertSame($event['field_name'], NULL);
     $this->assertSame($event['count'], NULL);
 
     // Check if there are no records left.
@@ -295,6 +307,7 @@ class EntityUsageTest extends EntityKernelTestBase {
           're_id' => $entity->id(),
           're_type' => $entity_type,
           'method' => 'entity_reference',
+          'field_name' => 'body',
           'count' => 1,
         ])
         ->execute();
@@ -312,6 +325,7 @@ class EntityUsageTest extends EntityKernelTestBase {
     $this->assertSame($event['referencing_id'], NULL);
     $this->assertSame($event['referencing_type'], $entity_type);
     $this->assertSame($event['method'], NULL);
+    $this->assertSame($event['field_name'], NULL);
     $this->assertSame($event['count'], NULL);
 
     // Check if there are no records left.
@@ -361,6 +375,7 @@ class EntityUsageTest extends EntityKernelTestBase {
       'referencing_id' => $event->getReferencingEntityId(),
       'referencing_type' => $event->getReferencingEntityType(),
       'method' => $event->getReferencingMethod(),
+      'field_name' => $event->getReferencingFieldName(),
       'count' => $event->getCount(),
     ]);
   }
@@ -381,6 +396,7 @@ class EntityUsageTest extends EntityKernelTestBase {
       'referencing_id' => $event->getReferencingEntityId(),
       'referencing_type' => $event->getReferencingEntityType(),
       'method' => $event->getReferencingMethod(),
+      'field_name' => $event->getReferencingFieldName(),
       'count' => $event->getCount(),
     ]);
   }
@@ -401,6 +417,7 @@ class EntityUsageTest extends EntityKernelTestBase {
       'referencing_id' => $event->getReferencingEntityId(),
       'referencing_type' => $event->getReferencingEntityType(),
       'method' => $event->getReferencingMethod(),
+      'field_name' => $event->getReferencingFieldName(),
       'count' => $event->getCount(),
     ]);
   }
@@ -421,6 +438,7 @@ class EntityUsageTest extends EntityKernelTestBase {
       'referencing_id' => $event->getReferencingEntityId(),
       'referencing_type' => $event->getReferencingEntityType(),
       'method' => $event->getReferencingMethod(),
+      'field_name' => $event->getReferencingFieldName(),
       'count' => $event->getCount(),
     ]);
   }

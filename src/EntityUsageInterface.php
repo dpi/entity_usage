@@ -26,10 +26,13 @@ interface EntityUsageInterface {
    * @param string $method
    *   (optional) The method or way the two entities are being referenced.
    *   Defaults to 'entity_reference'.
+   * @param string $field_name
+   *   (optional) The name of the field in the referencing entity using the
+   *   target entity. Defaults to NULL.
    * @param int $count
    *   (optional) The number of references to add to the object. Defaults to 1.
    */
-  public function add($t_id, $t_type, $re_id, $re_type, $method = 'entity_reference', $count = 1);
+  public function add($t_id, $t_type, $re_id, $re_type, $method = 'entity_reference', $field_name = NULL, $count = 1);
 
   /**
    * Remove a record indicating that the entity is not being referenced anymore.
@@ -46,12 +49,15 @@ interface EntityUsageInterface {
    *   (optional) The type of the object containing the referenced entity. May
    *   be omitted if all entity-type references to a file are being deleted.
    *   Defaults to NULL.
+   * @param string $field_name
+   *   (optional) The name of the field in the referencing entity using the
+   *   target entity. Defaults to NULL.
    * @param int $count
    *   (optional) The number of references to delete from the object. Defaults
    *   to 1. Zero may be specified to delete all references to the entity within
    *   a specific object.
    */
-  public function delete($t_id, $t_type, $re_id = NULL, $re_type = NULL, $count = 1);
+  public function delete($t_id, $t_type, $re_id = NULL, $re_type = NULL, $field_name = NULL, $count = 1);
 
   /**
    * Remove all records of a given entity_type (target).

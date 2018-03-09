@@ -77,10 +77,10 @@ abstract class EmbedBase extends EntityUsageTrackBase implements EmbedTrackInter
    */
   public function trackOnEntityCreation(ContentEntityInterface $entity) {
     $referenced_entities_by_field = $this->getEmbeddedEntitiesByField($entity);
-    foreach ($referenced_entities_by_field as $field => $embedded_entities) {
-      foreach ($embedded_entities as $uuid => $type) {
+    foreach ($referenced_entities_by_field as $field_name => $embedded_entities) {
+      foreach ($embedded_entities as $target_uuid => $target_type) {
         // Increment the usage as embedded entity.
-        $this->incrementEmbeddedUsage($entity, $type, $uuid);
+        $this->incrementEmbeddedUsage($entity, $target_type, $target_uuid, $field_name);
       }
     }
   }
@@ -110,23 +110,34 @@ abstract class EmbedBase extends EntityUsageTrackBase implements EmbedTrackInter
       $originals[] = $entity->original->getTranslation($langcode);
     }
 
-    $current_uuids = [];
+    $current_field_uuids = [[]];
     foreach ($translations as $translation) {
-      $current_uuids += $this->getEmbeddedEntitiesByField($translation, TRUE);
+      $current_field_uuids[] = $this->getEmbeddedEntitiesByField($translation);
     }
-    $original_uuids = [];
+    $current_field_uuids = array_merge_recursive(...$current_field_uuids);
+
+    $original_field_uuids = [[]];
     foreach ($originals as $original) {
-      $original_uuids += $this->getEmbeddedEntitiesByField($original, TRUE);
+      $original_field_uuids[] = $this->getEmbeddedEntitiesByField($original);
+    }
+    $original_field_uuids = array_merge_recursive(...$original_field_uuids);
+
+    foreach ($current_field_uuids as $field_name => $uuids) {
+      if (!empty($original_field_uuids[$field_name])) {
+        $uuids = array_diff_key($uuids, $original_field_uuids[$field_name]);
+      }
+      foreach ($uuids as $target_uuid => $target_type) {
+        $this->incrementEmbeddedUsage($entity, $target_type, $target_uuid, $field_name);
+      }
     }
 
-    $added_uuids = array_diff_key($current_uuids, $original_uuids);
-    $removed_uuids = array_diff_key($original_uuids, $current_uuids);
-
-    foreach ($added_uuids as $uuid => $type) {
-      $this->incrementEmbeddedUsage($entity, $type, $uuid);
-    }
-    foreach ($removed_uuids as $uuid => $type) {
-      $this->decrementEmbeddedUsage($entity, $type, $uuid);
+    foreach ($original_field_uuids as $field_name => $uuids) {
+      if (!empty($current_field_uuids[$field_name])) {
+        $uuids = array_diff_key($uuids, $current_field_uuids[$field_name]);
+      }
+      foreach ($uuids as $target_uuid => $target_type) {
+        $this->decrementEmbeddedUsage($entity, $target_type, $target_uuid, $field_name);
+      }
     }
   }
 
@@ -154,10 +165,10 @@ abstract class EmbedBase extends EntityUsageTrackBase implements EmbedTrackInter
 
     foreach ($translations as $translation) {
       $referenced_entities_by_field = $this->getEmbeddedEntitiesByField($translation);
-      foreach ($referenced_entities_by_field as $field => $embedded_entities) {
-        foreach ($embedded_entities as $uuid => $type) {
+      foreach ($referenced_entities_by_field as $field_name => $embedded_entities) {
+        foreach ($embedded_entities as $target_uuid => $target_type) {
           // Decrement the usage as embedded entity.
-          $this->decrementEmbeddedUsage($entity, $type, $uuid);
+          $this->decrementEmbeddedUsage($entity, $target_type, $target_uuid, $field_name);
         }
       }
     }
@@ -169,9 +180,6 @@ abstract class EmbedBase extends EntityUsageTrackBase implements EmbedTrackInter
    *
    * @param \Drupal\Core\Entity\ContentEntityInterface $entity
    *   An entity object whose fields to analyze.
-   * @param bool $omit_field_names
-   *   (Optional) Whether the field names should be omitted from the results.
-   *   Defaults to FALSE.
    *
    * @return array
    *   An array of found embedded entities, in the following structure:
@@ -182,31 +190,23 @@ abstract class EmbedBase extends EntityUsageTrackBase implements EmbedTrackInter
    *       'uuid3' => 'entity_type2',
    *        etc.
    *     ],
-   *   ]
-   *   If the $omit_field_names flag is TRUE, the first level is not present,
-   *   and the result array is directly an associative array of uuids as keys
-   *   and entity_types as values.
+   *   ].
    */
-  protected function getEmbeddedEntitiesByField(ContentEntityInterface $entity, $omit_field_names = FALSE) {
+  protected function getEmbeddedEntitiesByField(ContentEntityInterface $entity) {
     $entities = [];
 
     if ($this->moduleHandler->moduleExists('editor')) {
       $formatted_text_fields = _editor_get_formatted_text_fields($entity);
-      foreach ($formatted_text_fields as $formatted_text_field) {
+      foreach ($formatted_text_fields as $formatted_text_field_name) {
         $text = '';
-        $field_items = $entity->get($formatted_text_field);
+        $field_items = $entity->get($formatted_text_field_name);
         foreach ($field_items as $field_item) {
           $text .= $field_item->value;
           if ($field_item->getFieldDefinition()->getType() == 'text_with_summary') {
             $text .= $field_item->summary;
           }
         }
-        if ($omit_field_names) {
-          $entities += $this->parseEntitiesFromText($text);
-        }
-        else {
-          $entities[$formatted_text_field] = $this->parseEntitiesFromText($text);
-        }
+        $entities[$formatted_text_field_name] = $this->parseEntitiesFromText($text);
       }
     }
 
@@ -222,11 +222,13 @@ abstract class EmbedBase extends EntityUsageTrackBase implements EmbedTrackInter
    *   The type of the target entity.
    * @param string $uuid
    *   The UUID of the target entity.
+   * @param string $field_name
+   *   The name of the field referencing the target entity.
    */
-  protected function incrementEmbeddedUsage(ContentEntityInterface $entity, $t_type, $uuid) {
+  protected function incrementEmbeddedUsage(ContentEntityInterface $entity, $t_type, $uuid, $field_name) {
     $target_entity = $this->entityRepository->loadEntityByUuid($t_type, $uuid);
     if ($target_entity) {
-      $this->usageService->add($target_entity->id(), $t_type, $entity->id(), $entity->getEntityTypeId(), $this->pluginId);
+      $this->usageService->add($target_entity->id(), $t_type, $entity->id(), $entity->getEntityTypeId(), $this->pluginId, $field_name);
     }
   }
 
@@ -239,11 +241,13 @@ abstract class EmbedBase extends EntityUsageTrackBase implements EmbedTrackInter
    *   The type of the target entity.
    * @param string $uuid
    *   The UUID of the target entity.
+   * @param string $field_name
+   *   The name of the field referencing the target entity.
    */
-  protected function decrementEmbeddedUsage(ContentEntityInterface $entity, $t_type, $uuid) {
+  protected function decrementEmbeddedUsage(ContentEntityInterface $entity, $t_type, $uuid, $field_name) {
     $target_entity = $this->entityRepository->loadEntityByUuid($t_type, $uuid);
     if ($target_entity) {
-      $this->usageService->delete($target_entity->id(), $t_type, $entity->id(), $entity->getEntityTypeId());
+      $this->usageService->delete($target_entity->id(), $t_type, $entity->id(), $entity->getEntityTypeId(), $field_name);
     }
   }
 

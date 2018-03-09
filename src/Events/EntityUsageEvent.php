@@ -45,6 +45,13 @@ class EntityUsageEvent extends Event {
   protected $method;
 
   /**
+   * The name of the field in the referencing entity using the target entity.
+   *
+   * @var string
+   */
+  protected $fieldName;
+
+  /**
    * The number of references to add or remove.
    *
    * @var string
@@ -64,15 +71,18 @@ class EntityUsageEvent extends Event {
    *   The type of the entity that is referencing.
    * @param string $method
    *   The method or way the two entities are being referenced.
+   * @param string $field_name
+   *   The name of the field in the referencing entity using the target entity.
    * @param int $count
    *   The number of references to add or remove.
    */
-  public function __construct($t_id = NULL, $t_type = NULL, $re_id = NULL, $re_type = NULL, $method = NULL, $count = NULL) {
+  public function __construct($t_id = NULL, $t_type = NULL, $re_id = NULL, $re_type = NULL, $method = NULL, $field_name = NULL, $count = NULL) {
     $this->targetEntityId = $t_id;
     $this->targetEntityType = $t_type;
     $this->referencingEntityId = $re_id;
     $this->referencingEntityType = $re_type;
     $this->method = $method;
+    $this->fieldName = $field_name;
     $this->count = $count;
   }
 
@@ -184,6 +194,16 @@ class EntityUsageEvent extends Event {
    */
   public function getReferencingMethod() {
     return $this->method;
+  }
+
+  /**
+   * Gets the referencing field name.
+   *
+   * @return null|string
+   *   The referencing field name or NULL.
+   */
+  public function getReferencingFieldName() {
+    return $this->fieldName;
   }
 
   /**

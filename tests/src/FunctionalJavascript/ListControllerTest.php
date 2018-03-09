@@ -73,6 +73,7 @@ class ListControllerTest extends EntityUsageJavascriptTestBase {
     $this->assertSession()->pageTextContains('Referencing entity');
     $this->assertSession()->pageTextContains('Referencing entity type');
     $this->assertSession()->pageTextContains('Referencing method');
+    $this->assertSession()->pageTextContains('Referencing field');
     $this->assertSession()->pageTextContains('Count');
 
     // Check both referencing nodes are linked.
@@ -88,7 +89,9 @@ class ListControllerTest extends EntityUsageJavascriptTestBase {
     $this->assertEquals('node', $first_row_type->getText());
     $first_row_method = $this->xpath('//table/tbody/tr[1]/td[3]')[0];
     $this->assertEquals('entity_reference', $first_row_method->getText());
-    $first_row_count = $this->xpath('//table/tbody/tr[1]/td[4]')[0];
+    $first_row_field_label = $this->xpath('//table/tbody/tr[1]/td[4]')[0];
+    $this->assertEquals('Related nodes', $first_row_field_label->getText());
+    $first_row_count = $this->xpath('//table/tbody/tr[1]/td[5]')[0];
     $this->assertEquals('1', $first_row_count->getText());
 
     $second_row_title = $this->xpath('//table/tbody/tr[2]/td[1]')[0];
@@ -97,7 +100,9 @@ class ListControllerTest extends EntityUsageJavascriptTestBase {
     $this->assertEquals('node', $second_row_type->getText());
     $second_row_method = $this->xpath('//table/tbody/tr[2]/td[3]')[0];
     $this->assertEquals('entity_embed', $second_row_method->getText());
-    $second_row_count = $this->xpath('//table/tbody/tr[2]/td[4]')[0];
+    $second_row_field_label = $this->xpath('//table/tbody/tr[2]/td[4]')[0];
+    $this->assertEquals('Text', $second_row_field_label->getText());
+    $second_row_count = $this->xpath('//table/tbody/tr[2]/td[5]')[0];
     $this->assertEquals('1', $second_row_count->getText());
   }
 

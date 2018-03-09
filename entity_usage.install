@@ -46,6 +46,13 @@ function entity_usage_schema() {
         'not null' => TRUE,
         'default' => '',
       ],
+      'field_name' => [
+        'description' => 'The field in the referencing entity containing the target entity.',
+        'type' => 'varchar_ascii',
+        'length' => 128,
+        'not null' => FALSE,
+        'default' => '',
+      ],
       'count' => [
         'description' => 'The number of times this entity is referenced in this case.',
         'type' => 'int',
@@ -54,7 +61,7 @@ function entity_usage_schema() {
         'default' => 0,
       ],
     ],
-    'primary key' => ['t_id', 't_type', 're_id', 're_type', 'method'],
+    'primary key' => ['t_id', 't_type', 're_id', 're_type', 'method', 'field_name'],
     'indexes' => [
       'ttype_tid' => ['t_type', 't_id'],
       'tid_ttype_count' => ['t_id', 't_type', 'count'],
@@ -71,4 +78,25 @@ function entity_usage_update_8001(&$sandbox) {
   $database->schema()->dropPrimaryKey('entity_usage');
   $new_primary_keys = ['t_id', 't_type', 're_id', 're_type', 'method'];
   $database->schema()->addPrimaryKey('entity_usage', $new_primary_keys);
+}
+
+/**
+ * Add a field_name column to the entity_usage table and primary key.
+ */
+function entity_usage_update_8002() {
+  $database = \Drupal::database();
+  $schema = $database->schema();
+
+  $spec = array(
+    'description' => 'The field in the referencing entity containing the target entity.',
+    'type' => 'varchar_ascii',
+    'length' => 128,
+    'not null' => FALSE,
+    'default' => '',
+  );
+  $schema->addField('entity_usage', 'field_name', $spec);
+
+  $new_primary_keys = ['t_id', 't_type', 're_id', 're_type', 'method', 'field_name'];
+  $schema->dropPrimaryKey('entity_usage');
+  $schema->addPrimaryKey('entity_usage', $new_primary_keys);
 }

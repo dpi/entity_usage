@@ -5,6 +5,7 @@ namespace Drupal\entity_usage\Controller;
 use Drupal\Core\Access\AccessResult;
 use Drupal\Core\Controller\ControllerBase;
 use Drupal\Core\Entity\ContentEntityInterface;
+use Drupal\Core\Entity\EntityFieldManagerInterface;
 use Drupal\Core\Entity\EntityTypeManagerInterface;
 use Drupal\entity_usage\EntityUsageInterface;
 use Symfony\Component\DependencyInjection\ContainerInterface;
@@ -15,12 +16,13 @@ use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
  */
 class ListUsageController extends ControllerBase {
 
+
   /**
-   * The EntityTypeManager service.
+   * The entity field manager.
    *
-   * @var \Drupal\Core\Entity\EntityTypeManagerInterface
+   * @var \Drupal\Core\Entity\EntityFieldManagerInterface
    */
-  protected $entityTypeManager;
+  protected $entityFieldManager;
 
   /**
    * The EntityUsage service.
@@ -33,12 +35,15 @@ class ListUsageController extends ControllerBase {
    * ListUsageController constructor.
    *
    * @param \Drupal\Core\Entity\EntityTypeManagerInterface $entity_type_manager
-   *   The EntityManager service.
+   *   The entity type manager.
+   * @param \Drupal\Core\Entity\EntityFieldManagerInterface $entity_field_manager
+   *   The entity field manager.
    * @param \Drupal\entity_usage\EntityUsageInterface $entity_usage
    *   The EntityUsage service.
    */
-  public function __construct(EntityTypeManagerInterface $entity_type_manager, EntityUsageInterface $entity_usage) {
+  public function __construct(EntityTypeManagerInterface $entity_type_manager, EntityFieldManagerInterface $entity_field_manager, EntityUsageInterface $entity_usage) {
     $this->entityTypeManager = $entity_type_manager;
+    $this->entityFieldManager = $entity_field_manager;
     $this->entityUsage = $entity_usage;
   }
 
@@ -48,6 +53,7 @@ class ListUsageController extends ControllerBase {
   public static function create(ContainerInterface $container) {
     return new static(
       $container->get('entity_type.manager'),
+      $container->get('entity_field.manager'),
       $container->get('entity_usage.usage')
     );
   }
@@ -83,21 +89,28 @@ class ListUsageController extends ControllerBase {
           $this->t('Referencing entity'),
           $this->t('Referencing entity type'),
           $this->t('Referencing method'),
+          $this->t('Referencing field'),
           $this->t('Count'),
         ];
         $rows = [];
         foreach ($usages as $method => $method_usages) {
           foreach ($method_usages as $re_type => $type_usages) {
-            foreach ($type_usages as $re_id => $count) {
-              $referencing_entity = $this->entityTypeManager->getStorage($re_type)->load($re_id);
+            foreach ($type_usages as $re_id => $field_names) {
+              $referencing_entity = $this->entityTypeManager->getStorage($re_type)
+                ->load($re_id);
               if ($referencing_entity) {
-                $link = $this->getReferencingEntityLink($referencing_entity);
-                $rows[] = [
-                  $link,
-                  $re_type,
-                  $method,
-                  $count,
-                ];
+                $field_definitions = $this->entityFieldManager->getFieldDefinitions($referencing_entity->getEntityTypeId(), $referencing_entity->bundle());
+                foreach ($field_names as $field_name => $count) {
+                  $link = $this->getReferencingEntityLink($referencing_entity);
+                  $field_label = isset($field_definitions[$field_name]) ? $field_definitions[$field_name]->getLabel() : $this->t('Unknown');
+                  $rows[] = [
+                    $link,
+                    $re_type,
+                    $method,
+                    $field_label,
+                    $count,
+                  ];
+                }
               }
             }
           }
