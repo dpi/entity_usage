@@ -93,7 +93,7 @@ class EntityUsageTest extends EntityKernelTestBase {
   /**
    * Tests the listSources() method.
    *
-   * @covers \Drupal\entity_usage\EntityUsage::listUsage
+   * @covers \Drupal\entity_usage\EntityUsage::listSources
    * @covers \Drupal\entity_usage\EntityUsage::listTargets
    */
   public function testGetSources() {
