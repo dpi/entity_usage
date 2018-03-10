@@ -50,32 +50,14 @@ class BatchUpdateForm extends FormBase {
    * {@inheritdoc}
    */
   public function buildForm(array $form, FormStateInterface $form_state) {
-    $entity_types = $this->entityTypeManager->getDefinitions();
-    $types = [];
-    foreach ($entity_types as $type => $entity_type) {
-      // Only look for content entities.
-      if ($entity_type->entityClassImplements('\Drupal\Core\Entity\ContentEntityInterface')) {
-        $types[$type] = new FormattableMarkup('@label (@machine_name)', [
-          '@label' => $entity_type->getLabel(),
-          '@machine_name' => $type,
-        ]);
-      }
-    }
-
     $form['description'] = [
-      '#markup' => $this->t("This form allows you to reset and track again all entity usages in your system.<br /> It may be useful if you want to have available the information about the relationships between entities before installing the module.<br /><b>Be aware though that using this operation will delete all tracked statistics and recreate everything again.</b>"),
-    ];
-    $form['source_entity_types'] = [
-      '#type' => 'checkboxes',
-      '#title' => $this->t('Delete and recreate all usage statistics for these entity types:'),
-      '#options' => $types,
-      '#default_value' => array_keys($types),
+      '#markup' => $this->t("This page allows you to delete and re-generate again all entity usage statistics in your system.<br /><br />You may want to check the settings page to fine-tune what entities should be tracked, and other options."),
     ];
     $form['actions'] = ['#type' => 'actions'];
     $form['actions']['submit'] = [
       '#type' => 'submit',
       '#button_type' => 'primary',
-      '#value' => $this->t('Recreate entity usage statistics'),
+      '#value' => $this->t('Recreate all entity usage statistics'),
     ];
 
     return $form;
@@ -85,31 +67,28 @@ class BatchUpdateForm extends FormBase {
    * {@inheritdoc}
    */
   public function submitForm(array &$form, FormStateInterface $form_state) {
-    $source_entity_types = array_filter($form_state->getValue('source_entity_types'));
-
     // Generate a batch to recreate the statistics for all entities.
     // Note that if we force all statistics to be created, there is no need to
     // separate them between source / target cases. If all entities are
     // going to be re-tracked, tracking all of them as source is enough, because
     // there could never be a target without a source.
-    $batch = $this->generateBatch($source_entity_types);
+    $batch = $this->generateBatch();
     batch_set($batch);
   }
 
   /**
    * Create a batch to process the entity types in bulk.
    *
-   * @param string[] $types
-   *   An array of entity types ids.
-   *
    * @return array
    *   The batch array.
    */
-  public function generateBatch(array $types) {
+  public function generateBatch() {
     $operations = [];
-
-    foreach ($types as $type) {
-      $operations[] = ['Drupal\entity_usage\Form\BatchUpdateForm::updateSourcesBatchWorker', [$type]];
+    foreach ($this->entityTypeManager->getDefinitions() as $entity_type_id => $entity_type) {
+      // Only look for content entities.
+      if ($entity_type->entityClassImplements('\Drupal\Core\Entity\ContentEntityInterface')) {
+        $operations[] = ['Drupal\entity_usage\Form\BatchUpdateForm::updateSourcesBatchWorker', [$entity_type_id]];
+      }
     }
 
     $batch = [

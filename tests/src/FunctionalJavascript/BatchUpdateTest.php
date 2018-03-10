@@ -31,6 +31,8 @@ class BatchUpdateTest extends EntityUsageJavascriptTestBase {
    */
   public function testBatchUpdate() {
     $page = $this->getSession()->getPage();
+    $assert_session = $this->assertSession();
+
     /** @var \Drupal\entity_usage\EntityUsage $usage_service */
     $usage_service = \Drupal::service('entity_usage.usage');
 
@@ -38,7 +40,7 @@ class BatchUpdateTest extends EntityUsageJavascriptTestBase {
     $this->drupalGet('/node/add/eu_test_ct');
     $page->fillField('title[0][value]', 'Node 1');
     $page->pressButton('Save');
-    $this->assertSession()->pageTextContains('eu_test_ct Node 1 has been created.');
+    $assert_session->pageTextContains('eu_test_ct Node 1 has been created.');
     $node1 = Node::load(1);
     $this->saveHtmlOutput();
 
@@ -47,7 +49,7 @@ class BatchUpdateTest extends EntityUsageJavascriptTestBase {
     $page->fillField('title[0][value]', 'Node 2');
     $page->fillField('field_eu_test_related_nodes[0][target_id]', 'Node 1 (1)');
     $page->pressButton('Save');
-    $this->assertSession()->pageTextContains('eu_test_ct Node 2 has been created.');
+    $assert_session->pageTextContains('eu_test_ct Node 2 has been created.');
     $this->saveHtmlOutput();
 
     // Create node 3 also referencing node 1 in a reference field.
@@ -55,7 +57,7 @@ class BatchUpdateTest extends EntityUsageJavascriptTestBase {
     $page->fillField('title[0][value]', 'Node 3');
     $page->fillField('field_eu_test_related_nodes[0][target_id]', 'Node 1 (1)');
     $page->pressButton('Save');
-    $this->assertSession()->pageTextContains('eu_test_ct Node 3 has been created.');
+    $assert_session->pageTextContains('eu_test_ct Node 3 has been created.');
     $this->saveHtmlOutput();
 
     // Remove one of the records from the database to simulate an usage
@@ -66,12 +68,15 @@ class BatchUpdateTest extends EntityUsageJavascriptTestBase {
 
     // Go to the batch update page and check the update.
     $this->drupalGet('/admin/config/entity-usage/batch-update');
-    $this->assertSession()->pageTextContains('Batch Update');
-    $this->assertSession()->pageTextContains('This form allows you to reset and track again all entity usages in your system.');
-    $page->pressButton('Recreate entity usage statistics');
-    $this->getSession()->wait(5000);
+    $assert_session->pageTextContains('Batch Update');
+    $assert_session->pageTextContains('This page allows you to delete and re-generate again all entity usage statistics in your system.');
+    $assert_session->pageTextContains('You may want to check the settings page to fine-tune what entities should be tracked, and other options.');
+    $page->pressButton('Recreate all entity usage statistics');
+    $this->getSession()->wait(1000);
     $this->saveHtmlOutput();
-    $this->assertSession()->pageTextContains('Recreated entity usage for');
+    $this->getSession()->wait(6000);
+    $this->saveHtmlOutput();
+    $assert_session->pageTextContains('Recreated entity usage for');
 
     // Check if the resulting usage is the expected.
     $usage = $usage_service->listSources($node1);
