@@ -345,7 +345,6 @@ class EntityUsageTest extends EntityKernelTestBase {
    *   An array of entity objects.
    */
   protected function getTestEntities() {
-
     $content_entity_1 = EntityTest::create(['name' => $this->randomMachineName()]);
     $content_entity_1->save();
     $content_entity_2 = EntityTest::create(['name' => $this->randomMachineName()]);
@@ -361,9 +360,9 @@ class EntityUsageTest extends EntityKernelTestBase {
    * Reacts to save event.
    *
    * @param \Drupal\entity_usage\Events\EntityUsageEvent $event
-   *    The entity usage event.
+   *   The entity usage event.
    * @param string $name
-   *    The name of the event.
+   *   The name of the event.
    */
   public function usageAddEventRecorder(EntityUsageEvent $event, $name) {
     $this->state->set('entity_usage_events_test.usage_add', [
@@ -382,9 +381,9 @@ class EntityUsageTest extends EntityKernelTestBase {
    * Reacts to delete event.
    *
    * @param \Drupal\entity_usage\Events\EntityUsageEvent $event
-   *    The entity usage event.
+   *   The entity usage event.
    * @param string $name
-   *    The name of the event.
+   *   The name of the event.
    */
   public function usageDeleteEventRecorder(EntityUsageEvent $event, $name) {
     $this->state->set('entity_usage_events_test.usage_delete', [
@@ -403,9 +402,9 @@ class EntityUsageTest extends EntityKernelTestBase {
    * Reacts to bulk target delete event.
    *
    * @param \Drupal\entity_usage\Events\EntityUsageEvent $event
-   *    The entity usage event.
+   *   The entity usage event.
    * @param string $name
-   *    The name of the event.
+   *   The name of the event.
    */
   public function usageBulkTargetDeleteEventRecorder(EntityUsageEvent $event, $name) {
     $this->state->set('entity_usage_events_test.usage_bulk_delete_targets', [
@@ -424,9 +423,9 @@ class EntityUsageTest extends EntityKernelTestBase {
    * Reacts to bulk source delete event.
    *
    * @param \Drupal\entity_usage\Events\EntityUsageEvent $event
-   *    The entity usage event.
+   *   The entity usage event.
    * @param string $name
-   *    The name of the event.
+   *   The name of the event.
    */
   public function usageBulkSourceDeleteEventRecorder(EntityUsageEvent $event, $name) {
     $this->state->set('entity_usage_events_test.usage_bulk_delete_sources', [

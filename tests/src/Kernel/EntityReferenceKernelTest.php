@@ -95,7 +95,7 @@ class EntityReferenceKernelTest extends EntityKernelTestBase {
       'field_name' => 'body',
       'entity_type' => $this->entityType,
       'type' => 'text',
-      'settings' => array(),
+      'settings' => [],
     ])->save();
     FieldConfig::create([
       'entity_type' => $this->entityType,
