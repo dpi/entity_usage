@@ -94,7 +94,7 @@ class EntityUsage implements EntityUsageInterface {
   /**
    * {@inheritdoc}
    */
-  public function delete($target_id, $target_type, $source_id = NULL, $source_type = NULL, $field_name = NULL, $count = 1) {
+  public function delete($target_id, $target_type, $source_id = NULL, $source_type = NULL, $method = NULL, $field_name = NULL, $count = 1) {
     $query = $this->connection->delete($this->tableName)
       ->condition('target_type', $target_type)
       ->condition('target_id', $target_id);
@@ -102,6 +102,10 @@ class EntityUsage implements EntityUsageInterface {
       $query
         ->condition('source_type', $source_type)
         ->condition('source_id', $source_id);
+    }
+    if ($method) {
+      $query
+        ->condition('method', $method);
     }
     if ($field_name) {
       $query

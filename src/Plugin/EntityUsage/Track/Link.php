@@ -165,7 +165,7 @@ class Link extends EntityUsageTrackBase {
       }
       foreach ($removed_ids as $removed_entity) {
         list($target_type, $target_id) = explode('|', $removed_entity);
-        $this->usageService->delete($target_id, $target_type, $entity->id(), $entity->getEntityTypeId(), $field_name);
+        $this->usageService->delete($target_id, $target_type, $entity->id(), $entity->getEntityTypeId(), $this->pluginId, $field_name);
       }
     }
   }
@@ -201,7 +201,7 @@ class Link extends EntityUsageTrackBase {
             $target_entity = $this->getTargetEntity($field_item);
             if ($target_entity) {
               list($target_type, $target_id) = explode('|', $target_entity);
-              $this->usageService->delete($target_id, $target_type, $entity->id(), $entity->getEntityTypeId(), $field_name);
+              $this->usageService->delete($target_id, $target_type, $entity->id(), $entity->getEntityTypeId(), $this->pluginId, $field_name);
             }
           }
         }

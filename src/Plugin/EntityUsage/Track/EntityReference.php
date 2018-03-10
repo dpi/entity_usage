@@ -236,7 +236,7 @@ class EntityReference extends EntityUsageTrackBase {
     /** @var \Drupal\field\Entity\FieldConfig $definition */
     $definition = $this->entityFieldManager->getFieldDefinitions($source_entity->getEntityTypeId(), $source_entity->bundle())[$field_name];
     $target_entity_type = $definition->getSetting('target_type');
-    $this->usageService->delete($target_id, $target_entity_type, $source_entity->id(), $source_entity->getEntityTypeId(), $field_name);
+    $this->usageService->delete($target_id, $target_entity_type, $source_entity->id(), $source_entity->getEntityTypeId(), $this->pluginId, $field_name);
   }
 
 }

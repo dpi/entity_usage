@@ -248,7 +248,7 @@ abstract class EmbedBase extends EntityUsageTrackBase implements EmbedTrackInter
   protected function decrementEmbeddedUsage(ContentEntityInterface $source_entity, $target_type, $uuid, $field_name) {
     $target_entity = $this->entityRepository->loadEntityByUuid($target_type, $uuid);
     if ($target_entity) {
-      $this->usageService->delete($target_entity->id(), $target_type, $source_entity->id(), $source_entity->getEntityTypeId(), $field_name);
+      $this->usageService->delete($target_entity->id(), $target_type, $source_entity->id(), $source_entity->getEntityTypeId(), $this->pluginId, $field_name);
     }
   }
 

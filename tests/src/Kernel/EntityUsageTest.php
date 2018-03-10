@@ -190,7 +190,7 @@ class EntityUsageTest extends EntityKernelTestBase {
       ->execute();
 
     // Normal decrement.
-    $entity_usage->delete($entity->id(), $entity->getEntityTypeId(), 1, 'foo', $field_name, 1);
+    $entity_usage->delete($entity->id(), $entity->getEntityTypeId(), 1, 'foo', 'entity_reference', $field_name, 1);
 
     $event = \Drupal::state()->get('entity_usage_events_test.usage_delete', []);
 
@@ -213,7 +213,7 @@ class EntityUsageTest extends EntityKernelTestBase {
     $this->assertEquals(2, $count, 'The count was decremented correctly.');
 
     // Multiple decrement and removal.
-    $entity_usage->delete($entity->id(), $entity->getEntityTypeId(), 1, 'foo', $field_name, 2);
+    $entity_usage->delete($entity->id(), $entity->getEntityTypeId(), 1, 'foo', 'entity_reference', $field_name, 2);
     $count = $this->injectedDatabase->select($this->tableName, 'e')
       ->fields('e', ['count'])
       ->condition('e.target_id', $entity->id())
@@ -224,7 +224,7 @@ class EntityUsageTest extends EntityKernelTestBase {
     $this->assertSame(FALSE, $count, 'The count was removed entirely when empty.');
 
     // Non-existent decrement.
-    $entity_usage->delete($entity->id(), $entity->getEntityTypeId(), 1, 'foo', $field_name, 2);
+    $entity_usage->delete($entity->id(), $entity->getEntityTypeId(), 1, 'foo', 'entity_reference', $field_name, 2);
     $count = $this->injectedDatabase->select($this->tableName, 'e')
       ->fields('e', ['count'])
       ->condition('e.target_id', $entity->id())

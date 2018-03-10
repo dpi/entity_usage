@@ -46,6 +46,9 @@ interface EntityUsageInterface {
    * @param string $source_type
    *   (optional) The source entity type. May be omitted if all entity type
    *   references to a target are being deleted. Defaults to NULL.
+   * @param string $method
+   *   (optional) The method used to relate source entity with the target
+   *   entity. Defaults to NULL.
    * @param string $field_name
    *   (optional) The name of the field in the source entity using the
    *   target entity. Defaults to NULL.
@@ -54,7 +57,7 @@ interface EntityUsageInterface {
    *   to 1. Zero may be specified to delete all references to the entity within
    *   a specific object.
    */
-  public function delete($target_id, $target_type, $source_id = NULL, $source_type = NULL, $field_name = NULL, $count = 1);
+  public function delete($target_id, $target_type, $source_id = NULL, $source_type = NULL, $method = NULL, $field_name = NULL, $count = 1);
 
   /**
    * Remove all records of a given target entity type.
