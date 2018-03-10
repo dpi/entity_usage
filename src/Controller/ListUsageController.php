@@ -90,8 +90,7 @@ class ListUsageController extends ControllerBase {
         $header = [
           $this->t('Entity'),
           $this->t('Type'),
-          $this->t('Method'),
-          $this->t('Field'),
+          $this->t('Field name'),
           $this->t('Count'),
         ];
         $rows = [];
@@ -107,7 +106,6 @@ class ListUsageController extends ControllerBase {
                   $rows[] = [
                     $link,
                     $entity_types[$source_type]->getLabel(),
-                    $method,
                     $field_label,
                     $count,
                   ];
