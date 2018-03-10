@@ -239,6 +239,36 @@ class EntityUsageTest extends EntityKernelTestBase {
   }
 
   /**
+   * Tests that our hook correctly blocks a usage from being tracked.
+   */
+  public function testEntityUsageBlockTrackingHook() {
+    $this->container->get('module_installer')->install([
+      'path',
+      'views',
+      'entity_usage_test',
+    ]);
+
+    $entity = $this->testEntities[0];
+    $field_name = 'body';
+    /** @var \Drupal\entity_usage\EntityUsage $entity_usage */
+    $entity_usage = $this->container->get('entity_usage.usage');
+    $entity_usage->add($entity->id(), $entity->getEntityTypeId(), '1', 'foo', 'entity_reference', $field_name, 31);
+    $real_usage = $this->injectedDatabase->select($this->tableName, 'e')
+      ->fields('e', ['count'])
+      ->condition('e.target_id', $entity->id())
+      ->execute()
+      ->fetchField();
+
+    // In entity_usage_test_entity_usage_block_tracking() we block all
+    // transactions that try to add "31" as count. We expect then the usage to
+    // be 0.
+    $this->assertEquals(0, $real_usage, 'Usage tracking correctly blocked.');
+
+    // Clean back the environment.
+    $this->injectedDatabase->truncate($this->tableName);
+  }
+
+  /**
    * Tests the bulkDeleteTargets() method.
    *
    * @covers \Drupal\entity_usage\EntityUsage::bulkDeleteTargets

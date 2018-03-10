@@ -4,7 +4,7 @@ services:
     parent: default_plugin_manager
   entity_usage.usage:
     class: Drupal\entity_usage\EntityUsage
-    arguments: ['@database', '@event_dispatcher', '@config.factory']
+    arguments: ['@database', '@event_dispatcher', '@config.factory', '@module_handler']
   entity_usage.entity_update_manager:
     class: Drupal\entity_usage\EntityUpdateManager
     arguments: ['@entity_usage.usage', '@plugin.manager.entity_usage.track', '@config.factory']

@@ -5,6 +5,7 @@ namespace Drupal\entity_usage;
 use Drupal\Core\Config\ConfigFactoryInterface;
 use Drupal\Core\Database\Connection;
 use Drupal\Core\Entity\EntityInterface;
+use Drupal\Core\Extension\ModuleHandlerInterface;
 use Drupal\entity_usage\Events\Events;
 use Drupal\entity_usage\Events\EntityUsageEvent;
 use Symfony\Component\EventDispatcher\EventDispatcherInterface;
@@ -43,6 +44,13 @@ class EntityUsage implements EntityUsageInterface {
   protected $config;
 
   /**
+   * The ModuleHandler service.
+   *
+   * @var \Drupal\Core\Extension\ModuleHandlerInterface
+   */
+  protected $moduleHandler;
+
+  /**
    * Construct the EntityUsage object.
    *
    * @param \Drupal\Core\Database\Connection $connection
@@ -52,14 +60,17 @@ class EntityUsage implements EntityUsageInterface {
    *   An event dispatcher instance to use for events.
    * @param \Drupal\Core\Config\ConfigFactoryInterface $config_factory
    *   The config factory.
+   * @param \Drupal\Core\Extension\ModuleHandlerInterface $module_handler
+   *   The ModuleHandler service.
    * @param string $table
    *   (optional) The table to store the entity usage info. Defaults to
    *   'entity_usage'.
    */
-  public function __construct(Connection $connection, EventDispatcherInterface $event_dispatcher, ConfigFactoryInterface $config_factory, $table = 'entity_usage') {
+  public function __construct(Connection $connection, EventDispatcherInterface $event_dispatcher, ConfigFactoryInterface $config_factory, ModuleHandlerInterface $module_handler, $table = 'entity_usage') {
     $this->connection = $connection;
     $this->tableName = $table;
     $this->eventDispatcher = $event_dispatcher;
+    $this->moduleHandler = $module_handler;
     $this->config = $config_factory->get('entity_usage.settings');
   }
 
@@ -67,6 +78,23 @@ class EntityUsage implements EntityUsageInterface {
    * {@inheritdoc}
    */
   public function add($target_id, $target_type, $source_id, $source_type, $method, $field_name, $count = 1) {
+    // Allow modules to block this operation.
+    $context = [
+      'target_id' => $target_id,
+      'target_type' => $target_type,
+      'source_id' => $source_id,
+      'source_type' => $source_type,
+      'method' => $method,
+      'field_name' => $field_name,
+      'count' => $count,
+      'action' => 'add',
+    ];
+    $abort = $this->moduleHandler->invokeAll('entity_usage_block_tracking', $context);
+    // If at least one module wants to block the tracking, bail out.
+    if (in_array(TRUE, $abort, TRUE)) {
+      return;
+    }
+
     // Check if target entity type is enabled, all entity types are enabled by
     // default.
     $enabled_target_entity_types = $this->config->get('track_enabled_target_entity_types');
@@ -95,6 +123,23 @@ class EntityUsage implements EntityUsageInterface {
    * {@inheritdoc}
    */
   public function delete($target_id, $target_type, $source_id = NULL, $source_type = NULL, $method = NULL, $field_name = NULL, $count = 1) {
+    // Allow modules to block this operation.
+    $context = [
+      'target_id' => $target_id,
+      'target_type' => $target_type,
+      'source_id' => $source_id,
+      'source_type' => $source_type,
+      'method' => $method,
+      'field_name' => $field_name,
+      'count' => $count,
+      'action' => 'delete',
+    ];
+    $abort = $this->moduleHandler->invokeAll('entity_usage_block_tracking', $context);
+    // If at least one module wants to block the tracking, bail out.
+    if (in_array(TRUE, $abort, TRUE)) {
+      return;
+    }
+
     $query = $this->connection->delete($this->tableName)
       ->condition('target_type', $target_type)
       ->condition('target_id', $target_id);

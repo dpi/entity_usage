@@ -181,10 +181,11 @@ class IntegrationTest extends EntityUsageJavascriptTestBase {
     $this->drupalGet('/node/add/eu_test_ct');
     $page->fillField('title[0][value]', 'Node 1');
     $page->pressButton('Save');
+    $this->getSession()->wait(500);
     $assert_session->pageTextContains('eu_test_ct Node 1 has been created.');
     $this->saveHtmlOutput();
     $node1_id = \Drupal::entityQuery('node')
-      ->sort('changed', 'DESC')
+      ->sort('created', 'DESC')
       ->execute();
     $node1_id = reset($node1_id);
     $this->assertNotNull($node1_id);
@@ -197,10 +198,11 @@ class IntegrationTest extends EntityUsageJavascriptTestBase {
     $page->fillField('field_link1[0][uri]', "Node 1 ($node1_id)");
     $page->fillField('field_link1[0][title]', "Linked text");
     $page->pressButton('Save');
+    $this->getSession()->wait(500);
     $assert_session->pageTextContains('eu_test_ct Node 2 has been created.');
     $this->saveHtmlOutput();
     $node2_id = \Drupal::entityQuery('node')
-      ->sort('changed', 'DESC')
+      ->sort('created', 'DESC')
       ->execute();
     $node2_id = reset($node2_id);
     $this->assertNotNull($node2_id);

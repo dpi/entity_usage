@@ -22,19 +22,8 @@ class EntityUsageTrackManager extends DefaultPluginManager {
    * @param \Drupal\Core\Extension\ModuleHandlerInterface $module_handler
    *   The module handler.
    */
-  public function __construct(
-    \Traversable $namespaces,
-    CacheBackendInterface $cache_backend,
-    ModuleHandlerInterface $module_handler
-  ) {
-    parent::__construct(
-      'Plugin/EntityUsage/Track',
-      $namespaces,
-      $module_handler,
-      'Drupal\entity_usage\EntityUsageTrackInterface',
-      'Drupal\entity_usage\Annotation\EntityUsageTrack'
-    );
-
+  public function __construct(\Traversable $namespaces, CacheBackendInterface $cache_backend, ModuleHandlerInterface $module_handler) {
+    parent::__construct('Plugin/EntityUsage/Track', $namespaces, $module_handler, 'Drupal\entity_usage\EntityUsageTrackInterface', 'Drupal\entity_usage\Annotation\EntityUsageTrack');
     $this->alterInfo('entity_usage_track_info');
     $this->setCacheBackend($cache_backend, 'entity_usage_track_plugins');
   }
