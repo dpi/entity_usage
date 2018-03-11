@@ -78,6 +78,13 @@ class EntityUsage implements EntityUsageInterface {
    * {@inheritdoc}
    */
   public function add($target_id, $target_type, $source_id, $source_type, $source_langcode, $method, $field_name, $count = 1) {
+    // Check if target entity type is enabled, all entity types are enabled by
+    // default.
+    $enabled_target_entity_types = $this->config->get('track_enabled_target_entity_types');
+    if ($enabled_target_entity_types && !in_array($target_type, $enabled_target_entity_types, TRUE)) {
+      return;
+    }
+
     // Allow modules to block this operation.
     $context = [
       'target_id' => $target_id,
@@ -93,13 +100,6 @@ class EntityUsage implements EntityUsageInterface {
     $abort = $this->moduleHandler->invokeAll('entity_usage_block_tracking', $context);
     // If at least one module wants to block the tracking, bail out.
     if (in_array(TRUE, $abort, TRUE)) {
-      return;
-    }
-
-    // Check if target entity type is enabled, all entity types are enabled by
-    // default.
-    $enabled_target_entity_types = $this->config->get('track_enabled_target_entity_types');
-    if ($enabled_target_entity_types && !in_array($target_type, $enabled_target_entity_types, TRUE)) {
       return;
     }
 
