@@ -83,9 +83,63 @@ function entity_usage_update_8001(&$sandbox) {
 /**
  * Recreate the entity usage table with the new schema.
  */
-function entity_usage_update_8201() {
+function entity_usage_update_8201(&$sandbox) {
   $schema = \Drupal::database()->schema();
   $schema->dropTable('entity_usage');
   $new_table_schema = entity_usage_schema();
   $schema->createTable('entity_usage', $new_table_schema['entity_usage']);
+}
+
+/**
+ * Re-generate entity_usage statistics.
+ */
+function entity_usage_update_8202(&$sandbox) {
+  // First pass.
+  if (empty($sandbox['total'])) {
+    $sandbox['current_key'] = 0;
+    $sandbox['total'] = 0;
+    $sandbox['entities'] = [];
+    foreach (\Drupal::entityTypeManager()->getDefinitions() as $entity_type_id => $entity_type) {
+      // Only look for content entities.
+      if ($entity_type->entityClassImplements('\Drupal\Core\Entity\ContentEntityInterface')) {
+        // Delete current usage statistics for these entities.
+        \Drupal::service('entity_usage.usage')->bulkDeleteSources($entity_type_id);
+        // Add all existing ids to be tracked again.
+        $ids = \Drupal::entityQuery($entity_type_id)
+          ->accessCheck(FALSE)
+          ->execute();
+        if (!empty($ids)) {
+          $sandbox['total'] += count($ids);
+          foreach ($ids as $id) {
+            $sandbox['entities'][] = [
+              'entity_type' => $entity_type_id,
+              'entity_id' => $id,
+            ];
+          }
+        }
+      }
+    }
+  }
+
+  // Worker.
+  $batch_size = 25;
+  for ($i = $sandbox['current_key']; $i < ($sandbox['current_key'] + $batch_size); $i++) {
+    if (empty($sandbox['entities'][$i])) {
+      break;
+    }
+    $entity_type = $sandbox['entities'][$i]['entity_type'];
+    $entity_id = $sandbox['entities'][$i]['entity_id'];
+    if ($entity_type && $entity_id) {
+      $entity = \Drupal::entityTypeManager()->getStorage($entity_type)->load($entity_id);
+      if ($entity) {
+        \Drupal::service('entity_usage.entity_update_manager')->trackUpdateOnCreation($entity);
+      }
+    }
+    $sandbox['current_key']++;
+  }
+
+  $sandbox['#finished'] = ($sandbox['current_key'] / $sandbox['total']);
+  return t('Finished generating statistics for @total_count entities.', [
+    '@total_count' => $sandbox['total'],
+  ]);
 }
