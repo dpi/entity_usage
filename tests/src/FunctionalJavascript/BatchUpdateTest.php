@@ -64,7 +64,16 @@ class BatchUpdateTest extends EntityUsageJavascriptTestBase {
     // non-tracked by the module.
     $usage_service->delete(1, 'node', 2, 'node');
     $usage = $usage_service->listSources($node1);
-    $this->assertEquals($usage['node'], ['3' => ['field_eu_test_related_nodes' => '1']]);
+    $this->assertEquals($usage['node'], [
+      '3' => [
+        0 => [
+          'source_langcode' => 'en',
+          'method' => 'entity_reference',
+          'field_name' => 'field_eu_test_related_nodes',
+          'count' => 1,
+        ],
+      ],
+    ]);
 
     // Go to the batch update page and check the update.
     $this->drupalGet('/admin/config/entity-usage/batch-update');
@@ -82,10 +91,20 @@ class BatchUpdateTest extends EntityUsageJavascriptTestBase {
     $usage = $usage_service->listSources($node1);
     $this->assertEquals($usage['node'], [
       '2' => [
-        'field_eu_test_related_nodes' => '1',
+        0 => [
+          'source_langcode' => 'en',
+          'method' => 'entity_reference',
+          'field_name' => 'field_eu_test_related_nodes',
+          'count' => 1,
+        ],
       ],
       '3' => [
-        'field_eu_test_related_nodes' => '1',
+        0 => [
+          'source_langcode' => 'en',
+          'method' => 'entity_reference',
+          'field_name' => 'field_eu_test_related_nodes',
+          'count' => 1,
+        ],
       ],
     ]);
   }

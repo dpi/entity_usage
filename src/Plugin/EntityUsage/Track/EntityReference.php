@@ -86,46 +86,22 @@ class EntityReference extends EntityUsageTrackBase {
    * {@inheritdoc}
    */
   public function trackOnEntityUpdate(ContentEntityInterface $entity) {
-    // The assumption here is that an entity that is referenced by any
-    // translation of another entity should be tracked, and only once
-    // (regardless if many translations point to the same entity). So the
-    // process to identify them is quite simple: we build a list of all entity
-    // ids referenced before the update by all translations (original included),
-    // and compare it with the list of ids referenced by all translations after
-    // the update.
-    $translations = [];
-    $originals = [];
-    $languages = $entity->getTranslationLanguages();
-    foreach ($languages as $langcode => $language) {
-      if (!$entity->hasTranslation($langcode)) {
-        continue;
-      }
-      $translations[] = $entity->getTranslation($langcode);
-      if (!$entity->original->hasTranslation($langcode)) {
-        continue;
-      }
-      $originals[] = $entity->original->getTranslation($langcode);
-    }
-
     foreach ($this->entityReferenceFieldsAvailable($entity) as $field_name) {
       $current_target_ids = [];
-      foreach ($translations as $translation) {
-        if (!$translation->{$field_name}->isEmpty()) {
-          foreach ($translation->{$field_name} as $field_item) {
-            $current_target_ids[] = $field_item->target_id;
-          }
+      if (!$entity->{$field_name}->isEmpty()) {
+        foreach ($entity->{$field_name} as $field_item) {
+          $current_target_ids[] = $field_item->target_id;
         }
       }
+
       $original_target_ids = [];
-      foreach ($originals as $original) {
-        if (!$original->{$field_name}->isEmpty()) {
-          foreach ($original->{$field_name} as $field_item) {
-            $original_target_ids[] = $field_item->target_id;
-          }
+      if (!$entity->original->{$field_name}->isEmpty()) {
+        foreach ($entity->original->{$field_name} as $field_item) {
+          $original_target_ids[] = $field_item->target_id;
         }
       }
-      // If more than one translation references the same target entity, we
-      // record only one usage.
+
+      // If a field references the same target entity, we record only one usage.
       $original_target_ids = array_unique($original_target_ids);
       $current_target_ids = array_unique($current_target_ids);
 
@@ -145,31 +121,11 @@ class EntityReference extends EntityUsageTrackBase {
    * {@inheritdoc}
    */
   public function trackOnEntityDeletion(ContentEntityInterface $entity) {
-    $translations = [];
-    // When deleting the main (untranslated) entity, loop over all translations
-    // as well to release referenced entities there too.
-    if ($entity === $entity->getUntranslated()) {
-      $languages = $entity->getTranslationLanguages();
-      foreach ($languages as $langcode => $language) {
-        if (!$entity->hasTranslation($langcode)) {
-          continue;
-        }
-        $translations[] = $entity->getTranslation($langcode);
-      }
-    }
-    else {
-      // Otherwise, this is a single translation being deleted, so we just need
-      // to release usage reflected here.
-      $translations = [$entity];
-    }
-
     foreach ($this->entityReferenceFieldsAvailable($entity) as $field_name) {
-      foreach ($translations as $translation) {
-        if (!$translation->{$field_name}->isEmpty()) {
-          /** @var \Drupal\Core\Field\Plugin\Field\FieldType\EntityReferenceItem $field_item */
-          foreach ($translation->{$field_name} as $field_item) {
-            $this->decrementEntityReferenceUsage($entity, $field_name, $field_item->target_id);
-          }
+      if (!$entity->{$field_name}->isEmpty()) {
+        /** @var \Drupal\Core\Field\Plugin\Field\FieldType\EntityReferenceItem $field_item */
+        foreach ($entity->{$field_name} as $field_item) {
+          $this->decrementEntityReferenceUsage($entity, $field_name, $field_item->target_id);
         }
       }
     }
@@ -218,8 +174,8 @@ class EntityReference extends EntityUsageTrackBase {
   protected function incrementEntityReferenceUsage(ContentEntityInterface $source_entity, $field_name, $target_id) {
     /** @var \Drupal\field\Entity\FieldConfig $definition */
     $definition = $this->entityFieldManager->getFieldDefinitions($source_entity->getEntityTypeId(), $source_entity->bundle())[$field_name];
-    $target_entity_type = $definition->getSetting('target_type');
-    $this->usageService->add($target_id, $target_entity_type, $source_entity->id(), $source_entity->getEntityTypeId(), $this->pluginId, $field_name);
+    $target_type = $definition->getSetting('target_type');
+    $this->usageService->add($target_id, $target_type, $source_entity->id(), $source_entity->getEntityTypeId(), $source_entity->language()->getId(), $this->pluginId, $field_name);
   }
 
   /**
@@ -235,8 +191,8 @@ class EntityReference extends EntityUsageTrackBase {
   protected function decrementEntityReferenceUsage(ContentEntityInterface $source_entity, $field_name, $target_id) {
     /** @var \Drupal\field\Entity\FieldConfig $definition */
     $definition = $this->entityFieldManager->getFieldDefinitions($source_entity->getEntityTypeId(), $source_entity->bundle())[$field_name];
-    $target_entity_type = $definition->getSetting('target_type');
-    $this->usageService->delete($target_id, $target_entity_type, $source_entity->id(), $source_entity->getEntityTypeId(), $this->pluginId, $field_name);
+    $target_type = $definition->getSetting('target_type');
+    $this->usageService->delete($target_id, $target_type, $source_entity->id(), $source_entity->getEntityTypeId(), $source_entity->language()->getId(), $this->pluginId, $field_name);
   }
 
 }

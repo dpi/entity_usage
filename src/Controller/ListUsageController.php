@@ -80,8 +80,8 @@ class ListUsageController extends ControllerBase {
 
     $entity = $this->entityTypeManager->getStorage($entity_type)->load($entity_id);
     if ($entity) {
-      $usages = $this->entityUsage->listSources($entity, TRUE);
-      if (empty($usages)) {
+      $all_usages = $this->entityUsage->listSources($entity);
+      if (empty($all_usages)) {
         $build = [
           '#markup' => $this->t('There are no recorded usages for entity of type: @type with id: @id', ['@type' => $entity_type, '@id' => $entity_id]),
         ];
@@ -90,26 +90,29 @@ class ListUsageController extends ControllerBase {
         $header = [
           $this->t('Entity'),
           $this->t('Type'),
+          $this->t('Language'),
           $this->t('Field name'),
           $this->t('Count'),
         ];
         $rows = [];
-        foreach ($usages as $method => $method_usages) {
-          foreach ($method_usages as $source_type => $source_type_usages) {
-            foreach ($source_type_usages as $source_id => $field_names) {
-              $source_entity = $this->entityTypeManager->getStorage($source_type)->load($source_id);
-              if ($source_entity) {
-                $field_definitions = $this->entityFieldManager->getFieldDefinitions($source_entity->getEntityTypeId(), $source_entity->bundle());
-                foreach ($field_names as $field_name => $count) {
-                  $link = $this->getSourceEntityLink($source_entity);
-                  $field_label = isset($field_definitions[$field_name]) ? $field_definitions[$field_name]->getLabel() : $this->t('Unknown');
-                  $rows[] = [
-                    $link,
-                    $entity_types[$source_type]->getLabel(),
-                    $field_label,
-                    $count,
-                  ];
-                }
+        foreach ($all_usages as $source_type => $source_ids) {
+          foreach ($source_ids as $source_id => $entity_usages) {
+            foreach ($entity_usages as $usage_details) {
+              /** @var \Drupal\Core\Entity\ContentEntityInterface $source_entity */
+              $source_entity = $this->entityTypeManager->getStorage($source_type)
+                ->load($source_id);
+              $translation = $source_entity->getTranslation($usage_details['source_langcode']);
+              if ($translation) {
+                $field_definitions = $this->entityFieldManager->getFieldDefinitions($translation->getEntityTypeId(), $translation->bundle());
+                $link = $this->getSourceEntityLink($translation);
+                $field_label = isset($field_definitions[$usage_details['field_name']]) ? $field_definitions[$usage_details['field_name']]->getLabel() : $this->t('Unknown');
+                $rows[] = [
+                  $link,
+                  $entity_types[$source_type]->getLabel(),
+                  $usage_details['source_langcode'],
+                  $field_label,
+                  $usage_details['count'],
+                ];
               }
             }
           }

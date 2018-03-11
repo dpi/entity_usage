@@ -2,7 +2,7 @@
 
 namespace Drupal\entity_usage\Form;
 
-use Drupal\Component\Render\FormattableMarkup;
+use Drupal\Core\Entity\ContentEntityInterface;
 use Drupal\Core\Entity\EntityTypeManagerInterface;
 use Drupal\Core\Form\FormBase;
 use Drupal\Core\Form\FormStateInterface;
@@ -135,9 +135,16 @@ class BatchUpdateForm extends FormBase {
       ->execute();
 
     $entities = $entity_storage->loadMultiple($entity_ids);
+    /** @var \Drupal\Core\Entity\ContentEntityInterface $entity */
     foreach ($entities as $entity) {
       // Sources are tracked as if they were new entities.
       \Drupal::service('entity_usage.entity_update_manager')->trackUpdateOnCreation($entity);
+      // Track all translations of the entity.
+      foreach ($entity->getTranslationLanguages(FALSE) as $translation_language) {
+        if ($entity->hasTranslation($translation_language->getId())) {
+          \Drupal::service('entity_usage.entity_update_manager')->trackUpdateOnCreation($entity->getTranslation($translation_language->getId()));
+        }
+      }
 
       $context['sandbox']['progress']++;
       $context['sandbox']['current_id'] = $entity->id();

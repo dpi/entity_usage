@@ -96,7 +96,7 @@ class Link extends EntityUsageTrackBase {
           $target_entity = $this->getTargetEntity($field_item);
           if ($target_entity) {
             list($target_type, $target_id) = explode('|', $target_entity);
-            $this->usageService->add($target_id, $target_type, $entity->id(), $entity->getEntityTypeId(), $this->pluginId, $field_name);
+            $this->usageService->add($target_id, $target_type, $entity->id(), $entity->getEntityTypeId(), $entity->language()->getId(), $this->pluginId, $field_name);
           }
         }
       }
@@ -107,52 +107,28 @@ class Link extends EntityUsageTrackBase {
    * {@inheritdoc}
    */
   public function trackOnEntityUpdate(ContentEntityInterface $entity) {
-    // The assumption here is that an entity that is referenced by any
-    // translation of another entity should be tracked, and only once
-    // (regardless if many translations point to the same entity). So the
-    // process to identify them is quite simple: we build a list of all entity
-    // ids referenced before the update by all translations (original included),
-    // and compare it with the list of ids referenced by all translations after
-    // the update.
-    $translations = [];
-    $originals = [];
-    $languages = $entity->getTranslationLanguages();
-    foreach ($languages as $langcode => $language) {
-      if (!$entity->hasTranslation($langcode)) {
-        continue;
-      }
-      $translations[] = $entity->getTranslation($langcode);
-      if (!$entity->original->hasTranslation($langcode)) {
-        continue;
-      }
-      $originals[] = $entity->original->getTranslation($langcode);
-    }
-
     foreach ($this->linkFieldsAvailable($entity) as $field_name) {
       $current_targets = [];
-      foreach ($translations as $translation) {
-        if (!$translation->{$field_name}->isEmpty()) {
-          foreach ($translation->{$field_name} as $field_item) {
-            $target_entity = $this->getTargetEntity($field_item);
-            if ($target_entity) {
-              $current_targets[] = $target_entity;
-            }
+      if (!$entity->{$field_name}->isEmpty()) {
+        foreach ($entity->{$field_name} as $field_item) {
+          $target_entity = $this->getTargetEntity($field_item);
+          if ($target_entity) {
+            $current_targets[] = $target_entity;
           }
         }
       }
+
       $original_targets = [];
-      foreach ($originals as $original) {
-        if (!$original->{$field_name}->isEmpty()) {
-          foreach ($original->{$field_name} as $field_item) {
-            $target_entity = $this->getTargetEntity($field_item);
-            if ($target_entity) {
-              $original_targets[] = $target_entity;
-            }
+      if (!$entity->original->{$field_name}->isEmpty()) {
+        foreach ($entity->original->{$field_name} as $field_item) {
+          $target_entity = $this->getTargetEntity($field_item);
+          if ($target_entity) {
+            $original_targets[] = $target_entity;
           }
         }
       }
-      // If more than one translation references the same target entity, we
-      // record only one usage.
+
+      // If a field references the same target entity, we record only one usage.
       $original_targets = array_unique($original_targets);
       $current_targets = array_unique($current_targets);
 
@@ -161,11 +137,11 @@ class Link extends EntityUsageTrackBase {
 
       foreach ($added_ids as $added_entity) {
         list($target_type, $target_id) = explode('|', $added_entity);
-        $this->usageService->add($target_id, $target_type, $entity->id(), $entity->getEntityTypeId(), $this->pluginId, $field_name);
+        $this->usageService->add($target_id, $target_type, $entity->id(), $entity->getEntityTypeId(), $entity->language()->getId(), $this->pluginId, $field_name);
       }
       foreach ($removed_ids as $removed_entity) {
         list($target_type, $target_id) = explode('|', $removed_entity);
-        $this->usageService->delete($target_id, $target_type, $entity->id(), $entity->getEntityTypeId(), $this->pluginId, $field_name);
+        $this->usageService->delete($target_id, $target_type, $entity->id(), $entity->getEntityTypeId(), $entity->language()->getId(), $this->pluginId, $field_name);
       }
     }
   }
@@ -174,35 +150,15 @@ class Link extends EntityUsageTrackBase {
    * {@inheritdoc}
    */
   public function trackOnEntityDeletion(ContentEntityInterface $entity) {
-    $translations = [];
-    // When deleting the main (untranslated) entity, loop over all translations
-    // as well to release referenced entities there too.
-    if ($entity === $entity->getUntranslated()) {
-      $languages = $entity->getTranslationLanguages();
-      foreach ($languages as $langcode => $language) {
-        if (!$entity->hasTranslation($langcode)) {
-          continue;
-        }
-        $translations[] = $entity->getTranslation($langcode);
-      }
-    }
-    else {
-      // Otherwise, this is a single translation being deleted, so we just need
-      // to release usage reflected here.
-      $translations = [$entity];
-    }
-
     foreach ($this->linkFieldsAvailable($entity) as $field_name) {
-      foreach ($translations as $translation) {
-        if (!$translation->{$field_name}->isEmpty()) {
-          /** @var \Drupal\link\Plugin\Field\FieldType\LinkItem $field_item */
-          foreach ($translation->{$field_name} as $field_item) {
-            // This item got deleted. Track the usage down.
-            $target_entity = $this->getTargetEntity($field_item);
-            if ($target_entity) {
-              list($target_type, $target_id) = explode('|', $target_entity);
-              $this->usageService->delete($target_id, $target_type, $entity->id(), $entity->getEntityTypeId(), $this->pluginId, $field_name);
-            }
+      if (!$entity->{$field_name}->isEmpty()) {
+        /** @var \Drupal\link\Plugin\Field\FieldType\LinkItem $field_item */
+        foreach ($entity->{$field_name} as $field_item) {
+          // This item got deleted. Track the usage down.
+          $target_entity = $this->getTargetEntity($field_item);
+          if ($target_entity) {
+            list($target_type, $target_id) = explode('|', $target_entity);
+            $this->usageService->delete($target_id, $target_type, $entity->id(), $entity->getEntityTypeId(), $entity->language()->getId(), $this->pluginId, $field_name);
           }
         }
       }

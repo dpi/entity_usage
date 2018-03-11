@@ -23,6 +23,8 @@ interface EntityUsageInterface {
    *   The source entity ID.
    * @param string $source_type
    *   The source entity type.
+   * @param string $source_langcode
+   *   The source entity language code.
    * @param string $method
    *   The method used to relate source entity with the target entity. Normally
    *   the plugin id.
@@ -31,7 +33,7 @@ interface EntityUsageInterface {
    * @param int $count
    *   (optional) The number of references to add to the object. Defaults to 1.
    */
-  public function add($target_id, $target_type, $source_id, $source_type, $method, $field_name, $count = 1);
+  public function add($target_id, $target_type, $source_id, $source_type, $source_langcode, $method, $field_name, $count = 1);
 
   /**
    * Records that a source entity is no longer referencing a target entity.
@@ -46,6 +48,9 @@ interface EntityUsageInterface {
    * @param string $source_type
    *   (optional) The source entity type. May be omitted if all entity type
    *   references to a target are being deleted. Defaults to NULL.
+   * @param string $source_langcode
+   *   (optional) The source entity language code. May be omitted if all entity
+   *   type references to a target are being deleted. Defaults to NULL.
    * @param string $method
    *   (optional) The method used to relate source entity with the target
    *   entity. Defaults to NULL.
@@ -57,7 +62,7 @@ interface EntityUsageInterface {
    *   to 1. Zero may be specified to delete all references to the entity within
    *   a specific object.
    */
-  public function delete($target_id, $target_type, $source_id = NULL, $source_type = NULL, $method = NULL, $field_name = NULL, $count = 1);
+  public function delete($target_id, $target_type, $source_id = NULL, $source_type = NULL, $source_langcode = NULL, $method = NULL, $field_name = NULL, $count = 1);
 
   /**
    * Remove all records of a given target entity type.
@@ -83,15 +88,24 @@ interface EntityUsageInterface {
    *  [
    *    'node' => [
    *      123 => [
-   *        'field_name' => 1,
+   *        'source_langcode' => 'en',
+   *        'method' => 'entity_reference',
+   *        'field_name' => 'Related items',
+   *        'count' => 1,
    *      ],
    *      124 => [
-   *        'field_name' => 1,
+   *        'source_langcode' => 'en',
+   *        'method' => 'entity_reference',
+   *        'field_name' => 'Related items',
+   *        'count' => 1,
    *      ],
    *    ],
    *    'user' => [
    *      2 => [
-   *        'field_name' => 1,
+   *        'source_langcode' => 'en',
+   *        'method' => 'entity_reference',
+   *        'field_name' => 'Author',
+   *        'count' => 1,
    *      ],
    *    ],
    *  ]
@@ -105,18 +119,14 @@ interface EntityUsageInterface {
    *
    * @param \Drupal\Core\Entity\EntityInterface $target_entity
    *   A target entity.
-   * @param bool $include_method
-   *   (optional) Whether the results must be wrapped into an additional array
-   *   level, by the reference method. Defaults to FALSE.
    *
    * @return array
    *   A nested array with usage data. The first level is keyed by the type of
-   *   the source entities, the second by the source id and the third the field
-   *   name. The value of the third level contains the usage count.
-   *   Note that if $include_method is TRUE, the first level is keyed by the
-   *   reference method, and the second level will continue as explained above.
+   *   the source entities, the second by the source id. The value of the second
+   *   level contains all other information like the method used by the source
+   *   to reference the target, the field name and the source language code.
    */
-  public function listSources(EntityInterface $target_entity, $include_method = FALSE);
+  public function listSources(EntityInterface $target_entity);
 
   /**
    * Provide a list of all referenced target entities for a source entity.
@@ -126,8 +136,9 @@ interface EntityUsageInterface {
    *
    * @return array
    *   A nested array with usage data. The first level is keyed by the type of
-   *   the target entities, the second by the target id and the third
-   *   the field name. The value of the third level contains the usage count.
+   *   the target entities, the second by the target id. The value of the second
+   *   level contains all other information like the method used by the source
+   *   to reference the target, the field name and the target language code.
    *
    * @see \Drupal\entity_usage\EntityUsageInterface::listSources()
    */

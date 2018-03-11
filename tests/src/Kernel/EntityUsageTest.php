@@ -106,6 +106,7 @@ class EntityUsageTest extends EntityKernelTestBase {
         'target_type' => $target_entity->getEntityTypeId(),
         'source_id' => $source_entity->id(),
         'source_type' => $source_entity->getEntityTypeId(),
+        'source_langcode' => $source_entity->language()->getId(),
         'method' => 'entity_reference',
         'field_name' => $field_name,
         'count' => 1,
@@ -114,17 +115,32 @@ class EntityUsageTest extends EntityKernelTestBase {
 
     /** @var \Drupal\entity_usage\EntityUsage $entity_usage */
     $entity_usage = $this->container->get('entity_usage.usage');
-    $complete_usage = $entity_usage->listSources($target_entity);
-    $usage = $complete_usage[$source_entity->getEntityTypeId()][$source_entity->id()][$field_name];
-    $this->assertEquals(1, $usage, 'Returned the correct count, without tracking method.');
+    $source_usages = $entity_usage->listSources($target_entity);
+    $this->assertEquals([
+      $source_entity->getEntityTypeId() => [
+        $source_entity->id() => [
+          0 => [
+            'source_langcode' => $source_entity->language()->getId(),
+            'method' => 'entity_reference',
+            'field_name' => $field_name,
+            'count' => 1,
+          ],
+        ],
+      ],
+    ], $source_usages, 'Returned the correct usages.');
 
-    $complete_usage = $entity_usage->listSources($target_entity, TRUE);
-    $usage = $complete_usage['entity_reference'][$source_entity->getEntityTypeId()][$source_entity->id()][$field_name];
-    $this->assertEquals(1, $usage, 'Returned the correct count, with tracking method.');
-
-    $complete_references_entities = $entity_usage->listTargets($source_entity);
-    $usage = $complete_references_entities[$target_entity->getEntityTypeId()][$target_entity->id()][$field_name];
-    $this->assertEquals(1, $usage, 'Returned the correct count.');
+    $target_usages = $entity_usage->listTargets($source_entity);
+    $this->assertEquals([
+      $target_entity->getEntityTypeId() => [
+        $target_entity->id() => [
+          0 => [
+            'method' => 'entity_reference',
+            'field_name' => $field_name,
+            'count' => 1,
+          ],
+        ],
+      ],
+    ], $target_usages, 'Returned the correct usages.');
 
     // Clean back the environment.
     $this->injectedDatabase->truncate($this->tableName);
@@ -140,7 +156,7 @@ class EntityUsageTest extends EntityKernelTestBase {
     $field_name = 'body';
     /** @var \Drupal\entity_usage\EntityUsage $entity_usage */
     $entity_usage = $this->container->get('entity_usage.usage');
-    $entity_usage->add($entity->id(), $entity->getEntityTypeId(), '1', 'foo', 'entity_reference', $field_name, 1);
+    $entity_usage->add($entity->id(), $entity->getEntityTypeId(), '1', 'foo', 'en', 'entity_reference', $field_name, 1);
 
     $event = \Drupal::state()->get('entity_usage_events_test.usage_add', []);
 
@@ -149,6 +165,7 @@ class EntityUsageTest extends EntityKernelTestBase {
     $this->assertSame($event['target_type'], $entity->getEntityTypeId());
     $this->assertSame($event['source_id'], '1');
     $this->assertSame($event['source_type'], 'foo');
+    $this->assertSame($event['source_langcode'], 'en');
     $this->assertSame($event['method'], 'entity_reference');
     $this->assertSame($event['field_name'], $field_name);
     $this->assertSame($event['count'], 1);
@@ -163,7 +180,6 @@ class EntityUsageTest extends EntityKernelTestBase {
 
     // Clean back the environment.
     $this->injectedDatabase->truncate($this->tableName);
-
   }
 
   /**
@@ -183,6 +199,7 @@ class EntityUsageTest extends EntityKernelTestBase {
         'target_type' => $entity->getEntityTypeId(),
         'source_id' => 1,
         'source_type' => 'foo',
+        'source_langcode' => 'en',
         'method' => 'entity_reference',
         'field_name' => $field_name,
         'count' => 3,
@@ -190,7 +207,7 @@ class EntityUsageTest extends EntityKernelTestBase {
       ->execute();
 
     // Normal decrement.
-    $entity_usage->delete($entity->id(), $entity->getEntityTypeId(), 1, 'foo', 'entity_reference', $field_name, 1);
+    $entity_usage->delete($entity->id(), $entity->getEntityTypeId(), 1, 'foo', 'en', 'entity_reference', $field_name, 1);
 
     $event = \Drupal::state()->get('entity_usage_events_test.usage_delete', []);
 
@@ -199,8 +216,9 @@ class EntityUsageTest extends EntityKernelTestBase {
     $this->assertSame($event['target_type'], $entity->getEntityTypeId());
     $this->assertSame($event['source_id'], 1);
     $this->assertSame($event['source_type'], 'foo');
-    $this->assertSame($event['method'], NULL);
-    $this->assertSame($event['field_name'], NULL);
+    $this->assertSame($event['source_langcode'], 'en');
+    $this->assertSame($event['method'], 'entity_reference');
+    $this->assertSame($event['field_name'], $field_name);
     $this->assertSame($event['count'], 1);
 
     $count = $this->injectedDatabase->select($this->tableName, 'e')
@@ -213,7 +231,7 @@ class EntityUsageTest extends EntityKernelTestBase {
     $this->assertEquals(2, $count, 'The count was decremented correctly.');
 
     // Multiple decrement and removal.
-    $entity_usage->delete($entity->id(), $entity->getEntityTypeId(), 1, 'foo', 'entity_reference', $field_name, 2);
+    $entity_usage->delete($entity->id(), $entity->getEntityTypeId(), 1, 'foo', 'en', 'entity_reference', $field_name, 2);
     $count = $this->injectedDatabase->select($this->tableName, 'e')
       ->fields('e', ['count'])
       ->condition('e.target_id', $entity->id())
@@ -224,7 +242,7 @@ class EntityUsageTest extends EntityKernelTestBase {
     $this->assertSame(FALSE, $count, 'The count was removed entirely when empty.');
 
     // Non-existent decrement.
-    $entity_usage->delete($entity->id(), $entity->getEntityTypeId(), 1, 'foo', 'entity_reference', $field_name, 2);
+    $entity_usage->delete($entity->id(), $entity->getEntityTypeId(), 1, 'foo', 'en', 'entity_reference', $field_name, 2);
     $count = $this->injectedDatabase->select($this->tableName, 'e')
       ->fields('e', ['count'])
       ->condition('e.target_id', $entity->id())
@@ -252,7 +270,7 @@ class EntityUsageTest extends EntityKernelTestBase {
     $field_name = 'body';
     /** @var \Drupal\entity_usage\EntityUsage $entity_usage */
     $entity_usage = $this->container->get('entity_usage.usage');
-    $entity_usage->add($entity->id(), $entity->getEntityTypeId(), '1', 'foo', 'entity_reference', $field_name, 31);
+    $entity_usage->add($entity->id(), $entity->getEntityTypeId(), '1', 'foo', 'en', 'entity_reference', $field_name, 31);
     $real_usage = $this->injectedDatabase->select($this->tableName, 'e')
       ->fields('e', ['count'])
       ->condition('e.target_id', $entity->id())
@@ -284,6 +302,7 @@ class EntityUsageTest extends EntityKernelTestBase {
           'target_type' => $entity_type,
           'source_id' => 1,
           'source_type' => 'foo',
+          'source_langcode' => 'en',
           'method' => 'entity_reference',
           'field_name' => 'body',
           'count' => 1,
@@ -302,6 +321,7 @@ class EntityUsageTest extends EntityKernelTestBase {
     $this->assertSame($event['target_type'], $entity_type);
     $this->assertSame($event['source_id'], NULL);
     $this->assertSame($event['source_type'], NULL);
+    $this->assertSame($event['source_langcode'], NULL);
     $this->assertSame($event['method'], NULL);
     $this->assertSame($event['field_name'], NULL);
     $this->assertSame($event['count'], NULL);
@@ -334,6 +354,7 @@ class EntityUsageTest extends EntityKernelTestBase {
           'target_type' => 'foo',
           'source_id' => $entity->id(),
           'source_type' => $entity_type,
+          'source_langcode' => $entity->language()->getId(),
           'method' => 'entity_reference',
           'field_name' => 'body',
           'count' => 1,
@@ -352,6 +373,7 @@ class EntityUsageTest extends EntityKernelTestBase {
     $this->assertSame($event['target_type'], NULL);
     $this->assertSame($event['source_id'], NULL);
     $this->assertSame($event['source_type'], $entity_type);
+    $this->assertSame($event['source_langcode'], NULL);
     $this->assertSame($event['method'], NULL);
     $this->assertSame($event['field_name'], NULL);
     $this->assertSame($event['count'], NULL);
@@ -401,6 +423,7 @@ class EntityUsageTest extends EntityKernelTestBase {
       'target_type' => $event->getTargetEntityType(),
       'source_id' => $event->getSourceEntityId(),
       'source_type' => $event->getSourceEntityType(),
+      'source_langcode' => $event->getSourceEntityLangcode(),
       'method' => $event->getMethod(),
       'field_name' => $event->getFieldName(),
       'count' => $event->getCount(),
@@ -422,6 +445,7 @@ class EntityUsageTest extends EntityKernelTestBase {
       'target_type' => $event->getTargetEntityType(),
       'source_id' => $event->getSourceEntityId(),
       'source_type' => $event->getSourceEntityType(),
+      'source_langcode' => $event->getSourceEntityLangcode(),
       'method' => $event->getMethod(),
       'field_name' => $event->getFieldName(),
       'count' => $event->getCount(),
@@ -443,6 +467,7 @@ class EntityUsageTest extends EntityKernelTestBase {
       'target_type' => $event->getTargetEntityType(),
       'source_id' => $event->getSourceEntityId(),
       'source_type' => $event->getSourceEntityType(),
+      'source_langcode' => $event->getSourceEntityLangcode(),
       'method' => $event->getMethod(),
       'field_name' => $event->getFieldName(),
       'count' => $event->getCount(),
@@ -464,6 +489,7 @@ class EntityUsageTest extends EntityKernelTestBase {
       'target_type' => $event->getTargetEntityType(),
       'source_id' => $event->getSourceEntityId(),
       'source_type' => $event->getSourceEntityType(),
+      'source_langcode' => $event->getSourceEntityLangcode(),
       'method' => $event->getMethod(),
       'field_name' => $event->getFieldName(),
       'count' => $event->getCount(),

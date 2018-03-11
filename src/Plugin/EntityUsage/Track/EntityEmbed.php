@@ -13,7 +13,7 @@ use Drupal\Component\Utility\Html;
  *   description = @Translation("Tracks usage of entities related when embedded with Entity Embed."),
  * )
  */
-class EntityEmbed extends EmbedBase {
+class EntityEmbed extends TextFieldEmbedBase {
 
   /**
    * {@inheritdoc}

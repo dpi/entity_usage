@@ -15,7 +15,7 @@ use Symfony\Component\DependencyInjection\ContainerInterface;
 /**
  * Base class for plugins tracking usage in entities embedded in WYSIWYG fields.
  */
-abstract class EmbedBase extends EntityUsageTrackBase implements EmbedTrackInterface {
+abstract class TextFieldEmbedBase extends EntityUsageTrackBase implements EmbedTrackInterface {
 
   /**
    * The ModuleHandler service.
@@ -90,38 +90,8 @@ abstract class EmbedBase extends EntityUsageTrackBase implements EmbedTrackInter
    * {@inheritdoc}
    */
   public function trackOnEntityUpdate(ContentEntityInterface $entity) {
-    // The assumption here is that an entity that is referenced by any
-    // translation of another entity should be tracked, and only once
-    // (regardless if many translations point to the same entity). So the
-    // process to identify them is quite simple: we build a list of all entity
-    // ids referenced before the update by all translations (original included),
-    // and compare it with the list of ids referenced by all translations after
-    // the update.
-    $translations = [];
-    $originals = [];
-    $languages = $entity->getTranslationLanguages();
-    foreach ($languages as $langcode => $language) {
-      if (!$entity->hasTranslation($langcode)) {
-        continue;
-      }
-      $translations[] = $entity->getTranslation($langcode);
-      if (!$entity->original->hasTranslation($langcode)) {
-        continue;
-      }
-      $originals[] = $entity->original->getTranslation($langcode);
-    }
-
-    $current_field_uuids = [[]];
-    foreach ($translations as $translation) {
-      $current_field_uuids[] = $this->getEmbeddedEntitiesByField($translation);
-    }
-    $current_field_uuids = array_merge_recursive(...$current_field_uuids);
-
-    $original_field_uuids = [[]];
-    foreach ($originals as $original) {
-      $original_field_uuids[] = $this->getEmbeddedEntitiesByField($original);
-    }
-    $original_field_uuids = array_merge_recursive(...$original_field_uuids);
+    $current_field_uuids[] = $this->getEmbeddedEntitiesByField($entity);
+    $original_field_uuids[] = $this->getEmbeddedEntitiesByField($entity->original);
 
     foreach ($current_field_uuids as $field_name => $uuids) {
       if (!empty($original_field_uuids[$field_name])) {
@@ -146,31 +116,10 @@ abstract class EmbedBase extends EntityUsageTrackBase implements EmbedTrackInter
    * {@inheritdoc}
    */
   public function trackOnEntityDeletion(ContentEntityInterface $entity) {
-    $translations = [];
-    // When deleting the main (untranslated) entity, loop over all translations
-    // as well to release referenced entities there too.
-    if ($entity === $entity->getUntranslated()) {
-      $languages = $entity->getTranslationLanguages();
-      foreach ($languages as $langcode => $language) {
-        if (!$entity->hasTranslation($langcode)) {
-          continue;
-        }
-        $translations[] = $entity->getTranslation($langcode);
-      }
-    }
-    else {
-      // Otherwise, this is a single translation being deleted, so we just need
-      // to release usage reflected here.
-      $translations = [$entity];
-    }
-
-    foreach ($translations as $translation) {
-      $referenced_entities_by_field = $this->getEmbeddedEntitiesByField($translation);
-      foreach ($referenced_entities_by_field as $field_name => $embedded_entities) {
-        foreach ($embedded_entities as $target_uuid => $target_type) {
-          // Decrement the usage as embedded entity.
-          $this->decrementEmbeddedUsage($entity, $target_type, $target_uuid, $field_name);
-        }
+    $referenced_entities_by_field = $this->getEmbeddedEntitiesByField($entity);
+    foreach ($referenced_entities_by_field as $field_name => $embedded_entities) {
+      foreach ($embedded_entities as $target_uuid => $target_type) {
+        $this->decrementEmbeddedUsage($entity, $target_type, $target_uuid, $field_name);
       }
     }
 
@@ -227,10 +176,9 @@ abstract class EmbedBase extends EntityUsageTrackBase implements EmbedTrackInter
    *   The name of the field referencing the target entity.
    */
   protected function incrementEmbeddedUsage(ContentEntityInterface $source_entity, $target_type, $uuid, $field_name) {
+    /** @var \Drupal\Core\Entity\ContentEntityInterface $target_entity */
     $target_entity = $this->entityRepository->loadEntityByUuid($target_type, $uuid);
-    if ($target_entity) {
-      $this->usageService->add($target_entity->id(), $target_type, $source_entity->id(), $source_entity->getEntityTypeId(), $this->pluginId, $field_name);
-    }
+    $this->usageService->add($target_entity->id(), $target_type, $source_entity->id(), $source_entity->getEntityTypeId(), $source_entity->language()->getId(), $this->pluginId, $field_name);
   }
 
   /**
@@ -246,10 +194,9 @@ abstract class EmbedBase extends EntityUsageTrackBase implements EmbedTrackInter
    *   The name of the field referencing the target entity.
    */
   protected function decrementEmbeddedUsage(ContentEntityInterface $source_entity, $target_type, $uuid, $field_name) {
+    /** @var \Drupal\Core\Entity\ContentEntityInterface $target_entity */
     $target_entity = $this->entityRepository->loadEntityByUuid($target_type, $uuid);
-    if ($target_entity) {
-      $this->usageService->delete($target_entity->id(), $target_type, $source_entity->id(), $source_entity->getEntityTypeId(), $this->pluginId, $field_name);
-    }
+    $this->usageService->delete($target_entity->id(), $target_type, $source_entity->id(), $source_entity->getEntityTypeId(), $source_entity->language()->getId(), $this->pluginId, $field_name);
   }
 
 }

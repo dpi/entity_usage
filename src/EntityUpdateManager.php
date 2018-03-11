@@ -69,25 +69,6 @@ class EntityUpdateManager {
   }
 
   /**
-   * Track updates on deletion of potential source entities.
-   *
-   * @param \Drupal\Core\Entity\ContentEntityInterface $entity
-   *   The entity we are dealing with.
-   */
-  public function trackUpdateOnDeletion(ContentEntityInterface $entity) {
-    if (!$this->allowEntityTracking($entity)) {
-      return;
-    }
-
-    // Call all plugins that want to track entity usages.
-    foreach ($this->getEnabledPlugins() as $plugin) {
-      $plugin->trackOnEntityDeletion($entity);
-    }
-
-    $this->usageService->delete($entity->id(), $entity->getEntityTypeId());
-  }
-
-  /**
    * Track updates on edit / update of potential source entities.
    *
    * @param \Drupal\Core\Entity\ContentEntityInterface $entity
@@ -102,7 +83,25 @@ class EntityUpdateManager {
     foreach ($this->getEnabledPlugins() as $plugin) {
       $plugin->trackOnEntityUpdate($entity);
     }
+  }
 
+  /**
+   * Track updates on deletion of potential source entities.
+   *
+   * @param \Drupal\Core\Entity\ContentEntityInterface $entity
+   *   The entity we are dealing with.
+   */
+  public function trackUpdateOnDeletion(ContentEntityInterface $entity) {
+    if (!($entity instanceof ContentEntityInterface)) {
+      return FALSE;
+    }
+
+    // Call all plugins that want to track entity usages.
+    foreach ($this->getEnabledPlugins() as $plugin) {
+      $plugin->trackOnEntityDeletion($entity);
+    }
+
+    $this->usageService->delete($entity->id(), $entity->getEntityTypeId(), $entity->language()->getId());
   }
 
   /**

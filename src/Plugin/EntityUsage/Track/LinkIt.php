@@ -13,7 +13,7 @@ use Drupal\Component\Utility\Html;
  *   description = @Translation("Tracks usage of entities related when embedded with the LinkIt module."),
  * )
  */
-class LinkIt extends EmbedBase {
+class LinkIt extends TextFieldEmbedBase {
 
   /**
    * {@inheritdoc}

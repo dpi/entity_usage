@@ -24,18 +24,25 @@ class EntityUsageEvent extends Event {
   protected $targetEntityType;
 
   /**
-   * The identifier of the source entity.
+   * The source entity ID.
    *
    * @var string
    */
   protected $sourceEntityId;
 
   /**
-   * The type of the entity that is source.
+   * The source entity type.
    *
    * @var string
    */
   protected $sourceEntityType;
+
+  /**
+   * The source entity language code.
+   *
+   * @var string
+   */
+  protected $sourceEntityLangcode;
 
   /**
    * The method used to relate source entity with the target entity.
@@ -62,13 +69,15 @@ class EntityUsageEvent extends Event {
    * EntityUsageEvents constructor.
    *
    * @param int $target_id
-   *   The identifier of the target entity.
+   *   The target entity ID.
    * @param string $target_type
-   *   The type of the target entity.
+   *   The target entity type.
    * @param int $source_id
-   *   The identifier of the source entity.
+   *   The source entity ID.
    * @param string $source_type
-   *   The type of the entity that is source.
+   *   The source entity type.
+   * @param string $source_langcode
+   *   The source entity language code
    * @param string $method
    *   The method or way the two entities are being referenced.
    * @param string $field_name
@@ -76,11 +85,12 @@ class EntityUsageEvent extends Event {
    * @param int $count
    *   The number of references to add or remove.
    */
-  public function __construct($target_id = NULL, $target_type = NULL, $source_id = NULL, $source_type = NULL, $method = NULL, $field_name = NULL, $count = NULL) {
+  public function __construct($target_id = NULL, $target_type = NULL, $source_id = NULL, $source_type = NULL, $source_langcode = NULL, $method = NULL, $field_name = NULL, $count = NULL) {
     $this->targetEntityId = $target_id;
     $this->targetEntityType = $target_type;
     $this->sourceEntityId = $source_id;
     $this->sourceEntityType = $source_type;
+    $this->sourceEntityLangcode = $source_langcode;
     $this->method = $method;
     $this->fieldName = $field_name;
     $this->count = $count;
@@ -124,6 +134,16 @@ class EntityUsageEvent extends Event {
    */
   public function setSourceEntityType($type) {
     $this->sourceEntityType = $type;
+  }
+
+  /**
+   * Sets the source entity language code.
+   *
+   * @param string $langcode
+   *   The source entity language code.
+   */
+  public function setSourceEntityLangcode($langcode) {
+    $this->sourceEntityLangcode = $langcode;
   }
 
   /**
@@ -194,6 +214,16 @@ class EntityUsageEvent extends Event {
    */
   public function getSourceEntityType() {
     return $this->sourceEntityType;
+  }
+
+  /**
+   * Gets the source entity language code.
+   *
+   * @return null|string
+   *   The source entity language code or NULL.
+   */
+  public function getSourceEntityLangcode() {
+    return $this->sourceEntityLangcode;
   }
 
   /**

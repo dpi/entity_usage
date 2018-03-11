@@ -152,7 +152,12 @@ class EntityReferenceKernelTest extends EntityKernelTestBase {
     $this->assertEquals([
       $source_entity->getEntityTypeId() => [
         $source_entity->id() => [
-          $field_name => 1,
+          [
+            'source_langcode' => $source_entity->language()->getId(),
+            'method' => 'entity_reference',
+            'field_name' => $field_name,
+            'count' => 1,
+          ],
         ],
       ],
     ], $usage, 'The usage count is correct.');
@@ -167,7 +172,12 @@ class EntityReferenceKernelTest extends EntityKernelTestBase {
     $this->assertEquals([
       $source_entity->getEntityTypeId() => [
         $source_entity->id() => [
-          $field_name => 1,
+          0 => [
+            'source_langcode' => $source_entity->language()->getId(),
+            'method' => 'entity_reference',
+            'field_name' => $field_name,
+            'count' => 1,
+          ],
         ],
       ],
     ], $usage, 'The usage count is correct.');
@@ -186,7 +196,12 @@ class EntityReferenceKernelTest extends EntityKernelTestBase {
     $this->assertEquals([
       $source_entity->getEntityTypeId() => [
         $source_entity->id() => [
-          $field_name => 1,
+          0 => [
+            'source_langcode' => $source_entity->language()->getId(),
+            'method' => 'entity_reference',
+            'field_name' => $field_name,
+            'count' => 1,
+          ],
         ],
       ],
     ], $usage, 'The usage count is correct.');
@@ -204,7 +219,12 @@ class EntityReferenceKernelTest extends EntityKernelTestBase {
     $this->assertEquals([
       $source_entity->getEntityTypeId() => [
         $source_entity->id() => [
-          $field_name => 1,
+          0 => [
+            'source_langcode' => $source_entity->language()->getId(),
+            'method' => 'entity_reference',
+            'field_name' => $field_name,
+            'count' => 1,
+          ],
         ],
       ],
     ], $usage, 'The usage count is correct.');
@@ -227,7 +247,6 @@ class EntityReferenceKernelTest extends EntityKernelTestBase {
    *   An array of entity objects.
    */
   protected function getTestEntities() {
-
     $content_entity_1 = EntityTest::create(['name' => $this->randomMachineName()]);
     $content_entity_1->save();
     $content_entity_2 = EntityTest::create(['name' => $this->randomMachineName()]);

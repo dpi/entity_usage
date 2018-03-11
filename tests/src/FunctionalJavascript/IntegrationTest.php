@@ -50,12 +50,18 @@ class IntegrationTest extends EntityUsageJavascriptTestBase {
     $assert_session->pageTextContains('eu_test_ct Node 2 has been created.');
     $this->saveHtmlOutput();
     $node2 = Node::load(2);
-    // Check that we registered correctly the relation between N2 and N1.
+    // Check that we correctly registered the relation between N2 and N1.
     $usage = $usage_service->listSources($node1);
-    $this->assertEquals($usage['node'], ['2' => ['field_eu_test_related_nodes' => '1']], 'Correct usage found.');
-    // Check that the method stored for the tracking is "entity_reference".
-    $usage = $usage_service->listSources($node1, TRUE);
-    $this->assertEquals($usage['entity_reference']['node'], ['2' => ['field_eu_test_related_nodes' => '1']], 'Correct usage found.');
+    $this->assertEquals($usage['node'], [
+      '2' => [
+        0 => [
+          'source_langcode' => 'en',
+          'method' => 'entity_reference',
+          'field_name' => 'field_eu_test_related_nodes',
+          'count' => 1,
+        ],
+      ],
+    ], 'Correct usage found.');
 
     // Create node 3 referencing node 2 using embedded text.
     // $this->drupalGet('/node/add/eu_test_ct'); .
@@ -75,12 +81,18 @@ class IntegrationTest extends EntityUsageJavascriptTestBase {
       ],
     ]);
     $node3->save();
-    // Check that we registered correctly the relation between N3 and N2.
+    // Check that we correctly registered the relation between N3 and N2.
     $usage = $usage_service->listSources($node2);
-    $this->assertEquals($usage['node'], ['3' => ['field_eu_test_rich_text' => '1']], 'Correct usage found.');
-    // Check that the method stored for the tracking is "entity_embed".
-    $usage = $usage_service->listSources($node2, TRUE);
-    $this->assertEquals($usage['entity_embed']['node'], ['3' => ['field_eu_test_rich_text' => '1']], 'Correct usage found.');
+    $this->assertEquals($usage['node'], [
+      '3' => [
+        0 => [
+          'source_langcode' => 'en',
+          'method' => 'entity_embed',
+          'field_name' => 'field_eu_test_rich_text',
+          'count' => 1,
+        ],
+      ],
+    ], 'Correct usage found.');
 
     // Create node 4 referencing node 2 using both methods.
     $node4 = Node::create([
@@ -99,10 +111,27 @@ class IntegrationTest extends EntityUsageJavascriptTestBase {
     $usage = $usage_service->listSources($node2);
     $expected_count = [
       'node' => [
-        '3' => ['field_eu_test_rich_text' => '1'],
+        '3' => [
+          0 => [
+            'source_langcode' => 'en',
+            'method' => 'entity_embed',
+            'field_name' => 'field_eu_test_rich_text',
+            'count' => 1,
+          ],
+        ],
         '4' => [
-          'field_eu_test_related_nodes' => '1',
-          'field_eu_test_rich_text' => '1',
+          0 => [
+            'source_langcode' => 'en',
+            'method' => 'entity_embed',
+            'field_name' => 'field_eu_test_rich_text',
+            'count' => 1,
+          ],
+          1 => [
+            'source_langcode' => 'en',
+            'method' => 'entity_reference',
+            'field_name' => 'field_eu_test_related_nodes',
+            'count' => 1,
+          ],
         ],
       ],
     ];
@@ -134,10 +163,16 @@ class IntegrationTest extends EntityUsageJavascriptTestBase {
     $node5->save();
     // Check that we registered correctly the relation between N5 and N2.
     $usage = $usage_service->listSources($node4);
-    $this->assertEquals($usage['node'], ['5' => ['field_eu_test_rich_text' => '1']], 'Correct usage found.');
-    // Check that the method stored for the tracking is "linkit".
-    $usage = $usage_service->listSources($node4, TRUE);
-    $this->assertEquals($usage['linkit']['node'], ['5' => ['field_eu_test_rich_text' => '1']], 'Correct usage found.');
+    $this->assertEquals($usage['node'], [
+      '5' => [
+        0 => [
+          'source_langcode' => 'en',
+          'method' => 'linkit',
+          'field_name' => 'field_eu_test_rich_text',
+          'count' => 1,
+        ],
+      ],
+    ], 'Correct usage found.');
   }
 
   /**
@@ -209,8 +244,17 @@ class IntegrationTest extends EntityUsageJavascriptTestBase {
     $node2 = \Drupal::entityTypeManager()->getStorage('node')
       ->loadUnchanged($node2_id);
     // Check that the usage of Node 1 points to Node 2.
-    $usage = $usage_service->listSources($node1, TRUE);
-    $this->assertEquals([$node2_id => ['field_link1' => '1']], $usage['link']['node']);
+    $usage = $usage_service->listSources($node1);
+    $this->assertEquals([
+      $node2_id => [
+        0 => [
+          'source_langcode' => 'en',
+          'method' => 'link',
+          'field_name' => 'field_link1',
+          'count' => 1,
+        ],
+      ],
+    ], $usage['node']);
 
     // Edit Node 2, remove reference.
     $this->drupalGet("/node/{$node2_id}/edit");
@@ -231,8 +275,17 @@ class IntegrationTest extends EntityUsageJavascriptTestBase {
     $assert_session->pageTextContains('eu_test_ct Node 2 has been updated.');
     $this->saveHtmlOutput();
     // Usage now should be there.
-    $usage = $usage_service->listSources($node1, TRUE);
-    $this->assertEquals([$node2_id => ['field_link1' => '1']], $usage['link']['node']);
+    $usage = $usage_service->listSources($node1);
+    $this->assertEquals([
+      $node2_id => [
+        0 => [
+          'source_langcode' => 'en',
+          'method' => 'link',
+          'field_name' => 'field_link1',
+          'count' => 1,
+        ],
+      ],
+    ], $usage['node']);
     // Delete the source and usage should be released.
     $node2->delete();
     $usage = $usage_service->listSources($node1);
