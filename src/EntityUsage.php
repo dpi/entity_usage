@@ -152,12 +152,15 @@ class EntityUsage implements EntityUsageInterface {
     if ($source_type && $source_id) {
       $query
         ->condition('source_type', $source_type)
-        ->condition('source_id', $source_id)
-        ->condition('source_vid', $source_vid ?: 0);
+        ->condition('source_id', $source_id);
     }
     if ($source_langcode) {
       $query
         ->condition('source_langcode', $source_langcode);
+    }
+    if ($source_vid) {
+      $query
+        ->condition('source_vid', $source_vid ?: 0);
     }
     if ($method) {
       $query
@@ -211,7 +214,7 @@ class EntityUsage implements EntityUsageInterface {
       ->condition('target_type', $target_type);
     $query->execute();
 
-    $event = new EntityUsageEvent(NULL, $target_type, NULL, NULL, NULL, NULL, NULL);
+    $event = new EntityUsageEvent(NULL, $target_type, NULL, NULL, NULL, NULL, NULL, NULL, NULL);
     $this->eventDispatcher->dispatch(Events::BULK_DELETE_DESTINATIONS, $event);
   }
 
@@ -223,7 +226,7 @@ class EntityUsage implements EntityUsageInterface {
       ->condition('source_type', $source_type);
     $query->execute();
 
-    $event = new EntityUsageEvent(NULL, NULL, NULL, $source_type, NULL, NULL, NULL);
+    $event = new EntityUsageEvent(NULL, NULL, NULL, $source_type, NULL, NULL, NULL, NULL, NULL);
     $this->eventDispatcher->dispatch(Events::BULK_DELETE_SOURCES, $event);
   }
 
