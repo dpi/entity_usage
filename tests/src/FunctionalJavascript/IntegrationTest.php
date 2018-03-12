@@ -53,9 +53,10 @@ class IntegrationTest extends EntityUsageJavascriptTestBase {
     // Check that we correctly registered the relation between N2 and N1.
     $usage = $usage_service->listSources($node1);
     $this->assertEquals($usage['node'], [
-      '2' => [
+      $node2->id() => [
         0 => [
           'source_langcode' => 'en',
+          'source_vid' => $node2->getRevisionId(),
           'method' => 'entity_reference',
           'field_name' => 'field_eu_test_related_nodes',
           'count' => 1,
@@ -84,9 +85,10 @@ class IntegrationTest extends EntityUsageJavascriptTestBase {
     // Check that we correctly registered the relation between N3 and N2.
     $usage = $usage_service->listSources($node2);
     $this->assertEquals($usage['node'], [
-      '3' => [
+      $node3->id() => [
         0 => [
           'source_langcode' => 'en',
+          'source_vid' => $node3->getRevisionId(),
           'method' => 'entity_embed',
           'field_name' => 'field_eu_test_rich_text',
           'count' => 1,
@@ -111,23 +113,26 @@ class IntegrationTest extends EntityUsageJavascriptTestBase {
     $usage = $usage_service->listSources($node2);
     $expected_count = [
       'node' => [
-        '3' => [
+        $node3->id() => [
           0 => [
             'source_langcode' => 'en',
+            'source_vid' => $node3->getRevisionId(),
             'method' => 'entity_embed',
             'field_name' => 'field_eu_test_rich_text',
             'count' => 1,
           ],
         ],
-        '4' => [
+        $node4->id() => [
           0 => [
             'source_langcode' => 'en',
+            'source_vid' => $node4->getRevisionId(),
             'method' => 'entity_embed',
             'field_name' => 'field_eu_test_rich_text',
             'count' => 1,
           ],
           1 => [
             'source_langcode' => 'en',
+            'source_vid' => $node4->getRevisionId(),
             'method' => 'entity_reference',
             'field_name' => 'field_eu_test_related_nodes',
             'count' => 1,
@@ -164,9 +169,10 @@ class IntegrationTest extends EntityUsageJavascriptTestBase {
     // Check that we registered correctly the relation between N5 and N2.
     $usage = $usage_service->listSources($node4);
     $this->assertEquals($usage['node'], [
-      '5' => [
+      $node5->id() => [
         0 => [
           'source_langcode' => 'en',
+          'source_vid' => $node5->getRevisionId(),
           'method' => 'linkit',
           'field_name' => 'field_eu_test_rich_text',
           'count' => 1,
@@ -241,6 +247,7 @@ class IntegrationTest extends EntityUsageJavascriptTestBase {
       ->execute();
     $node2_id = reset($node2_id);
     $this->assertNotNull($node2_id);
+    /** @var \Drupal\node\NodeInterface $node2 */
     $node2 = \Drupal::entityTypeManager()->getStorage('node')
       ->loadUnchanged($node2_id);
     // Check that the usage of Node 1 points to Node 2.
@@ -249,6 +256,7 @@ class IntegrationTest extends EntityUsageJavascriptTestBase {
       $node2_id => [
         0 => [
           'source_langcode' => 'en',
+          'source_vid' => $node2->getRevisionId(),
           'method' => 'link',
           'field_name' => 'field_link1',
           'count' => 1,
@@ -280,6 +288,7 @@ class IntegrationTest extends EntityUsageJavascriptTestBase {
       $node2_id => [
         0 => [
           'source_langcode' => 'en',
+          'source_vid' => $node2->getRevisionId(),
           'method' => 'link',
           'field_name' => 'field_link1',
           'count' => 1,

@@ -87,16 +87,16 @@ class Link extends EntityUsageTrackBase {
   /**
    * {@inheritdoc}
    */
-  public function trackOnEntityCreation(ContentEntityInterface $entity) {
-    foreach ($this->linkFieldsAvailable($entity) as $field_name) {
-      if (!$entity->{$field_name}->isEmpty()) {
+  public function trackOnEntityCreation(ContentEntityInterface $source_entity) {
+    foreach ($this->linkFieldsAvailable($source_entity) as $field_name) {
+      if (!$source_entity->{$field_name}->isEmpty()) {
         /** @var \Drupal\link\Plugin\Field\FieldType\LinkItem $field_item */
-        foreach ($entity->{$field_name} as $field_item) {
-          // This item got added. Track the usage up.
+        foreach ($source_entity->{$field_name} as $field_item) {
+          // This item got added, add a tracking record.
           $target_entity = $this->getTargetEntity($field_item);
           if ($target_entity) {
             list($target_type, $target_id) = explode('|', $target_entity);
-            $this->usageService->add($target_id, $target_type, $entity->id(), $entity->getEntityTypeId(), $entity->language()->getId(), $this->pluginId, $field_name);
+            $this->usageService->add($target_id, $target_type, $source_entity->id(), $source_entity->getEntityTypeId(), $source_entity->language()->getId(), $source_entity->getRevisionId(), $this->pluginId, $field_name);
           }
         }
       }
@@ -106,11 +106,19 @@ class Link extends EntityUsageTrackBase {
   /**
    * {@inheritdoc}
    */
-  public function trackOnEntityUpdate(ContentEntityInterface $entity) {
-    foreach ($this->linkFieldsAvailable($entity) as $field_name) {
+  public function trackOnEntityUpdate(ContentEntityInterface $source_entity) {
+    foreach ($this->linkFieldsAvailable($source_entity) as $field_name) {
+      // If we create a new revision, just add the new tracking records.
+      if ($source_entity->getRevisionId() !== $source_entity->original->getRevisionId() && !$source_entity->$field_name->isEmpty()) {
+        $this->trackOnEntityCreation($source_entity);
+        return;
+      }
+
+      // We are updating an existing revision, compare target entities to see if
+      // we need to add or remove tracking records.
       $current_targets = [];
-      if (!$entity->{$field_name}->isEmpty()) {
-        foreach ($entity->{$field_name} as $field_item) {
+      if (!$source_entity->{$field_name}->isEmpty()) {
+        foreach ($source_entity->{$field_name} as $field_item) {
           $target_entity = $this->getTargetEntity($field_item);
           if ($target_entity) {
             $current_targets[] = $target_entity;
@@ -119,8 +127,8 @@ class Link extends EntityUsageTrackBase {
       }
 
       $original_targets = [];
-      if (!$entity->original->{$field_name}->isEmpty()) {
-        foreach ($entity->original->{$field_name} as $field_item) {
+      if (!$source_entity->original->{$field_name}->isEmpty()) {
+        foreach ($source_entity->original->{$field_name} as $field_item) {
           $target_entity = $this->getTargetEntity($field_item);
           if ($target_entity) {
             $original_targets[] = $target_entity;
@@ -137,11 +145,11 @@ class Link extends EntityUsageTrackBase {
 
       foreach ($added_ids as $added_entity) {
         list($target_type, $target_id) = explode('|', $added_entity);
-        $this->usageService->add($target_id, $target_type, $entity->id(), $entity->getEntityTypeId(), $entity->language()->getId(), $this->pluginId, $field_name);
+        $this->usageService->add($target_id, $target_type, $source_entity->id(), $source_entity->getEntityTypeId(), $source_entity->language()->getId(), $source_entity->getRevisionId(), $this->pluginId, $field_name);
       }
       foreach ($removed_ids as $removed_entity) {
         list($target_type, $target_id) = explode('|', $removed_entity);
-        $this->usageService->delete($target_id, $target_type, $entity->id(), $entity->getEntityTypeId(), $entity->language()->getId(), $this->pluginId, $field_name);
+        $this->usageService->delete($target_id, $target_type, $source_entity->id(), $source_entity->getEntityTypeId(), $source_entity->language()->getId(), $source_entity->getRevisionId(), $this->pluginId, $field_name);
       }
     }
   }
@@ -149,16 +157,16 @@ class Link extends EntityUsageTrackBase {
   /**
    * {@inheritdoc}
    */
-  public function trackOnEntityDeletion(ContentEntityInterface $entity) {
-    foreach ($this->linkFieldsAvailable($entity) as $field_name) {
-      if (!$entity->{$field_name}->isEmpty()) {
+  public function trackOnEntityDeletion(ContentEntityInterface $source_entity) {
+    foreach ($this->linkFieldsAvailable($source_entity) as $field_name) {
+      if (!$source_entity->{$field_name}->isEmpty()) {
         /** @var \Drupal\link\Plugin\Field\FieldType\LinkItem $field_item */
-        foreach ($entity->{$field_name} as $field_item) {
+        foreach ($source_entity->{$field_name} as $field_item) {
           // This item got deleted. Track the usage down.
           $target_entity = $this->getTargetEntity($field_item);
           if ($target_entity) {
             list($target_type, $target_id) = explode('|', $target_entity);
-            $this->usageService->delete($target_id, $target_type, $entity->id(), $entity->getEntityTypeId(), $entity->language()->getId(), $this->pluginId, $field_name);
+            $this->usageService->delete($target_id, $target_type, $source_entity->id(), $source_entity->getEntityTypeId(), $source_entity->language()->getId(), $source_entity->getRevisionId(), $this->pluginId, $field_name);
           }
         }
       }
@@ -168,15 +176,15 @@ class Link extends EntityUsageTrackBase {
   /**
    * Retrieve the link fields on a given entity.
    *
-   * @param \Drupal\Core\Entity\ContentEntityInterface $entity
+   * @param \Drupal\Core\Entity\ContentEntityInterface $source_entity
    *   The entity object.
    *
    * @return array
    *   An array of field_names that could reference to other content entities.
    */
-  protected function linkFieldsAvailable(ContentEntityInterface $entity) {
+  protected function linkFieldsAvailable(ContentEntityInterface $source_entity) {
     $return_fields = [];
-    $fields = $this->getReferencingFields($entity, ['link']);
+    $fields = $this->getReferencingFields($source_entity, ['link']);
     if (!empty($fields)) {
       $return_fields = array_keys($fields);
     }

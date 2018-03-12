@@ -93,7 +93,7 @@ class EntityUpdateManager {
    */
   public function trackUpdateOnDeletion(ContentEntityInterface $entity) {
     if (!($entity instanceof ContentEntityInterface)) {
-      return FALSE;
+      return;
     }
 
     // Call all plugins that want to track entity usages.
@@ -101,7 +101,7 @@ class EntityUpdateManager {
       $plugin->trackOnEntityDeletion($entity);
     }
 
-    $this->usageService->delete($entity->id(), $entity->getEntityTypeId(), $entity->language()->getId());
+    $this->usageService->delete($entity->id(), $entity->getEntityTypeId());
   }
 
   /**

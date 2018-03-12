@@ -77,7 +77,7 @@ class EntityUsage implements EntityUsageInterface {
   /**
    * {@inheritdoc}
    */
-  public function add($target_id, $target_type, $source_id, $source_type, $source_langcode, $method, $field_name, $count = 1) {
+  public function add($target_id, $target_type, $source_id, $source_type, $source_langcode, $source_vid, $method, $field_name, $count = 1) {
     // Check if target entity type is enabled, all entity types are enabled by
     // default.
     $enabled_target_entity_types = $this->config->get('track_enabled_target_entity_types');
@@ -92,6 +92,7 @@ class EntityUsage implements EntityUsageInterface {
       'source_id' => $source_id,
       'source_type' => $source_type,
       'source_langcode' => $source_langcode,
+      'source_vid' => $source_vid,
       'method' => $method,
       'field_name' => $field_name,
       'count' => $count,
@@ -110,6 +111,7 @@ class EntityUsage implements EntityUsageInterface {
         'source_id' => $source_id,
         'source_type' => $source_type,
         'source_langcode' => $source_langcode,
+        'source_vid' => $source_vid ?: 0,
         'method' => $method,
         'field_name' => $field_name,
       ])
@@ -117,14 +119,14 @@ class EntityUsage implements EntityUsageInterface {
       ->expression('count', 'count + :count', [':count' => $count])
       ->execute();
 
-    $event = new EntityUsageEvent($target_id, $target_type, $source_id, $source_type, $source_langcode, $method, $field_name, $count);
+    $event = new EntityUsageEvent($target_id, $target_type, $source_id, $source_type, $source_langcode, $source_vid, $method, $field_name, $count);
     $this->eventDispatcher->dispatch(Events::USAGE_ADD, $event);
   }
 
   /**
    * {@inheritdoc}
    */
-  public function delete($target_id, $target_type, $source_id = NULL, $source_type = NULL, $source_langcode = NULL, $method = NULL, $field_name = NULL, $count = 1) {
+  public function delete($target_id, $target_type, $source_id = NULL, $source_type = NULL, $source_langcode = NULL, $source_vid = NULL, $method = NULL, $field_name = NULL, $count = 1) {
     // Allow modules to block this operation.
     $context = [
       'target_id' => $target_id,
@@ -132,6 +134,7 @@ class EntityUsage implements EntityUsageInterface {
       'source_id' => $source_id,
       'source_type' => $source_type,
       'source_langcode' => $source_langcode,
+      'source_vid' => $source_vid,
       'method' => $method,
       'field_name' => $field_name,
       'count' => $count,
@@ -149,11 +152,8 @@ class EntityUsage implements EntityUsageInterface {
     if ($source_type && $source_id) {
       $query
         ->condition('source_type', $source_type)
-        ->condition('source_id', $source_id);
-    }
-    if ($method) {
-      $query
-        ->condition('method', $method);
+        ->condition('source_id', $source_id)
+        ->condition('source_vid', $source_vid ?: 0);
     }
     if ($source_langcode) {
       $query
@@ -180,7 +180,16 @@ class EntityUsage implements EntityUsageInterface {
       if ($source_type && $source_id) {
         $query
           ->condition('source_type', $source_type)
-          ->condition('source_id', $source_id);
+          ->condition('source_id', $source_id)
+          ->condition('source_vid', $source_vid ?: 0);
+      }
+      if ($source_langcode) {
+        $query
+          ->condition('source_langcode', $source_langcode);
+      }
+      if ($method) {
+        $query
+          ->condition('method', $method);
       }
       if ($field_name) {
         $query
@@ -190,7 +199,7 @@ class EntityUsage implements EntityUsageInterface {
       $query->execute();
     }
 
-    $event = new EntityUsageEvent($target_id, $target_type, $source_id, $source_type, $source_langcode, $method, $field_name, $count);
+    $event = new EntityUsageEvent($target_id, $target_type, $source_id, $source_type, $source_langcode, $source_vid, $method, $field_name, $count);
     $this->eventDispatcher->dispatch(Events::USAGE_DELETE, $event);
   }
 
@@ -223,16 +232,21 @@ class EntityUsage implements EntityUsageInterface {
    */
   public function listSources(EntityInterface $target_entity) {
     $result = $this->connection->select($this->tableName, 'e')
-      ->fields('e', ['source_id', 'source_type', 'source_langcode', 'method', 'field_name', 'count'])
+      ->fields('e', ['source_id', 'source_type', 'source_langcode', 'source_vid', 'method', 'field_name', 'count'])
       ->condition('target_id', $target_entity->id())
       ->condition('target_type', $target_entity->getEntityTypeId())
       ->condition('count', 0, '>')
+      ->orderBy('source_type')
+      ->orderBy('source_id', 'DESC')
+      ->orderBy('source_vid', 'DESC')
+      ->orderBy('source_langcode')
       ->execute();
 
     $references = [];
     foreach ($result as $usage) {
       $references[$usage->source_type][$usage->source_id][] = [
         'source_langcode' => $usage->source_langcode,
+        'source_vid' => $usage->source_vid,
         'method' => $usage->method,
         'field_name' => $usage->field_name,
         'count' => $usage->count,
@@ -251,6 +265,8 @@ class EntityUsage implements EntityUsageInterface {
       ->condition('source_id', $source_entity->id())
       ->condition('source_type', $source_entity->getEntityTypeId())
       ->condition('count', 0, '>')
+      ->orderBy('target_id')
+      ->orderBy('target_id', 'DESC')
       ->execute();
 
     $references = [];

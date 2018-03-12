@@ -27,6 +27,8 @@
  *   The source entity type.
  * @param string $source_langcode
  *   The source entity language code.
+ * @param string $source_vid
+ *   The source entity revision ID.
  * @param string $method
  *   The method used to relate source entity with the target entity. Normally
  *   the plugin id.
@@ -38,7 +40,7 @@
  *   The strings 'add' or 'delete', indicating the API method that invoked this
  *   hook.
  */
-function hook_entity_usage_block_tracking($target_id, $target_type, $source_id, $source_type, $source_langcode, $method, $field_name, $count, $action) {
+function hook_entity_usage_block_tracking($target_id, $target_type, $source_id, $source_type, $source_langcode, $source_vid, $method, $field_name, $count, $action) {
   if ($field_name === 'field_foo_bar' && $method === 'link') {
     return TRUE;
   }

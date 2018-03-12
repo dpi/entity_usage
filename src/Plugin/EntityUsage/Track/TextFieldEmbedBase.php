@@ -76,12 +76,11 @@ abstract class TextFieldEmbedBase extends EntityUsageTrackBase implements EmbedT
   /**
    * {@inheritdoc}
    */
-  public function trackOnEntityCreation(ContentEntityInterface $entity) {
-    $referenced_entities_by_field = $this->getEmbeddedEntitiesByField($entity);
+  public function trackOnEntityCreation(ContentEntityInterface $source_entity) {
+    $referenced_entities_by_field = $this->getEmbeddedEntities($source_entity);
     foreach ($referenced_entities_by_field as $field_name => $embedded_entities) {
       foreach ($embedded_entities as $target_uuid => $target_type) {
-        // Increment the usage as embedded entity.
-        $this->incrementEmbeddedUsage($entity, $target_type, $target_uuid, $field_name);
+        $this->incrementEmbeddedUsage($source_entity, $target_type, $target_uuid, $field_name);
       }
     }
   }
@@ -89,16 +88,24 @@ abstract class TextFieldEmbedBase extends EntityUsageTrackBase implements EmbedT
   /**
    * {@inheritdoc}
    */
-  public function trackOnEntityUpdate(ContentEntityInterface $entity) {
-    $current_field_uuids[] = $this->getEmbeddedEntitiesByField($entity);
-    $original_field_uuids[] = $this->getEmbeddedEntitiesByField($entity->original);
+  public function trackOnEntityUpdate(ContentEntityInterface $source_entity) {
+    // If we create a new revision, just add the new tracking records.
+    if ($source_entity->getRevisionId() !== $source_entity->original->getRevisionId()) {
+      $this->trackOnEntityCreation($source_entity);
+      return;
+    }
+
+    // We are updating an existing revision, compare target entities to see if
+    // we need to add or remove tracking records.
+    $current_field_uuids[] = $this->getEmbeddedEntities($source_entity);
+    $original_field_uuids[] = $this->getEmbeddedEntities($source_entity->original);
 
     foreach ($current_field_uuids as $field_name => $uuids) {
       if (!empty($original_field_uuids[$field_name])) {
         $uuids = array_diff_key($uuids, $original_field_uuids[$field_name]);
       }
       foreach ($uuids as $target_uuid => $target_type) {
-        $this->incrementEmbeddedUsage($entity, $target_type, $target_uuid, $field_name);
+        $this->incrementEmbeddedUsage($source_entity, $target_type, $target_uuid, $field_name);
       }
     }
 
@@ -107,7 +114,7 @@ abstract class TextFieldEmbedBase extends EntityUsageTrackBase implements EmbedT
         $uuids = array_diff_key($uuids, $current_field_uuids[$field_name]);
       }
       foreach ($uuids as $target_uuid => $target_type) {
-        $this->decrementEmbeddedUsage($entity, $target_type, $target_uuid, $field_name);
+        $this->decrementEmbeddedUsage($source_entity, $target_type, $target_uuid, $field_name);
       }
     }
   }
@@ -115,21 +122,21 @@ abstract class TextFieldEmbedBase extends EntityUsageTrackBase implements EmbedT
   /**
    * {@inheritdoc}
    */
-  public function trackOnEntityDeletion(ContentEntityInterface $entity) {
-    $referenced_entities_by_field = $this->getEmbeddedEntitiesByField($entity);
+  public function trackOnEntityDeletion(ContentEntityInterface $source_entity) {
+    $referenced_entities_by_field = $this->getEmbeddedEntities($source_entity);
     foreach ($referenced_entities_by_field as $field_name => $embedded_entities) {
       foreach ($embedded_entities as $target_uuid => $target_type) {
-        $this->decrementEmbeddedUsage($entity, $target_type, $target_uuid, $field_name);
+        $this->decrementEmbeddedUsage($source_entity, $target_type, $target_uuid, $field_name);
       }
     }
 
   }
 
   /**
-   * Finds all entities embedded (<drupal-entity>) by formatted text fields.
+   * Get all entities embedded (<drupal-entity>) in formatted text fields.
    *
-   * @param \Drupal\Core\Entity\ContentEntityInterface $entity
-   *   An entity object whose fields to analyze.
+   * @param \Drupal\Core\Entity\ContentEntityInterface $source_entity
+   *   The source entity.
    *
    * @return array
    *   An array of found embedded entities, in the following structure:
@@ -142,14 +149,14 @@ abstract class TextFieldEmbedBase extends EntityUsageTrackBase implements EmbedT
    *     ],
    *   ].
    */
-  protected function getEmbeddedEntitiesByField(ContentEntityInterface $entity) {
+  protected function getEmbeddedEntities(ContentEntityInterface $source_entity) {
     $entities = [];
 
     if ($this->moduleHandler->moduleExists('editor')) {
-      $formatted_text_fields = _editor_get_formatted_text_fields($entity);
+      $formatted_text_fields = _editor_get_formatted_text_fields($source_entity);
       foreach ($formatted_text_fields as $formatted_text_field_name) {
         $text = '';
-        $field_items = $entity->get($formatted_text_field_name);
+        $field_items = $source_entity->get($formatted_text_field_name);
         foreach ($field_items as $field_item) {
           $text .= $field_item->value;
           if ($field_item->getFieldDefinition()->getType() === 'text_with_summary') {
@@ -178,7 +185,7 @@ abstract class TextFieldEmbedBase extends EntityUsageTrackBase implements EmbedT
   protected function incrementEmbeddedUsage(ContentEntityInterface $source_entity, $target_type, $uuid, $field_name) {
     /** @var \Drupal\Core\Entity\ContentEntityInterface $target_entity */
     $target_entity = $this->entityRepository->loadEntityByUuid($target_type, $uuid);
-    $this->usageService->add($target_entity->id(), $target_type, $source_entity->id(), $source_entity->getEntityTypeId(), $source_entity->language()->getId(), $this->pluginId, $field_name);
+    $this->usageService->add($target_entity->id(), $target_type, $source_entity->id(), $source_entity->getEntityTypeId(), $source_entity->language()->getId(), $source_entity->getRevisionId(), $this->pluginId, $field_name);
   }
 
   /**
@@ -196,7 +203,7 @@ abstract class TextFieldEmbedBase extends EntityUsageTrackBase implements EmbedT
   protected function decrementEmbeddedUsage(ContentEntityInterface $source_entity, $target_type, $uuid, $field_name) {
     /** @var \Drupal\Core\Entity\ContentEntityInterface $target_entity */
     $target_entity = $this->entityRepository->loadEntityByUuid($target_type, $uuid);
-    $this->usageService->delete($target_entity->id(), $target_type, $source_entity->id(), $source_entity->getEntityTypeId(), $source_entity->language()->getId(), $this->pluginId, $field_name);
+    $this->usageService->delete($target_entity->id(), $target_type, $source_entity->id(), $source_entity->getEntityTypeId(), $source_entity->language()->getId(), $source_entity->getRevisionId(), $this->pluginId, $field_name);
   }
 
 }

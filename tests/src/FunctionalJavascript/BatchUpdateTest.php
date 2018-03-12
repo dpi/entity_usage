@@ -68,6 +68,7 @@ class BatchUpdateTest extends EntityUsageJavascriptTestBase {
       '3' => [
         0 => [
           'source_langcode' => 'en',
+          'source_vid' => '3',
           'method' => 'entity_reference',
           'field_name' => 'field_eu_test_related_nodes',
           'count' => 1,
@@ -90,17 +91,19 @@ class BatchUpdateTest extends EntityUsageJavascriptTestBase {
     // Check if the resulting usage is the expected.
     $usage = $usage_service->listSources($node1);
     $this->assertEquals($usage['node'], [
-      '2' => [
+      '3' => [
         0 => [
           'source_langcode' => 'en',
+          'source_vid' => '3',
           'method' => 'entity_reference',
           'field_name' => 'field_eu_test_related_nodes',
           'count' => 1,
         ],
       ],
-      '3' => [
+      '2' => [
         0 => [
           'source_langcode' => 'en',
+          'source_vid' => '2',
           'method' => 'entity_reference',
           'field_name' => 'field_eu_test_related_nodes',
           'count' => 1,

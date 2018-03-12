@@ -25,6 +25,8 @@ interface EntityUsageInterface {
    *   The source entity type.
    * @param string $source_langcode
    *   The source entity language code.
+   * @param string $source_vid
+   *   The source entity revision ID.
    * @param string $method
    *   The method used to relate source entity with the target entity. Normally
    *   the plugin id.
@@ -33,7 +35,7 @@ interface EntityUsageInterface {
    * @param int $count
    *   (optional) The number of references to add to the object. Defaults to 1.
    */
-  public function add($target_id, $target_type, $source_id, $source_type, $source_langcode, $method, $field_name, $count = 1);
+  public function add($target_id, $target_type, $source_id, $source_type, $source_langcode, $source_vid, $method, $field_name, $count = 1);
 
   /**
    * Records that a source entity is no longer referencing a target entity.
@@ -44,25 +46,29 @@ interface EntityUsageInterface {
    *   The target entity type.
    * @param int $source_id
    *   (optional) The source entity ID. May be omitted if all references to an
-   *   entity are being deleted. Defaults to NULL.
+   *   target are being deleted. Defaults to NULL.
    * @param string $source_type
-   *   (optional) The source entity type. May be omitted if all entity type
-   *   references to a target are being deleted. Defaults to NULL.
+   *   (optional) The source entity type. May be omitted if all references to a
+   *   target are being deleted. Defaults to NULL.
    * @param string $source_langcode
-   *   (optional) The source entity language code. May be omitted if all entity
-   *   type references to a target are being deleted. Defaults to NULL.
+   *   (optional) The source entity language code. May be omitted if all
+   *   references to a target are being deleted. Defaults to NULL.
+   * @param string $source_vid
+   *   (optional) The source entity revision ID. May be omitted if all
+   *   references to a target are being deleted. Defaults to NULL.
    * @param string $method
    *   (optional) The method used to relate source entity with the target
    *   entity. Defaults to NULL.
    * @param string $field_name
    *   (optional) The name of the field in the source entity using the
-   *   target entity. Defaults to NULL.
+   *   target entity. May be omitted if all references to a target are being
+   *   deleted. Defaults to NULL.
    * @param int $count
    *   (optional) The number of references to delete from the object. Defaults
    *   to 1. Zero may be specified to delete all references to the entity within
-   *   a specific object.
+   *   a specific object. Defaults to 1.
    */
-  public function delete($target_id, $target_type, $source_id = NULL, $source_type = NULL, $source_langcode = NULL, $method = NULL, $field_name = NULL, $count = 1);
+  public function delete($target_id, $target_type, $source_id = NULL, $source_type = NULL, $source_langcode = NULL, $source_vid = NULL, $method = NULL, $field_name = NULL, $count = 1);
 
   /**
    * Remove all records of a given target entity type.
@@ -89,12 +95,14 @@ interface EntityUsageInterface {
    *    'node' => [
    *      123 => [
    *        'source_langcode' => 'en',
+   *        'source_vid' => '128',
    *        'method' => 'entity_reference',
    *        'field_name' => 'Related items',
    *        'count' => 1,
    *      ],
    *      124 => [
    *        'source_langcode' => 'en',
+   *        'source_vid' => '129',
    *        'method' => 'entity_reference',
    *        'field_name' => 'Related items',
    *        'count' => 1,
@@ -103,6 +111,7 @@ interface EntityUsageInterface {
    *    'user' => [
    *      2 => [
    *        'source_langcode' => 'en',
+   *        'source_vid' => '2',
    *        'method' => 'entity_reference',
    *        'field_name' => 'Author',
    *        'count' => 1,

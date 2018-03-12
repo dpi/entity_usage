@@ -72,6 +72,7 @@ class ListControllerTest extends EntityUsageJavascriptTestBase {
     $this->assertSession()->pageTextContains('Entity');
     $this->assertSession()->pageTextContains('Type');
     $this->assertSession()->pageTextContains('Language');
+    $this->assertSession()->pageTextContains('Revision ID');
     $this->assertSession()->pageTextContains('Field name');
     $this->assertSession()->pageTextContains('Count');
 
@@ -83,25 +84,29 @@ class ListControllerTest extends EntityUsageJavascriptTestBase {
 
     // Make sure that all elements of the table are the expected ones.
     $first_row_title = $this->xpath('//table/tbody/tr[1]/td[1]')[0];
-    $this->assertEquals('Node 2', $first_row_title->getText());
+    $this->assertEquals('Node 3', $first_row_title->getText());
     $first_row_type = $this->xpath('//table/tbody/tr[1]/td[2]')[0];
     $this->assertEquals('Content', $first_row_type->getText());
     $first_row_langcode = $this->xpath('//table/tbody/tr[1]/td[3]')[0];
     $this->assertEquals('en', $first_row_langcode->getText());
-    $first_row_field_label = $this->xpath('//table/tbody/tr[1]/td[4]')[0];
-    $this->assertEquals('Related nodes', $first_row_field_label->getText());
-    $first_row_count = $this->xpath('//table/tbody/tr[1]/td[5]')[0];
+    $first_row_vid = $this->xpath('//table/tbody/tr[1]/td[4]')[0];
+    $this->assertEquals('3', $first_row_vid->getText());
+    $first_row_field_label = $this->xpath('//table/tbody/tr[1]/td[5]')[0];
+    $this->assertEquals('Text', $first_row_field_label->getText());
+    $first_row_count = $this->xpath('//table/tbody/tr[1]/td[6]')[0];
     $this->assertEquals('1', $first_row_count->getText());
 
     $second_row_title = $this->xpath('//table/tbody/tr[2]/td[1]')[0];
-    $this->assertEquals('Node 3', $second_row_title->getText());
+    $this->assertEquals('Node 2', $second_row_title->getText());
     $second_row_type = $this->xpath('//table/tbody/tr[2]/td[2]')[0];
     $this->assertEquals('Content', $second_row_type->getText());
     $second_row_langcode = $this->xpath('//table/tbody/tr[2]/td[3]')[0];
     $this->assertEquals('en', $second_row_langcode->getText());
-    $second_row_field_label = $this->xpath('//table/tbody/tr[2]/td[4]')[0];
-    $this->assertEquals('Text', $second_row_field_label->getText());
-    $second_row_count = $this->xpath('//table/tbody/tr[2]/td[5]')[0];
+    $second_row_vid = $this->xpath('//table/tbody/tr[2]/td[4]')[0];
+    $this->assertEquals('2', $second_row_vid->getText());
+    $second_row_field_label = $this->xpath('//table/tbody/tr[2]/td[5]')[0];
+    $this->assertEquals('Related nodes', $second_row_field_label->getText());
+    $second_row_count = $this->xpath('//table/tbody/tr[2]/td[6]')[0];
     $this->assertEquals('1', $second_row_count->getText());
   }
 

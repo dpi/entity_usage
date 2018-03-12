@@ -46,6 +46,13 @@ function entity_usage_schema() {
         'not null' => TRUE,
         'default' => '',
       ],
+      'source_vid' => [
+        'description' => 'The source entity revision ID.',
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'default' => 0,
+      ],
       'method' => [
         'description' => 'The method used to track the target, generally the plugin ID.',
         'type' => 'varchar_ascii',
@@ -68,7 +75,7 @@ function entity_usage_schema() {
         'default' => 0,
       ],
     ],
-    'primary key' => ['target_id', 'target_type', 'source_id', 'source_type', 'source_langcode', 'method', 'field_name'],
+    'primary key' => ['target_id', 'target_type', 'source_id', 'source_type', 'source_langcode', 'source_vid', 'method', 'field_name'],
     'indexes' => [
       'target_entity' => ['target_type', 'target_id'],
       'target_entity_count' => ['target_id', 'target_type', 'count'],
@@ -137,9 +144,28 @@ function entity_usage_update_8202(&$sandbox) {
     $entity_type = $sandbox['entities'][$i]['entity_type'];
     $entity_id = $sandbox['entities'][$i]['entity_id'];
     if ($entity_type && $entity_id) {
+      $entity_storage = \Drupal::entityTypeManager()->getStorage($entity_type);
       /** @var \Drupal\Core\Entity\ContentEntityInterface $entity */
-      $entity = \Drupal::entityTypeManager()->getStorage($entity_type)->load($entity_id);
-      if ($entity) {
+      $entity = $entity_storage->load($entity_id);
+      if ($entity->getEntityType()->isRevisionable()) {
+        // Track all revisions and translations of the source entity. Sources are
+        // tracked as if they were new entities.
+        $result = $entity_storage->getQuery()->allRevisions()
+          ->condition($entity->getEntityType()->getKey('id'), $entity->id())
+          ->sort($entity->getEntityType()->getKey('revision'), 'DESC')
+          ->execute();
+        $revision_ids = array_keys($result);
+        foreach ($revision_ids as $revision_id => $entity_id) {
+          /** @var \Drupal\Core\Entity\ContentEntityInterface $entity_revision */
+          if ($entity_revision = $entity_storage->loadRevision($revision_id)) {
+            foreach ($entity_revision->getTranslationLanguages() as $translation_language) {
+              \Drupal::service('entity_usage.entity_update_manager')->trackUpdateOnCreation($entity_revision->getTranslation($translation_language->getId()));
+            }
+          }
+        }
+      }
+      else {
+        // Sources are tracked as if they were new entities.
         \Drupal::service('entity_usage.entity_update_manager')->trackUpdateOnCreation($entity);
         // Track all translations of the entity.
         foreach ($entity->getTranslationLanguages(FALSE) as $translation_language) {

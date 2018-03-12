@@ -134,11 +134,11 @@ class EntityReferenceKernelTest extends EntityKernelTestBase {
    * Tests basic entity tracking on test entities using entityreference fields.
    */
   public function testEntityReferenceTracking() {
-
     /** @var \Drupal\entity_usage\EntityUsage $entity_usage */
     $entity_usage = $this->container->get('entity_usage.usage');
 
     $field_name = $this->fieldName;
+    /** @var \Drupal\node\NodeInterface $source_entity */
     $source_entity = $this->testEntities[0];
 
     // First check usage is 0 for the referenced entity.
@@ -154,6 +154,7 @@ class EntityReferenceKernelTest extends EntityKernelTestBase {
         $source_entity->id() => [
           [
             'source_langcode' => $source_entity->language()->getId(),
+            'source_vid' => $source_entity->getRevisionId() ?: 0,
             'method' => 'entity_reference',
             'field_name' => $field_name,
             'count' => 1,
@@ -174,6 +175,7 @@ class EntityReferenceKernelTest extends EntityKernelTestBase {
         $source_entity->id() => [
           0 => [
             'source_langcode' => $source_entity->language()->getId(),
+            'source_vid' => $source_entity->getRevisionId() ?: 0,
             'method' => 'entity_reference',
             'field_name' => $field_name,
             'count' => 1,
@@ -182,7 +184,7 @@ class EntityReferenceKernelTest extends EntityKernelTestBase {
       ],
     ], $usage, 'The usage count is correct.');
 
-    // Delete the field value from the entityreference field and check that the
+    // Delete the field value from the entity reference field and check that the
     // usage goes back to 0.
     $source_entity->{$field_name}->entity = $this->testEntities[1];
     $source_entity->save();
@@ -198,6 +200,7 @@ class EntityReferenceKernelTest extends EntityKernelTestBase {
         $source_entity->id() => [
           0 => [
             'source_langcode' => $source_entity->language()->getId(),
+            'source_vid' => $source_entity->getRevisionId() ?: 0,
             'method' => 'entity_reference',
             'field_name' => $field_name,
             'count' => 1,
@@ -221,6 +224,7 @@ class EntityReferenceKernelTest extends EntityKernelTestBase {
         $source_entity->id() => [
           0 => [
             'source_langcode' => $source_entity->language()->getId(),
+            'source_vid' => $source_entity->getRevisionId() ?: 0,
             'method' => 'entity_reference',
             'field_name' => $field_name,
             'count' => 1,
@@ -237,7 +241,6 @@ class EntityReferenceKernelTest extends EntityKernelTestBase {
     $usage = $entity_usage->listSources($this->referencedEntity);
     $this->assertSame([], $usage, 'Non-referenced usage is correctly empty.');
      */
-
   }
 
   /**

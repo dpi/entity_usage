@@ -91,25 +91,28 @@ class ListUsageController extends ControllerBase {
           $this->t('Entity'),
           $this->t('Type'),
           $this->t('Language'),
+          $this->t('Revision ID'),
           $this->t('Field name'),
           $this->t('Count'),
         ];
         $rows = [];
         foreach ($all_usages as $source_type => $source_ids) {
           foreach ($source_ids as $source_id => $entity_usages) {
+            /** @var \Drupal\Core\Entity\ContentEntityInterface $source_entity */
+            $source_entity = $this->entityTypeManager->getStorage($source_type)->load($source_id);
+            $field_definitions = $this->entityFieldManager->getFieldDefinitions($source_type, $source_entity->bundle());
             foreach ($entity_usages as $usage_details) {
               /** @var \Drupal\Core\Entity\ContentEntityInterface $source_entity */
-              $source_entity = $this->entityTypeManager->getStorage($source_type)
-                ->load($source_id);
-              $translation = $source_entity->getTranslation($usage_details['source_langcode']);
-              if ($translation) {
-                $field_definitions = $this->entityFieldManager->getFieldDefinitions($translation->getEntityTypeId(), $translation->bundle());
+              $source_entity_revision = $this->entityTypeManager->getStorage($source_type)
+                ->loadRevision($usage_details['source_vid']);
+              if ($source_entity_revision && $translation = $source_entity_revision->getTranslation($usage_details['source_langcode'])) {
                 $link = $this->getSourceEntityLink($translation);
                 $field_label = isset($field_definitions[$usage_details['field_name']]) ? $field_definitions[$usage_details['field_name']]->getLabel() : $this->t('Unknown');
                 $rows[] = [
                   $link,
                   $entity_types[$source_type]->getLabel(),
                   $usage_details['source_langcode'],
+                  $usage_details['source_vid'] ?: '',
                   $field_label,
                   $usage_details['count'],
                 ];
@@ -170,11 +173,20 @@ class ListUsageController extends ControllerBase {
    */
   protected function getSourceEntityLink(ContentEntityInterface $source_entity, $text = NULL) {
     $entity_label = $source_entity->access('view label') ? $source_entity->label() : $this->t('- Restricted access -');
-    if ($source_entity->hasLinkTemplate('canonical')) {
+
+    $rel = NULL;
+    if ($source_entity->hasLinkTemplate('revision')) {
+      $rel = 'revision';
+    }
+    elseif ($source_entity->hasLinkTemplate('canonical')) {
+      $rel = 'canonical';
+    }
+
+    if ($rel) {
       $link_text = $text ?: $entity_label;
       // Prevent 404s by exposing the text unlinked if the user has no access
       // to view the entity.
-      return $source_entity->access('view') ? $source_entity->toLink($link_text) : $link_text;
+      return $source_entity->access('view') ? $source_entity->toLink($link_text, $rel) : $link_text;
     }
 
     // Treat paragraph entities in a special manner. Once the current paragraphs

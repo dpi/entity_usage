@@ -111,43 +111,43 @@ abstract class EntityUsageTrackBase extends PluginBase implements EntityUsageTra
   /**
    * {@inheritdoc}
    */
-  public function trackOnEntityCreation(ContentEntityInterface $entity) {
+  public function trackOnEntityCreation(ContentEntityInterface $source_entity) {
 
   }
 
   /**
    * {@inheritdoc}
    */
-  public function trackOnEntityUpdate(ContentEntityInterface $entity) {
+  public function trackOnEntityUpdate(ContentEntityInterface $source_entity) {
 
   }
 
   /**
    * {@inheritdoc}
    */
-  public function trackOnEntityDeletion(ContentEntityInterface $entity) {
+  public function trackOnEntityDeletion(ContentEntityInterface $source_entity) {
 
   }
 
   /**
    * {@inheritdoc}
    */
-  public function getReferencingFields(ContentEntityInterface $entity, array $field_types) {
-    $entity_type_id = $entity->getEntityTypeId();
+  public function getReferencingFields(ContentEntityInterface $source_entity, array $field_types) {
+    $source_entity_type_id = $source_entity->getEntityTypeId();
 
-    $all_fields_on_bundle = $this->entityFieldManager->getFieldDefinitions($entity_type_id, $entity->bundle());
+    $all_fields_on_bundle = $this->entityFieldManager->getFieldDefinitions($source_entity_type_id, $source_entity->bundle());
 
     $referencing_fields_on_entity_type = [];
     foreach ($field_types as $field_type) {
       $fields_of_type = $this->entityFieldManager->getFieldMapByFieldType($field_type);
-      if (!empty($fields_of_type[$entity_type_id])) {
-        $referencing_fields_on_entity_type = $fields_of_type[$entity_type_id];
+      if (!empty($fields_of_type[$source_entity_type_id])) {
+        $referencing_fields_on_entity_type = $fields_of_type[$source_entity_type_id];
       }
     }
     $referencing_fields_on_bundle = array_intersect_key($all_fields_on_bundle, $referencing_fields_on_entity_type);
 
     if (!$this->config->get('track_enabled_base_fields')) {
-      $basefields = $this->entityFieldManager->getBaseFieldDefinitions($entity_type_id);
+      $basefields = $this->entityFieldManager->getBaseFieldDefinitions($source_entity_type_id);
       $referencing_fields_on_bundle = array_diff_key($referencing_fields_on_bundle, $basefields);
     }
 

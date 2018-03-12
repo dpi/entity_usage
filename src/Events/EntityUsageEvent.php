@@ -45,6 +45,13 @@ class EntityUsageEvent extends Event {
   protected $sourceEntityLangcode;
 
   /**
+   * The source entity revision ID.
+   *
+   * @var string
+   */
+  protected $sourceEntityRevisionId;
+
+  /**
    * The method used to relate source entity with the target entity.
    *
    * @var string
@@ -77,7 +84,9 @@ class EntityUsageEvent extends Event {
    * @param string $source_type
    *   The source entity type.
    * @param string $source_langcode
-   *   The source entity language code
+   *   The source entity language code.
+   * @param string $source_vid
+   *   The source entity revision ID.
    * @param string $method
    *   The method or way the two entities are being referenced.
    * @param string $field_name
@@ -85,12 +94,13 @@ class EntityUsageEvent extends Event {
    * @param int $count
    *   The number of references to add or remove.
    */
-  public function __construct($target_id = NULL, $target_type = NULL, $source_id = NULL, $source_type = NULL, $source_langcode = NULL, $method = NULL, $field_name = NULL, $count = NULL) {
+  public function __construct($target_id = NULL, $target_type = NULL, $source_id = NULL, $source_type = NULL, $source_langcode = NULL, $source_vid = NULL, $method = NULL, $field_name = NULL, $count = NULL) {
     $this->targetEntityId = $target_id;
     $this->targetEntityType = $target_type;
     $this->sourceEntityId = $source_id;
     $this->sourceEntityType = $source_type;
     $this->sourceEntityLangcode = $source_langcode;
+    $this->sourceEntityRevisionId = $source_vid;
     $this->method = $method;
     $this->fieldName = $field_name;
     $this->count = $count;
@@ -144,6 +154,16 @@ class EntityUsageEvent extends Event {
    */
   public function setSourceEntityLangcode($langcode) {
     $this->sourceEntityLangcode = $langcode;
+  }
+
+  /**
+   * Sets the source entity revision ID.
+   *
+   * @param string $vid
+   *   The source entity revision ID.
+   */
+  public function setSourceEntityRevisionId($vid) {
+    $this->sourceEntityRevisionId = $vid;
   }
 
   /**
@@ -224,6 +244,16 @@ class EntityUsageEvent extends Event {
    */
   public function getSourceEntityLangcode() {
     return $this->sourceEntityLangcode;
+  }
+
+  /**
+   * Gets the source entity revision ID.
+   *
+   * @return null|string
+   *   The source entity revision ID or NULL.
+   */
+  public function getSourceEntityRevisionId() {
+    return $this->sourceEntityRevisionId;
   }
 
   /**
