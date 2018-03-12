@@ -125,7 +125,7 @@ class EntityUsageSettingsForm extends ConfigFormBase {
       '#type' => 'checkboxes',
       '#title' => $this->t('Source entity types'),
       '#options' => $entity_type_options,
-      '#default_value' => $config->get('track_enabled_source_entity_types') ?: $entity_type_options,
+      '#default_value' => $config->get('track_enabled_source_entity_types') ?: array_keys($entity_type_options),
       '#required' => TRUE,
     ];
 
@@ -141,7 +141,7 @@ class EntityUsageSettingsForm extends ConfigFormBase {
       '#type' => 'checkboxes',
       '#title' => $this->t('Target entity types'),
       '#options' => $entity_type_options,
-      '#default_value' => $config->get('track_enabled_target_entity_types') ?: $entity_type_options,
+      '#default_value' => $config->get('track_enabled_target_entity_types') ?: array_keys($entity_type_options),
       '#required' => TRUE,
     ];
 
@@ -162,7 +162,7 @@ class EntityUsageSettingsForm extends ConfigFormBase {
       '#type' => 'checkboxes',
       '#title' => $this->t('Tracking plugins'),
       '#options' => $plugin_options,
-      '#default_value' => $config->get('track_enabled_plugins') ?: $plugin_options,
+      '#default_value' => $config->get('track_enabled_plugins') ?: array_keys($plugin_options),
       '#required' => TRUE,
     ];
 
