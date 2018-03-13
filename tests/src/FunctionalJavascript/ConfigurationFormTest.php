@@ -33,11 +33,15 @@ class ConfigurationFormTest extends EntityUsageJavascriptTestBase {
     $all_entity_types = \Drupal::entityTypeManager()->getDefinitions();
     /** @var \Drupal\Core\Entity\ContentEntityTypeInterface[] $entity_types */
     $entity_types = [];
+    $tabs = [];
     foreach ($all_entity_types as $entity_type) {
-      if (!($entity_type instanceof ContentEntityTypeInterface) || !$entity_type->hasLinkTemplate('canonical')) {
+      if (!($entity_type instanceof ContentEntityTypeInterface)) {
         continue;
       }
       $entity_types[$entity_type->id()] = $entity_type->getLabel();
+      if ($entity_type->hasLinkTemplate('canonical')) {
+        $tabs[$entity_type->id()] = $entity_type->getLabel();
+      }
     }
 
     // Check the form is using the expected permission-based access.
@@ -57,7 +61,7 @@ class ConfigurationFormTest extends EntityUsageJavascriptTestBase {
     $summary = $assert_session->elementExists('css', '#edit-local-task-enabled-entity-types summary');
     $this->assertEquals('Enabled local tasks', $summary->getText());
     $assert_session->pageTextContains('Check in which entity types there should be a tab (local task) linking to the usage page.');
-    foreach ($entity_types as $entity_type_id => $entity_type) {
+    foreach ($tabs as $entity_type_id => $entity_type) {
       $field_name = "local_task_enabled_entity_types[entity_types][$entity_type_id]";
       $assert_session->fieldExists($field_name);
       // By default none of the tabs should be enabled.

@@ -93,11 +93,15 @@ class EntityUsageSettingsForm extends ConfigFormBase {
     // Filter the entity types.
     /** @var \Drupal\Core\Entity\ContentEntityTypeInterface[] $entity_type_options */
     $entity_type_options = [];
+    $tabs_options = [];
     foreach ($all_entity_types as $entity_type) {
-      if (!($entity_type instanceof ContentEntityTypeInterface) || !$entity_type->hasLinkTemplate('canonical')) {
+      if (!($entity_type instanceof ContentEntityTypeInterface)) {
         continue;
       }
       $entity_type_options[$entity_type->id()] = $entity_type->getLabel();
+      if ($entity_type->hasLinkTemplate('canonical')) {
+        $tabs_options[$entity_type->id()] = $entity_type->getLabel();
+      }
     }
 
     // Tabs configuration.
@@ -111,7 +115,7 @@ class EntityUsageSettingsForm extends ConfigFormBase {
     $form['local_task_enabled_entity_types']['entity_types'] = [
       '#type' => 'checkboxes',
       '#title' => $this->t('Local task entity types'),
-      '#options' => $entity_type_options,
+      '#options' => $tabs_options,
       '#default_value' => $config->get('local_task_enabled_entity_types') ?: [],
     ];
 
