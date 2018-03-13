@@ -97,8 +97,8 @@ abstract class TextFieldEmbedBase extends EntityUsageTrackBase implements EmbedT
 
     // We are updating an existing revision, compare target entities to see if
     // we need to add or remove tracking records.
-    $current_field_uuids[] = $this->getEmbeddedEntities($source_entity);
-    $original_field_uuids[] = $this->getEmbeddedEntities($source_entity->original);
+    $current_field_uuids = $this->getEmbeddedEntities($source_entity);
+    $original_field_uuids = $this->getEmbeddedEntities($source_entity->original);
 
     foreach ($current_field_uuids as $field_name => $uuids) {
       if (!empty($original_field_uuids[$field_name])) {
