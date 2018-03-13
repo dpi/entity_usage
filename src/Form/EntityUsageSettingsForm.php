@@ -94,7 +94,7 @@ class EntityUsageSettingsForm extends ConfigFormBase {
     /** @var \Drupal\Core\Entity\ContentEntityTypeInterface[] $entity_type_options */
     $entity_type_options = [];
     foreach ($all_entity_types as $entity_type) {
-      if (!$entity_type instanceof ContentEntityTypeInterface) {
+      if (!($entity_type instanceof ContentEntityTypeInterface) || !$entity_type->hasLinkTemplate('canonical')) {
         continue;
       }
       $entity_type_options[$entity_type->id()] = $entity_type->getLabel();

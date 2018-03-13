@@ -34,7 +34,7 @@ class ConfigurationFormTest extends EntityUsageJavascriptTestBase {
     /** @var \Drupal\Core\Entity\ContentEntityTypeInterface[] $entity_types */
     $entity_types = [];
     foreach ($all_entity_types as $entity_type) {
-      if (!$entity_type instanceof ContentEntityTypeInterface) {
+      if (!($entity_type instanceof ContentEntityTypeInterface) || !$entity_type->hasLinkTemplate('canonical')) {
         continue;
       }
       $entity_types[$entity_type->id()] = $entity_type->getLabel();
