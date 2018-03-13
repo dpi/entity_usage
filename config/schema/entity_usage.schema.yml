@@ -1,9 +1,11 @@
 entity_usage.settings:
   type: config_object
   mapping:
-    track_enabled_base_fields:
-      type: boolean
-      label: Track referencing base fields
+    local_task_enabled_entity_types:
+      label: Local task enabled entity types
+      type: sequence
+      sequence:
+        type: string
     track_enabled_source_entity_types:
       label: Track enabled source entity types
       type: sequence
@@ -19,8 +21,11 @@ entity_usage.settings:
       type: sequence
       sequence:
         type: string
-    local_task_enabled_entity_types:
-      label: Local task enabled entity types
+    track_enabled_base_fields:
+      type: boolean
+      label: Track referencing base fields
+    site_domains:
+      label: Domains for this website
       type: sequence
       sequence:
         type: string

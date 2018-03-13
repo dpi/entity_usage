@@ -190,6 +190,12 @@ class EntityUsageSettingsForm extends ConfigFormBase {
       '#description' => $this->t('If enabled, relationships generated through non-configurable fields (basefields) will also be tracked.'),
       '#default_value' => (bool) $config->get('track_enabled_base_fields'),
     ];
+    $form['generic_settings']['site_domains'] = [
+      '#type' => 'textarea',
+      '#title' => $this->t('Domains for this website'),
+      '#description' => $this->t("A comma or new-line separated list of domain names for this website. Absolute URL's in content will be checked against these domains to allow usage tracking."),
+      '#default_value' => implode("\r\n", $config->get('site_domains') ?: []),
+    ];
 
     return parent::buildForm($form, $form_state);
   }
@@ -200,12 +206,16 @@ class EntityUsageSettingsForm extends ConfigFormBase {
   public function submitForm(array &$form, FormStateInterface $form_state) {
     $form_state->cleanValues();
 
+    $site_domains = preg_replace('/[\s, ]/', ',', $form_state->getValue('site_domains'));
+    $site_domains = array_filter(explode(',', $site_domains));
+
     $config = $this->config('entity_usage.settings');
     $config->set('track_enabled_base_fields', (bool) $form_state->getValue('track_enabled_base_fields'))
       ->set('track_enabled_source_entity_types', $form_state->getValue('track_enabled_source_entity_types')['entity_types'])
       ->set('track_enabled_target_entity_types', $form_state->getValue('track_enabled_target_entity_types')['entity_types'])
       ->set('track_enabled_plugins', $form_state->getValue('track_enabled_plugins')['plugins'])
       ->set('local_task_enabled_entity_types', $form_state->getValue('local_task_enabled_entity_types')['entity_types'])
+      ->set('site_domains', $site_domains)
       ->save();
 
     $this->routerBuilder->rebuild();
