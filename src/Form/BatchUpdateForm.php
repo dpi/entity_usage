@@ -88,7 +88,7 @@ class BatchUpdateForm extends FormBase {
     foreach ($this->entityTypeManager->getDefinitions() as $entity_type_id => $entity_type) {
       // Only look for content entities that are marked for tracking on the
       // settings form.
-      if ($entity_type->entityClassImplements('\Drupal\Core\Entity\ContentEntityInterface') && in_array($entity_type_id, $to_track, TRUE)) {
+      if ($entity_type->entityClassImplements('\Drupal\Core\Entity\ContentEntityInterface') && (empty($to_track) || in_array($entity_type_id, $to_track, TRUE))) {
         $operations[] = ['Drupal\entity_usage\Form\BatchUpdateForm::updateSourcesBatchWorker', [$entity_type_id]];
       }
     }
