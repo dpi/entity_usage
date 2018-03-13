@@ -151,7 +151,7 @@ class EntityReference extends EntityUsageTrackBase {
    */
   protected function entityReferenceFieldsAvailable(ContentEntityInterface $source_entity) {
     /** @var \Drupal\Core\Field\FieldDefinitionInterface[] $fields */
-    $fields = $this->getReferencingFields($source_entity, ['entity_reference']);
+    $fields = $this->getReferencingFields($source_entity, ['entity_reference', 'entity_reference_revisions']);
 
     $return_fields = [];
     if (!empty($fields)) {

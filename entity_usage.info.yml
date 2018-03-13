@@ -6,3 +6,5 @@ package: Other
 
 test_dependencies:
   - entity_embed:entity_embed
+  - entity_reference_revisions:entity_reference_revisions
+  - paragraphs:paragraphs
