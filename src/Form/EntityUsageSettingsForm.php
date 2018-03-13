@@ -91,7 +91,7 @@ class EntityUsageSettingsForm extends ConfigFormBase {
     $all_entity_types = $this->entityTypeManager->getDefinitions();
 
     // Filter the entity types.
-    /** @var \Drupal\Core\Entity\ContentEntityTypeInterface[] $entity_types */
+    /** @var \Drupal\Core\Entity\ContentEntityTypeInterface[] $entity_type_options */
     $entity_type_options = [];
     foreach ($all_entity_types as $entity_type) {
       if (!$entity_type instanceof ContentEntityTypeInterface) {
@@ -100,17 +100,19 @@ class EntityUsageSettingsForm extends ConfigFormBase {
       $entity_type_options[$entity_type->id()] = $entity_type->getLabel();
     }
 
-    // Miscellaneous settings.
-    $form['generic_settings'] = [
+    // Tabs configuration.
+    $form['local_task_enabled_entity_types'] = [
       '#type' => 'details',
       '#open' => TRUE,
-      '#title' => $this->t('Generic'),
+      '#title' => $this->t('Enabled local tasks'),
+      '#description' => $this->t('Check in which entity types there should be a tab (local task) linking to the usage page.'),
+      '#tree' => TRUE,
     ];
-    $form['generic_settings']['track_enabled_base_fields'] = [
-      '#type' => 'checkbox',
-      '#title' => $this->t('Track referencing basefields'),
-      '#description' => $this->t('If enabled, relationships generated through non-configurable fields (basefields) will also be tracked.'),
-      '#default_value' => (bool) $config->get('track_enabled_base_fields'),
+    $form['local_task_enabled_entity_types']['entity_types'] = [
+      '#type' => 'checkboxes',
+      '#title' => $this->t('Local task entity types'),
+      '#options' => $entity_type_options,
+      '#default_value' => $config->get('local_task_enabled_entity_types') ?: [],
     ];
 
     // Entity types (source).
@@ -155,7 +157,7 @@ class EntityUsageSettingsForm extends ConfigFormBase {
     ];
     $plugins = $this->usageTrackManager->getDefinitions();
     $plugin_options = [];
-    foreach ($plugins as $plugin_id => $plugin) {
+    foreach ($plugins as $plugin) {
       $plugin_options[$plugin['id']] = $plugin['label'];
     }
     $form['track_enabled_plugins']['plugins'] = [
@@ -165,20 +167,24 @@ class EntityUsageSettingsForm extends ConfigFormBase {
       '#default_value' => $config->get('track_enabled_plugins') ?: array_keys($plugin_options),
       '#required' => TRUE,
     ];
+    // Add descriptions to all plugins that defined it.
+    foreach ($plugins as $plugin) {
+      if (!empty($plugin['description'])) {
+        $form['track_enabled_plugins']['plugins'][$plugin['id']]['#description'] = $plugin['description'];
+      }
+    }
 
-    // Tabs configuration.
-    $form['local_task_enabled_entity_types'] = [
+    // Miscellaneous settings.
+    $form['generic_settings'] = [
       '#type' => 'details',
       '#open' => TRUE,
-      '#title' => $this->t('Enabled local tasks'),
-      '#description' => $this->t('Check in which entity types there should be a tab (local task) linking to the usage page.'),
-      '#tree' => TRUE,
+      '#title' => $this->t('Generic'),
     ];
-    $form['local_task_enabled_entity_types']['entity_types'] = [
-      '#type' => 'checkboxes',
-      '#title' => $this->t('Local task entity types'),
-      '#options' => $entity_type_options,
-      '#default_value' => $config->get('local_task_enabled_entity_types') ?: [],
+    $form['generic_settings']['track_enabled_base_fields'] = [
+      '#type' => 'checkbox',
+      '#title' => $this->t('Track referencing basefields'),
+      '#description' => $this->t('If enabled, relationships generated through non-configurable fields (basefields) will also be tracked.'),
+      '#default_value' => (bool) $config->get('track_enabled_base_fields'),
     ];
 
     return parent::buildForm($form, $form_state);
