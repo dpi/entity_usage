@@ -88,7 +88,7 @@ class EntityReference extends EntityUsageTrackBase {
   public function trackOnEntityUpdate(ContentEntityInterface $source_entity) {
     foreach ($this->entityReferenceFieldsAvailable($source_entity) as $field_name) {
       // If we create a new revision, just add the new tracking records.
-      if ($source_entity->getRevisionId() !== $source_entity->original->getRevisionId() && !$source_entity->$field_name->isEmpty()) {
+      if ($source_entity->getRevisionId() != $source_entity->original->getRevisionId() && !$source_entity->$field_name->isEmpty()) {
         $this->trackOnEntityCreation($source_entity);
         return;
       }

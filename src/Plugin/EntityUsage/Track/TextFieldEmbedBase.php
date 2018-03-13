@@ -90,7 +90,7 @@ abstract class TextFieldEmbedBase extends EntityUsageTrackBase implements EmbedT
    */
   public function trackOnEntityUpdate(ContentEntityInterface $source_entity) {
     // If we create a new revision, just add the new tracking records.
-    if ($source_entity->getRevisionId() !== $source_entity->original->getRevisionId()) {
+    if ($source_entity->getRevisionId() != $source_entity->original->getRevisionId()) {
       $this->trackOnEntityCreation($source_entity);
       return;
     }
