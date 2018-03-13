@@ -145,11 +145,22 @@ class BatchUpdateForm extends FormBase {
           ->sort($entity->getEntityType()->getKey('revision'), 'DESC')
           ->execute();
         $revision_ids = array_keys($result);
+
         foreach ($revision_ids as $revision_id) {
-          if ($entity_revision = $entity_storage->loadRevision($revision_id)) {
-            foreach ($entity_revision->getTranslationLanguages() as $translation_language) {
-              \Drupal::service('entity_usage.entity_update_manager')->trackUpdateOnCreation($entity_revision->getTranslation($translation_language->getId()));
+          /** @var \Drupal\Core\Entity\ContentEntityInterface $entity_revision */
+          if (!$entity_revision = $entity_storage->loadRevision($revision_id)) {
+            continue;
+          }
+
+          foreach ($entity_revision->getTranslationLanguages() as $translation_language) {
+            /** @var \Drupal\Core\Entity\ContentEntityInterface $translation */
+            $translation = $entity_revision->getTranslation($translation_language->getId());
+
+            if (!$translation->isRevisionTranslationAffected()) {
+              continue;
             }
+
+            \Drupal::service('entity_usage.entity_update_manager')->trackUpdateOnCreation($translation);
           }
         }
       }
@@ -158,9 +169,13 @@ class BatchUpdateForm extends FormBase {
         \Drupal::service('entity_usage.entity_update_manager')->trackUpdateOnCreation($entity);
         // Track all translations of the entity.
         foreach ($entity->getTranslationLanguages(FALSE) as $translation_language) {
-          if ($entity->hasTranslation($translation_language->getId())) {
-            \Drupal::service('entity_usage.entity_update_manager')->trackUpdateOnCreation($entity->getTranslation($translation_language->getId()));
+          $translation = $entity->getTranslation($translation_language->getId());
+
+          if (!$translation->isRevisionTranslationAffected()) {
+            continue;
           }
+
+          \Drupal::service('entity_usage.entity_update_manager')->trackUpdateOnCreation($translation);
         }
       }
 
