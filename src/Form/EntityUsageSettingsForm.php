@@ -207,7 +207,7 @@ class EntityUsageSettingsForm extends ConfigFormBase {
     $form_state->cleanValues();
 
     $site_domains = preg_replace('/[\s, ]/', ',', $form_state->getValue('site_domains'));
-    $site_domains = array_filter(explode(',', $site_domains));
+    $site_domains = array_values(array_filter(explode(',', $site_domains)));
 
     $config = $this->config('entity_usage.settings');
     $config->set('track_enabled_base_fields', (bool) $form_state->getValue('track_enabled_base_fields'))
