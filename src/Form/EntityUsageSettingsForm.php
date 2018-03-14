@@ -205,11 +205,13 @@ class EntityUsageSettingsForm extends ConfigFormBase {
    */
   public function submitForm(array &$form, FormStateInterface $form_state) {
     $form_state->cleanValues();
+    $config = $this->config('entity_usage.settings');
+
+    $local_tasks_updated = array_filter($config->get('local_task_enabled_entity_types')) !== array_filter($form_state->getValue('local_task_enabled_entity_types')['entity_types']);
 
     $site_domains = preg_replace('/[\s, ]/', ',', $form_state->getValue('site_domains'));
     $site_domains = array_values(array_filter(explode(',', $site_domains)));
 
-    $config = $this->config('entity_usage.settings');
     $config->set('track_enabled_base_fields', (bool) $form_state->getValue('track_enabled_base_fields'))
       ->set('track_enabled_source_entity_types', $form_state->getValue('track_enabled_source_entity_types')['entity_types'])
       ->set('track_enabled_target_entity_types', $form_state->getValue('track_enabled_target_entity_types')['entity_types'])
@@ -218,8 +220,10 @@ class EntityUsageSettingsForm extends ConfigFormBase {
       ->set('site_domains', $site_domains)
       ->save();
 
-    $this->routerBuilder->rebuild();
-    $this->cacheRender->invalidateAll();
+    if ($local_tasks_updated) {
+      $this->routerBuilder->rebuild();
+      $this->cacheRender->invalidateAll();
+    }
 
     parent::submitForm($form, $form_state);
   }
