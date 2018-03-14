@@ -139,7 +139,7 @@ function entity_usage_update_8202(&$sandbox) {
   }
 
   // Worker.
-  $batch_size = 25;
+  $batch_size = 1;
   for ($i = $sandbox['current_key']; $i < ($sandbox['current_key'] + $batch_size); $i++) {
     if (empty($sandbox['entities'][$i])) {
       break;

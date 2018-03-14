@@ -131,17 +131,17 @@ class BatchUpdateForm extends FormBase {
 
     $entity_ids = $entity_storage->getQuery()
       ->condition($entity_type_key, $context['sandbox']['current_id'], '>')
-      ->range(0, 10)
+      ->range(0, 1)
       ->accessCheck(FALSE)
       ->sort($entity_type_key)
       ->execute();
 
-    $entities = $entity_storage->loadMultiple($entity_ids);
     /** @var \Drupal\Core\Entity\ContentEntityInterface $entity */
-    foreach ($entities as $entity) {
+    $entity = $entity_storage->load(reset($entity_ids));
+    if ($entity) {
       if ($entity->getEntityType()->isRevisionable()) {
-        // Track all revisions and translations of the source entity. Sources are
-        // tracked as if they were new entities.
+        // Track all revisions and translations of the source entity. Sources
+        // are tracked as if they were new entities.
         $result = $entity_storage->getQuery()->allRevisions()
           ->condition($entity->getEntityType()->getKey('id'), $entity->id())
           ->sort($entity->getEntityType()->getKey('revision'), 'DESC')
