@@ -118,7 +118,7 @@ function entity_usage_update_8202(&$sandbox) {
     foreach (\Drupal::entityTypeManager()->getDefinitions() as $entity_type_id => $entity_type) {
       // Only look for content entities that are marked for tracking on the
       // settings form.
-      if ($entity_type->entityClassImplements('\Drupal\Core\Entity\ContentEntityInterface') && (empty($to_track) || in_array($entity_type_id, $to_track, TRUE))) {
+      if ($entity_type->entityClassImplements('\Drupal\Core\Entity\ContentEntityInterface') && (!is_array($to_track) || in_array($entity_type_id, $to_track, TRUE))) {
         // Delete current usage statistics for these entities.
         \Drupal::service('entity_usage.usage')->bulkDeleteSources($entity_type_id);
         // Add all existing ids to be tracked again.

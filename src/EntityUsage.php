@@ -81,7 +81,7 @@ class EntityUsage implements EntityUsageInterface {
     // Check if target entity type is enabled, all entity types are enabled by
     // default.
     $enabled_target_entity_types = $this->config->get('track_enabled_target_entity_types');
-    if ($enabled_target_entity_types && !in_array($target_type, $enabled_target_entity_types, TRUE)) {
+    if (is_array($enabled_target_entity_types) && !in_array($target_type, $enabled_target_entity_types, TRUE)) {
       return;
     }
 

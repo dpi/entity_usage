@@ -120,7 +120,7 @@ class EntityUpdateManager {
 
     // Check if entity type is enabled, all entity types are enabled by default.
     $enabled_source_entity_types = $this->config->get('track_enabled_source_entity_types');
-    if ($enabled_source_entity_types && !in_array($entity->getEntityTypeId(), $enabled_source_entity_types, TRUE)) {
+    if (is_array($enabled_source_entity_types) && !in_array($entity->getEntityTypeId(), $enabled_source_entity_types, TRUE)) {
       return FALSE;
     }
 
@@ -135,7 +135,8 @@ class EntityUpdateManager {
    */
   protected function getEnabledPlugins() {
     $all_plugin_ids = array_keys($this->trackManager->getDefinitions());
-    $enabled_plugin_ids = $this->config->get('track_enabled_plugins') ?: $all_plugin_ids;
+    $enabled_plugins = $this->config->get('track_enabled_plugins');
+    $enabled_plugin_ids = is_array($enabled_plugins) ? $enabled_plugins : $all_plugin_ids;
 
     $plugins = [];
     foreach (array_intersect($all_plugin_ids, $enabled_plugin_ids) as $plugin_id) {
