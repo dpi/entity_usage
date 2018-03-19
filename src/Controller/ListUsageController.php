@@ -107,6 +107,11 @@ class ListUsageController extends ControllerBase {
                 ->loadRevision($usage_details['source_vid']);
               if ($source_entity_revision && $translation = $source_entity_revision->getTranslation($usage_details['source_langcode'])) {
                 $link = $this->getSourceEntityLink($translation);
+                // If the label is empty it means this usage shouldn't be shown
+                // on the UI, just skip this row.
+                if (empty($link)) {
+                  continue;
+                }
                 $field_label = isset($field_definitions[$usage_details['field_name']]) ? $field_definitions[$usage_details['field_name']]->getLabel() : $this->t('Unknown');
                 $rows[] = [
                   $link,
@@ -164,14 +169,17 @@ class ListUsageController extends ControllerBase {
    *   (optional) The link text for the anchor tag as a translated string.
    *   If NULL, it will use the entity's label. Defaults to NULL.
    *
-   * @return \Drupal\Core\Link|string
+   * @return \Drupal\Core\Link|string|false
    *   A link to the entity, or its non-linked label, in case it was impossible
-   *   to correctly build a link.
+   *   to correctly build a link. Will return FALSE if this item should not be
+   *   shown on the UI (for example when dealing with an orphan paragraph).
    *   Note that Paragraph entities are specially treated. This function will
    *   return the link to its parent entity, relying on the fact that paragraphs
    *   have only one single parent and don't have canonical template.
    */
   protected function getSourceEntityLink(ContentEntityInterface $source_entity, $text = NULL) {
+    // Note that $paragraph_entity->label() will return a string of type:
+    // "{parent label} > {parent field}", which is actually OK for us.
     $entity_label = $source_entity->access('view label') ? $source_entity->label() : $this->t('- Restricted access -');
 
     $rel = NULL;
@@ -189,13 +197,43 @@ class ListUsageController extends ControllerBase {
       return $source_entity->access('view') ? $source_entity->toLink($link_text, $rel) : $link_text;
     }
 
-    // Treat paragraph entities in a special manner. Once the current paragraphs
-    // implementation does not support reusing paragraphs, it is safe to
-    // consider that each paragraph entity is attached to only one parent
-    // entity. For this reason we will use the link to the parent's entity,
-    // adding a note that the parent uses this entity through a paragraph.
-    // @see #2414865 and related issues for more info.
-    if ($source_entity->getEntityTypeId() == 'paragraph' && $parent = $source_entity->getParentEntity()) {
+    // Treat paragraph entities in a special manner. Normal paragraph entities
+    // only exist in the context of their host (parent) entity. For this reason
+    // we will use the link to the parent's entity label instead.
+    /** @var \Drupal\paragraphs\ParagraphInterface $source_entity */
+    if ($source_entity->getEntityTypeId() == 'paragraph') {
+      // Paragraph items may be legitimately orphan, so even if this is a real
+      // usage, we will only show it on the UI if its parent is loadable and
+      // references the paragraph on its default revision.
+      // @todo This could probably be simplified once #2954039 lands.
+      $parent = $source_entity->getParentEntity();
+      if (empty($parent)) {
+        $orphan = TRUE;
+      }
+      else {
+        $parent_field = $source_entity->get('parent_field_name')->value;
+        /** @var \Drupal\entity_reference_revisions\EntityReferenceRevisionsFieldItemList $values */
+        $values = $parent->{$parent_field};
+        if (empty($values->getValue())) {
+          // The field is empty or was removed.
+          $orphan = TRUE;
+        }
+        else {
+          // There are values in the field. Once paragraphs can have just been
+          // re-ordered, there is no other option apart from looping through all
+          // values and checking if any of them is this entity.
+          $orphan = TRUE;
+          foreach ($values as $value) {
+            if ($value->entity->id() == $source_entity->id()) {
+              $orphan = FALSE;
+              break;
+            }
+          }
+        }
+      }
+      if ($orphan) {
+        return FALSE;
+      }
       return $this->getSourceEntityLink($parent, $entity_label);
     }
 
