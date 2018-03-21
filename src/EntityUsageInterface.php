@@ -10,10 +10,17 @@ use Drupal\Core\Entity\EntityInterface;
 interface EntityUsageInterface {
 
   /**
-   * Records that a source entity is referencing a target entity.
+   * Register or update a usage record.
    *
-   * Examples:
-   * - A node that references another node using an entityreference field.
+   * If called with $count >= 1, the record matching the other parameters will
+   * be updated (or created if it doesn't exist). If called with $count <= 0,
+   * the record will be deleted.
+   *
+   * Note that this method will honor the settings defined on the configuration
+   * page, hence potentially ignoring the register if the settings for the
+   * called combination are to not track this usage. Also, the hook
+   * hook_entity_usage_block_tracking() will be invoked, so other modules will
+   * have an opportunity to block this record before it is written to DB.
    *
    * @param int $target_id
    *   The target entity ID.
@@ -35,40 +42,7 @@ interface EntityUsageInterface {
    * @param int $count
    *   (optional) The number of references to add to the object. Defaults to 1.
    */
-  public function add($target_id, $target_type, $source_id, $source_type, $source_langcode, $source_vid, $method, $field_name, $count = 1);
-
-  /**
-   * Records that a source entity is no longer referencing a target entity.
-   *
-   * @param int $target_id
-   *   The target entity ID.
-   * @param string $target_type
-   *   The target entity type.
-   * @param int $source_id
-   *   (optional) The source entity ID. May be omitted if all references to an
-   *   target are being deleted. Defaults to NULL.
-   * @param string $source_type
-   *   (optional) The source entity type. May be omitted if all references to a
-   *   target are being deleted. Defaults to NULL.
-   * @param string $source_langcode
-   *   (optional) The source entity language code. May be omitted if all
-   *   references to a target are being deleted. Defaults to NULL.
-   * @param string $source_vid
-   *   (optional) The source entity revision ID. May be omitted if all
-   *   references to a target are being deleted. Defaults to NULL.
-   * @param string $method
-   *   (optional) The method used to relate source entity with the target
-   *   entity. Defaults to NULL.
-   * @param string $field_name
-   *   (optional) The name of the field in the source entity using the
-   *   target entity. May be omitted if all references to a target are being
-   *   deleted. Defaults to NULL.
-   * @param int $count
-   *   (optional) The number of references to delete from the object. Defaults
-   *   to 1. Zero may be specified to delete all references to the entity within
-   *   a specific object. Defaults to 1.
-   */
-  public function delete($target_id, $target_type, $source_id = NULL, $source_type = NULL, $source_langcode = NULL, $source_vid = NULL, $method = NULL, $field_name = NULL, $count = 1);
+  public function registerUsage($target_id, $target_type, $source_id, $source_type, $source_langcode, $source_vid, $method, $field_name, $count = 1);
 
   /**
    * Remove all records of a given target entity type.
@@ -87,6 +61,41 @@ interface EntityUsageInterface {
   public function bulkDeleteSources($source_type);
 
   /**
+   * Delete all records for a given field_name + source_type.
+   *
+   * @param string $source_type
+   *   The source entity type.
+   * @param string $field_name
+   *   The name of the field in the source entity using the
+   *   target entity.
+   */
+  public function deleteByField($source_type, $field_name);
+
+  /**
+   * Delete all records for a given source entity.
+   *
+   * @param int $source_id
+   *   The source entity ID.
+   * @param string $source_type
+   *   The source entity type.
+   * @param string $source_langcode
+   *   (optional) The source entity language code. Defaults to NULL.
+   * @param string $source_vid
+   *   (optional) The source entity revision ID. Defaults to NULL.
+   */
+  public function deleteBySourceEntity($source_id, $source_type, $source_langcode = NULL, $source_vid = NULL);
+
+  /**
+   * Delete all records for a given target entity.
+   *
+   * @param int $target_id
+   *   The target entity ID.
+   * @param string $target_type
+   *   The target entity type.
+   */
+  public function deleteByTargetEntity($target_id, $target_type);
+
+  /**
    * Provide a list of all referencing source entities for a target entity.
    *
    * Examples:
@@ -97,7 +106,7 @@ interface EntityUsageInterface {
    *        'source_langcode' => 'en',
    *        'source_vid' => '128',
    *        'method' => 'entity_reference',
-   *        'field_name' => 'Related items',
+   *        'field_name' => 'field_related_items',
    *        'count' => 1,
    *      ],
    *      124 => [
@@ -113,7 +122,7 @@ interface EntityUsageInterface {
    *        'source_langcode' => 'en',
    *        'source_vid' => '2',
    *        'method' => 'entity_reference',
-   *        'field_name' => 'Author',
+   *        'field_name' => 'field_author',
    *        'count' => 1,
    *      ],
    *    ],

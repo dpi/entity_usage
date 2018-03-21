@@ -125,13 +125,6 @@ abstract class EntityUsageTrackBase extends PluginBase implements EntityUsageTra
   /**
    * {@inheritdoc}
    */
-  public function trackOnEntityDeletion(ContentEntityInterface $source_entity) {
-
-  }
-
-  /**
-   * {@inheritdoc}
-   */
   public function getReferencingFields(ContentEntityInterface $source_entity, array $field_types) {
     $source_entity_type_id = $source_entity->getEntityTypeId();
 

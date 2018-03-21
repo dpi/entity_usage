@@ -96,7 +96,7 @@ class Link extends EntityUsageTrackBase {
           $target_entity = $this->getTargetEntity($field_item);
           if ($target_entity) {
             list($target_type, $target_id) = explode('|', $target_entity);
-            $this->usageService->add($target_id, $target_type, $source_entity->id(), $source_entity->getEntityTypeId(), $source_entity->language()->getId(), $source_entity->getRevisionId(), $this->pluginId, $field_name);
+            $this->usageService->registerUsage($target_id, $target_type, $source_entity->id(), $source_entity->getEntityTypeId(), $source_entity->language()->getId(), $source_entity->getRevisionId(), $this->pluginId, $field_name);
           }
         }
       }
@@ -145,30 +145,11 @@ class Link extends EntityUsageTrackBase {
 
       foreach ($added_ids as $added_entity) {
         list($target_type, $target_id) = explode('|', $added_entity);
-        $this->usageService->add($target_id, $target_type, $source_entity->id(), $source_entity->getEntityTypeId(), $source_entity->language()->getId(), $source_entity->getRevisionId(), $this->pluginId, $field_name);
+        $this->usageService->registerUsage($target_id, $target_type, $source_entity->id(), $source_entity->getEntityTypeId(), $source_entity->language()->getId(), $source_entity->getRevisionId(), $this->pluginId, $field_name);
       }
       foreach ($removed_ids as $removed_entity) {
         list($target_type, $target_id) = explode('|', $removed_entity);
-        $this->usageService->delete($target_id, $target_type, $source_entity->id(), $source_entity->getEntityTypeId(), $source_entity->language()->getId(), $source_entity->getRevisionId(), $this->pluginId, $field_name);
-      }
-    }
-  }
-
-  /**
-   * {@inheritdoc}
-   */
-  public function trackOnEntityDeletion(ContentEntityInterface $source_entity) {
-    foreach ($this->linkFieldsAvailable($source_entity) as $field_name) {
-      if (!$source_entity->{$field_name}->isEmpty()) {
-        /** @var \Drupal\link\Plugin\Field\FieldType\LinkItem $field_item */
-        foreach ($source_entity->{$field_name} as $field_item) {
-          // This item got deleted. Track the usage down.
-          $target_entity = $this->getTargetEntity($field_item);
-          if ($target_entity) {
-            list($target_type, $target_id) = explode('|', $target_entity);
-            $this->usageService->delete($target_id, $target_type, $source_entity->id(), $source_entity->getEntityTypeId(), $source_entity->language()->getId(), $source_entity->getRevisionId(), $this->pluginId, $field_name);
-          }
-        }
+        $this->usageService->registerUsage($target_id, $target_type, $source_entity->id(), $source_entity->getEntityTypeId(), $source_entity->language()->getId(), $source_entity->getRevisionId(), $this->pluginId, $field_name, 0);
       }
     }
   }

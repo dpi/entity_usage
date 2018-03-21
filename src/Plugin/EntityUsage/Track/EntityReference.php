@@ -127,20 +127,6 @@ class EntityReference extends EntityUsageTrackBase {
   }
 
   /**
-   * {@inheritdoc}
-   */
-  public function trackOnEntityDeletion(ContentEntityInterface $source_entity) {
-    foreach ($this->entityReferenceFieldsAvailable($source_entity) as $field_name) {
-      if (!$source_entity->{$field_name}->isEmpty()) {
-        /** @var \Drupal\Core\Field\Plugin\Field\FieldType\EntityReferenceItem $field_item */
-        foreach ($source_entity->{$field_name} as $field_item) {
-          $this->decrementEntityReferenceUsage($source_entity, $field_name, $field_item->target_id);
-        }
-      }
-    }
-  }
-
-  /**
    * Retrieve the entity_reference fields on a given entity.
    *
    * @param \Drupal\Core\Entity\ContentEntityInterface $source_entity
@@ -184,7 +170,7 @@ class EntityReference extends EntityUsageTrackBase {
     /** @var \Drupal\field\Entity\FieldConfig $definition */
     $definition = $this->entityFieldManager->getFieldDefinitions($source_entity->getEntityTypeId(), $source_entity->bundle())[$field_name];
     $target_type = $definition->getSetting('target_type');
-    $this->usageService->add($target_id, $target_type, $source_entity->id(), $source_entity->getEntityTypeId(), $source_entity->language()->getId(), $source_entity->getRevisionId(), $this->pluginId, $field_name);
+    $this->usageService->registerUsage($target_id, $target_type, $source_entity->id(), $source_entity->getEntityTypeId(), $source_entity->language()->getId(), $source_entity->getRevisionId(), $this->pluginId, $field_name);
   }
 
   /**
@@ -201,7 +187,7 @@ class EntityReference extends EntityUsageTrackBase {
     /** @var \Drupal\field\Entity\FieldConfig $definition */
     $definition = $this->entityFieldManager->getFieldDefinitions($source_entity->getEntityTypeId(), $source_entity->bundle())[$field_name];
     $target_type = $definition->getSetting('target_type');
-    $this->usageService->delete($target_id, $target_type, $source_entity->id(), $source_entity->getEntityTypeId(), $source_entity->language()->getId(), $source_entity->getRevisionId(), $this->pluginId, $field_name);
+    $this->usageService->registerUsage($target_id, $target_type, $source_entity->id(), $source_entity->getEntityTypeId(), $source_entity->language()->getId(), $source_entity->getRevisionId(), $this->pluginId, $field_name, 0);
   }
 
 }

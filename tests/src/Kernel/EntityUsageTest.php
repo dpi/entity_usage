@@ -80,10 +80,14 @@ class EntityUsageTest extends EntityKernelTestBase {
     $this->testEntities = $this->getTestEntities();
 
     $this->state = \Drupal::state();
-    \Drupal::service('event_dispatcher')->addListener(Events::USAGE_ADD,
-      [$this, 'usageAddEventRecorder']);
-    \Drupal::service('event_dispatcher')->addListener(Events::USAGE_DELETE,
-      [$this, 'usageDeleteEventRecorder']);
+    \Drupal::service('event_dispatcher')->addListener(Events::USAGE_REGISTER,
+      [$this, 'usageRegisterEventRecorder']);
+    \Drupal::service('event_dispatcher')->addListener(Events::DELETE_BY_FIELD,
+      [$this, 'usageDeleteByFieldEventRecorder']);
+    \Drupal::service('event_dispatcher')->addListener(Events::DELETE_BY_SOURCE_ENTITY,
+      [$this, 'usageDeleteBySourceEntityEventRecorder']);
+    \Drupal::service('event_dispatcher')->addListener(Events::DELETE_BY_TARGET_ENTITY,
+      [$this, 'usageDeleteByTargetEntityEventRecorder']);
     \Drupal::service('event_dispatcher')->addListener(Events::BULK_DELETE_DESTINATIONS,
       [$this, 'usageBulkTargetDeleteEventRecorder']);
     \Drupal::service('event_dispatcher')->addListener(Events::BULK_DELETE_SOURCES,
@@ -151,20 +155,22 @@ class EntityUsageTest extends EntityKernelTestBase {
   }
 
   /**
-   * Tests the add() method.
+   * Tests the registerUsage() method.
    *
-   * @covers \Drupal\entity_usage\EntityUsage::add
+   * @covers \Drupal\entity_usage\EntityUsage::registerUsage
    */
-  public function testAddUsage() {
+  public function testRegisterUsage() {
     $entity = $this->testEntities[0];
     $field_name = 'body';
     /** @var \Drupal\entity_usage\EntityUsage $entity_usage */
     $entity_usage = $this->container->get('entity_usage.usage');
-    $entity_usage->add($entity->id(), $entity->getEntityTypeId(), 1, 'foo', 'en', 1, 'entity_reference', $field_name, 1);
 
-    $event = \Drupal::state()->get('entity_usage_events_test.usage_add', []);
+    // Track an usage up.
+    $entity_usage->registerUsage($entity->id(), $entity->getEntityTypeId(), 1, 'foo', 'en', 1, 'entity_reference', $field_name, 1);
 
-    $this->assertSame($event['event_name'], Events::USAGE_ADD);
+    $event = \Drupal::state()->get('entity_usage_events_test.usage_register', []);
+
+    $this->assertSame($event['event_name'], Events::USAGE_REGISTER);
     $this->assertSame($event['target_id'], $entity->id());
     $this->assertSame($event['target_type'], $entity->getEntityTypeId());
     $this->assertSame($event['source_id'], 1);
@@ -181,83 +187,18 @@ class EntityUsageTest extends EntityKernelTestBase {
       ->execute()
       ->fetchField();
 
-    $this->assertEquals(1, $real_usage, 'Usage saved correctly to the database.');
+    $this->assertEquals(1, $real_usage);
 
-    // Clean back the environment.
-    $this->injectedDatabase->truncate($this->tableName);
-  }
+    // Track an usage down.
+    $entity_usage->registerUsage($entity->id(), $entity->getEntityTypeId(), 1, 'foo', 'en', 1, 'entity_reference', $field_name, 0);
 
-  /**
-   * Tests the delete() method.
-   *
-   * @covers \Drupal\entity_usage\EntityUsage::delete
-   */
-  public function testRemoveUsage() {
-    $entity = $this->testEntities[0];
-    $field_name = 'body';
-    /** @var \Drupal\entity_usage\EntityUsage $entity_usage */
-    $entity_usage = $this->container->get('entity_usage.usage');
-
-    $this->injectedDatabase->insert($this->tableName)
-      ->fields([
-        'target_id' => $entity->id(),
-        'target_type' => $entity->getEntityTypeId(),
-        'source_id' => 1,
-        'source_type' => 'foo',
-        'source_langcode' => 'en',
-        'source_vid' => 1,
-        'method' => 'entity_reference',
-        'field_name' => $field_name,
-        'count' => 3,
-      ])
-      ->execute();
-
-    // Normal decrement.
-    $entity_usage->delete($entity->id(), $entity->getEntityTypeId(), 1, 'foo', 'en', 1, 'entity_reference', $field_name, 1);
-
-    $event = \Drupal::state()->get('entity_usage_events_test.usage_delete', []);
-
-    $this->assertSame($event['event_name'], Events::USAGE_DELETE);
-    $this->assertSame($event['target_id'], $entity->id());
-    $this->assertSame($event['target_type'], $entity->getEntityTypeId());
-    $this->assertSame($event['source_id'], 1);
-    $this->assertSame($event['source_type'], 'foo');
-    $this->assertSame($event['source_langcode'], 'en');
-    $this->assertSame($event['source_vid'], 1);
-    $this->assertSame($event['method'], 'entity_reference');
-    $this->assertSame($event['field_name'], $field_name);
-    $this->assertSame($event['count'], 1);
-
-    $count = $this->injectedDatabase->select($this->tableName, 'e')
+    $real_usage = $this->injectedDatabase->select($this->tableName, 'e')
       ->fields('e', ['count'])
       ->condition('e.target_id', $entity->id())
-      ->condition('e.target_type', $entity->getEntityTypeId())
-      ->condition('e.field_name', $field_name)
       ->execute()
       ->fetchField();
-    $this->assertEquals(2, $count, 'The count was decremented correctly.');
 
-    // Multiple decrement and removal.
-    $entity_usage->delete($entity->id(), $entity->getEntityTypeId(), 1, 'foo', 'en', 1, 'entity_reference', $field_name, 2);
-    $count = $this->injectedDatabase->select($this->tableName, 'e')
-      ->fields('e', ['count'])
-      ->condition('e.target_id', $entity->id())
-      ->condition('e.target_type', $entity->getEntityTypeId())
-      ->condition('e.field_name', $field_name)
-      ->execute()
-      ->fetchField();
-    $this->assertSame(FALSE, $count, 'The count was removed entirely when empty.');
-
-    // Non-existent decrement.
-    $entity_usage->delete($entity->id(), $entity->getEntityTypeId(), 1, 'foo', 'en', 1, 'entity_reference', $field_name, 2);
-    $count = $this->injectedDatabase->select($this->tableName, 'e')
-      ->fields('e', ['count'])
-      ->condition('e.target_id', $entity->id())
-      ->condition('e.target_type', $entity->getEntityTypeId())
-      ->condition('e.field_name', $field_name)
-      ->execute()
-      ->fetchField();
-    $this->assertSame(FALSE, $count, 'Decrementing non-existing record complete.');
+    $this->assertEquals(0, $real_usage);
 
     // Clean back the environment.
     $this->injectedDatabase->truncate($this->tableName);
@@ -277,7 +218,7 @@ class EntityUsageTest extends EntityKernelTestBase {
     $field_name = 'body';
     /** @var \Drupal\entity_usage\EntityUsage $entity_usage */
     $entity_usage = $this->container->get('entity_usage.usage');
-    $entity_usage->add($entity->id(), $entity->getEntityTypeId(), 1, 'foo', 'en', 0, 'entity_reference', $field_name, 31);
+    $entity_usage->registerUsage($entity->id(), $entity->getEntityTypeId(), 1, 'foo', 'en', 0, 'entity_reference', $field_name, 31);
     $real_usage = $this->injectedDatabase->select($this->tableName, 'e')
       ->fields('e', ['count'])
       ->condition('e.target_id', $entity->id())
@@ -419,15 +360,15 @@ class EntityUsageTest extends EntityKernelTestBase {
   }
 
   /**
-   * Reacts to save event.
+   * Reacts to a register event.
    *
    * @param \Drupal\entity_usage\Events\EntityUsageEvent $event
    *   The entity usage event.
    * @param string $name
    *   The name of the event.
    */
-  public function usageAddEventRecorder(EntityUsageEvent $event, $name) {
-    $this->state->set('entity_usage_events_test.usage_add', [
+  public function usageRegisterEventRecorder(EntityUsageEvent $event, $name) {
+    $this->state->set('entity_usage_events_test.usage_register', [
       'event_name' => $name,
       'target_id' => $event->getTargetEntityId(),
       'target_type' => $event->getTargetEntityType(),
@@ -442,15 +383,61 @@ class EntityUsageTest extends EntityKernelTestBase {
   }
 
   /**
-   * Reacts to delete event.
+   * Reacts to delete by field event.
    *
    * @param \Drupal\entity_usage\Events\EntityUsageEvent $event
    *   The entity usage event.
    * @param string $name
    *   The name of the event.
    */
-  public function usageDeleteEventRecorder(EntityUsageEvent $event, $name) {
-    $this->state->set('entity_usage_events_test.usage_delete', [
+  public function usageDeleteByFieldEventRecorder(EntityUsageEvent $event, $name) {
+    $this->state->set('entity_usage_events_test.usage_delete_by_field', [
+      'event_name' => $name,
+      'target_id' => $event->getTargetEntityId(),
+      'target_type' => $event->getTargetEntityType(),
+      'source_id' => $event->getSourceEntityId(),
+      'source_type' => $event->getSourceEntityType(),
+      'source_langcode' => $event->getSourceEntityLangcode(),
+      'source_vid' => $event->getSourceEntityRevisionId(),
+      'method' => $event->getMethod(),
+      'field_name' => $event->getFieldName(),
+      'count' => $event->getCount(),
+    ]);
+  }
+
+  /**
+   * Reacts to delete by source entity event.
+   *
+   * @param \Drupal\entity_usage\Events\EntityUsageEvent $event
+   *   The entity usage event.
+   * @param string $name
+   *   The name of the event.
+   */
+  public function usageDeleteBySourceEntityEventRecorder(EntityUsageEvent $event, $name) {
+    $this->state->set('entity_usage_events_test.usage_delete_by_source_entity', [
+      'event_name' => $name,
+      'target_id' => $event->getTargetEntityId(),
+      'target_type' => $event->getTargetEntityType(),
+      'source_id' => $event->getSourceEntityId(),
+      'source_type' => $event->getSourceEntityType(),
+      'source_langcode' => $event->getSourceEntityLangcode(),
+      'source_vid' => $event->getSourceEntityRevisionId(),
+      'method' => $event->getMethod(),
+      'field_name' => $event->getFieldName(),
+      'count' => $event->getCount(),
+    ]);
+  }
+
+  /**
+   * Reacts to delete by target entity event.
+   *
+   * @param \Drupal\entity_usage\Events\EntityUsageEvent $event
+   *   The entity usage event.
+   * @param string $name
+   *   The name of the event.
+   */
+  public function usageDeleteByTargetEntityEventRecorder(EntityUsageEvent $event, $name) {
+    $this->state->set('entity_usage_events_test.usage_delete_by_target_entity', [
       'event_name' => $name,
       'target_id' => $event->getTargetEntityId(),
       'target_type' => $event->getTargetEntityType(),

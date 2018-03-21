@@ -55,7 +55,7 @@ function entity_usage_entity_predelete(EntityInterface $entity) {
   if (!($entity instanceof ContentEntityInterface)) {
     return;
   }
-  return \Drupal::service('entity_usage.entity_update_manager')->trackUpdateOnDeletion($entity);
+  \Drupal::service('entity_usage.entity_update_manager')->trackUpdateOnDeletion($entity);
 }
 
 /**
@@ -66,7 +66,7 @@ function entity_usage_entity_translation_delete(EntityInterface $translation) {
   if (!($translation instanceof ContentEntityInterface)) {
     return;
   }
-  \Drupal::service('entity_usage.entity_update_manager')->trackUpdateOnDeletion($translation);
+  \Drupal::service('entity_usage.entity_update_manager')->trackUpdateOnDeletion($translation, 'translation');
 }
 
 /**
@@ -77,5 +77,5 @@ function entity_usage_entity_revision_delete(EntityInterface $entity) {
   if (!($entity instanceof ContentEntityInterface)) {
     return;
   }
-  \Drupal::service('entity_usage.entity_update_manager')->trackUpdateOnDeletion($entity);
+  \Drupal::service('entity_usage.entity_update_manager')->trackUpdateOnDeletion($entity, 'revision');
 }

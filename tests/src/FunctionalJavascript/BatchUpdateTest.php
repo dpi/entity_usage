@@ -62,7 +62,7 @@ class BatchUpdateTest extends EntityUsageJavascriptTestBase {
 
     // Remove one of the records from the database to simulate an usage
     // non-tracked by the module.
-    $usage_service->delete(1, 'node', 2, 'node');
+    $usage_service->deleteBySourceEntity(2, 'node');
     $usage = $usage_service->listSources($node1);
     $this->assertEquals($usage['node'], [
       '3' => [

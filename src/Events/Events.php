@@ -8,37 +8,44 @@ namespace Drupal\entity_usage\Events;
 final class Events {
 
   /**
-   * The USAGE_ADD event occurs when entities are referenced.
+   * Occurs when usage records are added or updated.
    *
    * @var string
    */
-  const USAGE_ADD = 'entity_usage.add';
+  const USAGE_REGISTER = 'entity_usage.register';
 
   /**
-   * The USAGE_DELETE event occurs when a reference to an entity is removed.
-   *
-   * @var string
-   */
-  const USAGE_DELETE = 'entity_usage.delete';
-
-  /**
-   * The BULK_DELETE_DESTINATIONS event.
-   *
-   * The BULK_DELETE_DESTINATIONS event occurs when all records of a given
-   * target entity type are removed.
+   * Occurs when all records of a given target entity type are removed.
    *
    * @var string
    */
   const BULK_DELETE_DESTINATIONS = 'entity_usage.bulk_delete_targets';
 
   /**
-   * The BULK_DELETE_SOURCES event.
-   *
-   * The BULK_DELETE_SOURCES event occurs when all records of a given source
-   * entity type are removed.
+   * Occurs when all records of a given source entity type are removed.
    *
    * @var string
    */
   const BULK_DELETE_SOURCES = 'entity_usage.bulk_delete_sources';
 
+  /**
+   * Occurs when all records from a given entity_type + field are deleted.
+   *
+   * @var string
+   */
+  const DELETE_BY_FIELD = 'entity_usage.delete_by_field';
+
+  /**
+   * Occurs when all records from a given source entity are deleted.
+   *
+   * @var string
+   */
+  const DELETE_BY_SOURCE_ENTITY = 'entity_usage.delete_by_source_entity';
+
+  /**
+   * Occurs when all records from a given target entity are deleted.
+   *
+   * @var string
+   */
+  const DELETE_BY_TARGET_ENTITY = 'entity_usage.delete_by_target_entity';
 }

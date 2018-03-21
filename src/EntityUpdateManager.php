@@ -86,22 +86,43 @@ class EntityUpdateManager {
   }
 
   /**
-   * Track updates on deletion of potential source entities.
+   * Track updates on deletion of entities.
    *
    * @param \Drupal\Core\Entity\ContentEntityInterface $entity
    *   The entity we are dealing with.
+   * @param string $type
+   *   What type of deletion is being performed:
+   *   - default: The main entity (default language, default revision) is being
+   *   deleted (delete also other languages and revisions).
+   *   - translation: Only one translation is being deleted.
+   *   - revision: Onlyone revision is being deleted.
    */
-  public function trackUpdateOnDeletion(ContentEntityInterface $entity) {
+  public function trackUpdateOnDeletion(ContentEntityInterface $entity, $type = 'default') {
     if (!($entity instanceof ContentEntityInterface)) {
       return;
     }
 
-    // Call all plugins that want to track entity usages.
-    foreach ($this->getEnabledPlugins() as $plugin) {
-      $plugin->trackOnEntityDeletion($entity);
-    }
+    // When an entity is being deleted the logic is much simpler and we don't
+    // even need to call the plugins. Just delete the records that affect this
+    // entity both as target and source.
+    switch ($type) {
+      case 'revision':
+        $this->usageService->deleteBySourceEntity($entity->id(), $entity->getEntityTypeId(), NULL, $entity->getRevisionId());
+        break;
 
-    $this->usageService->delete($entity->id(), $entity->getEntityTypeId());
+      case 'translation':
+        $this->usageService->deleteBySourceEntity($entity->id(), $entity->getEntityTypeId(), $entity->language()->getId());
+        break;
+
+      case 'default':
+        $this->usageService->deleteBySourceEntity($entity->id(), $entity->getEntityTypeId());
+        $this->usageService->deleteByTargetEntity($entity->id(), $entity->getEntityTypeId());
+        break;
+
+      default:
+        // We only accept one of the above mentioned types.
+        throw new \Exception('EntityUpdateManager::trackUpdateOnDeletion called with unkown deletion type: ' . $type);
+    }
   }
 
   /**

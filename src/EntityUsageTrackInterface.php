@@ -58,14 +58,6 @@ interface EntityUsageTrackInterface extends PluginInspectionInterface {
   public function trackOnEntityUpdate(ContentEntityInterface $source_entity);
 
   /**
-   * Track usage updates on the deletion of entities.
-   *
-   * @param \Drupal\Core\Entity\ContentEntityInterface $source_entity
-   *   The source entity.
-   */
-  public function trackOnEntityDeletion(ContentEntityInterface $source_entity);
-
-  /**
    * Retrieve fields of the given types on an entity.
    *
    * @param \Drupal\Core\Entity\ContentEntityInterface $source_entity
