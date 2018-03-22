@@ -62,9 +62,16 @@ class EntityUpdateManager {
       return;
     }
 
-    // Call all plugins that want to track entity usages.
-    foreach ($this->getEnabledPlugins() as $plugin) {
-      $plugin->trackOnEntityCreation($entity);
+    // Call all plugins that want to track entity usages. We need to call this
+    // for all translations as well since Drupal stores new revisions for all
+    // translations by default when saving an entity.
+    foreach ($entity->getTranslationLanguages() as $translation_language) {
+      /** @var \Drupal\Core\Entity\ContentEntityInterface $translation */
+      if ($translation = $entity->getTranslation($translation_language->getId())) {
+        foreach ($this->getEnabledPlugins() as $plugin) {
+          $plugin->trackOnEntityCreation($translation);
+        }
+      }
     }
   }
 
@@ -79,9 +86,16 @@ class EntityUpdateManager {
       return;
     }
 
-    // Call all plugins that want to track entity usages.
-    foreach ($this->getEnabledPlugins() as $plugin) {
-      $plugin->trackOnEntityUpdate($entity);
+    // Call all plugins that want to track entity usages. We need to call this
+    // for all translations as well since Drupal stores new revisions for all
+    // translations by default when saving an entity.
+    foreach ($entity->getTranslationLanguages() as $translation_language) {
+      /** @var \Drupal\Core\Entity\ContentEntityInterface $translation */
+      if ($translation = $entity->getTranslation($translation_language->getId())) {
+        foreach ($this->getEnabledPlugins() as $plugin) {
+          $plugin->trackOnEntityUpdate($translation);
+        }
+      }
     }
   }
 
@@ -96,6 +110,8 @@ class EntityUpdateManager {
    *   deleted (delete also other languages and revisions).
    *   - translation: Only one translation is being deleted.
    *   - revision: Onlyone revision is being deleted.
+   *
+   * @throws \InvalidArgumentException
    */
   public function trackUpdateOnDeletion(ContentEntityInterface $entity, $type = 'default') {
     if (!($entity instanceof ContentEntityInterface)) {
@@ -121,7 +137,7 @@ class EntityUpdateManager {
 
       default:
         // We only accept one of the above mentioned types.
-        throw new \Exception('EntityUpdateManager::trackUpdateOnDeletion called with unkown deletion type: ' . $type);
+        throw new \InvalidArgumentException('EntityUpdateManager::trackUpdateOnDeletion called with unkown deletion type: ' . $type);
     }
   }
 

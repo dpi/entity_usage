@@ -106,12 +106,20 @@ class ListUsageController extends ControllerBase {
               $source_entity_revision = $this->entityTypeManager->getStorage($source_type)
                 ->loadRevision($usage_details['source_vid']);
               if ($source_entity_revision && $translation = $source_entity_revision->getTranslation($usage_details['source_langcode'])) {
+                // Only show revision translations if they were affected.
+                /** @var \Drupal\Core\Entity\ContentEntityInterface $translation */
+                if (!$translation->isRevisionTranslationAffected()) {
+                  continue;
+                }
+
                 $link = $this->getSourceEntityLink($translation);
+
                 // If the label is empty it means this usage shouldn't be shown
                 // on the UI, just skip this row.
                 if (empty($link)) {
                   continue;
                 }
+
                 $field_label = isset($field_definitions[$usage_details['field_name']]) ? $field_definitions[$usage_details['field_name']]->getLabel() : $this->t('Unknown');
                 $rows[] = [
                   $link,

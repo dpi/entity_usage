@@ -154,31 +154,12 @@ class BatchUpdateForm extends FormBase {
             continue;
           }
 
-          foreach ($entity_revision->getTranslationLanguages() as $translation_language) {
-            /** @var \Drupal\Core\Entity\ContentEntityInterface $translation */
-            $translation = $entity_revision->getTranslation($translation_language->getId());
-
-            if (!$translation->isRevisionTranslationAffected()) {
-              continue;
-            }
-
-            \Drupal::service('entity_usage.entity_update_manager')->trackUpdateOnCreation($translation);
-          }
+          \Drupal::service('entity_usage.entity_update_manager')->trackUpdateOnCreation($entity_revision);
         }
       }
       else {
         // Sources are tracked as if they were new entities.
         \Drupal::service('entity_usage.entity_update_manager')->trackUpdateOnCreation($entity);
-        // Track all translations of the entity.
-        foreach ($entity->getTranslationLanguages(FALSE) as $translation_language) {
-          $translation = $entity->getTranslation($translation_language->getId());
-
-          if (!$translation->isRevisionTranslationAffected()) {
-            continue;
-          }
-
-          \Drupal::service('entity_usage.entity_update_manager')->trackUpdateOnCreation($translation);
-        }
       }
 
       $context['sandbox']['progress']++;
