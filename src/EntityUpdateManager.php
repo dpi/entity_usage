@@ -66,8 +66,9 @@ class EntityUpdateManager {
     // for all translations as well since Drupal stores new revisions for all
     // translations by default when saving an entity.
     foreach ($entity->getTranslationLanguages() as $translation_language) {
-      /** @var \Drupal\Core\Entity\ContentEntityInterface $translation */
-      if ($translation = $entity->getTranslation($translation_language->getId())) {
+      if ($entity->hasTranslation($translation_language->getId())) {
+        /** @var \Drupal\Core\Entity\ContentEntityInterface $translation */
+        $translation = $entity->getTranslation($translation_language->getId());
         foreach ($this->getEnabledPlugins() as $plugin) {
           $plugin->trackOnEntityCreation($translation);
         }
@@ -90,8 +91,9 @@ class EntityUpdateManager {
     // for all translations as well since Drupal stores new revisions for all
     // translations by default when saving an entity.
     foreach ($entity->getTranslationLanguages() as $translation_language) {
-      /** @var \Drupal\Core\Entity\ContentEntityInterface $translation */
-      if ($translation = $entity->getTranslation($translation_language->getId())) {
+      if ($entity->hasTranslation($translation_language->getId())) {
+        /** @var \Drupal\Core\Entity\ContentEntityInterface $translation */
+        $translation = $entity->getTranslation($translation_language->getId());
         foreach ($this->getEnabledPlugins() as $plugin) {
           $plugin->trackOnEntityUpdate($translation);
         }
