@@ -36,11 +36,8 @@
  *   The name of the field in the source entity using the target entity.
  * @param int $count
  *   The number of usages being tracked or deleted.
- * @param string $action
- *   The strings 'add' or 'delete', indicating the API method that invoked this
- *   hook.
  */
-function hook_entity_usage_block_tracking($target_id, $target_type, $source_id, $source_type, $source_langcode, $source_vid, $method, $field_name, $count, $action) {
+function hook_entity_usage_block_tracking($target_id, $target_type, $source_id, $source_type, $source_langcode, $source_vid, $method, $field_name, $count) {
   if ($field_name === 'field_foo_bar' && $method === 'link') {
     return TRUE;
   }
