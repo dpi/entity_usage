@@ -12,11 +12,13 @@ use Drupal\field\Entity\FieldConfig;
 /**
  * Tests basic usage tracking on generic entities referenced by HTML links.
  *
+ * THIS IS A LEGACY TEST AND SHOULD NOT BE FURTHER IMPROVED OR EXTENDED.
+ *
  * @group entity_usage
  *
  * @package Drupal\Tests\entity_usage\Kernel
  */
-class HtmlLinkKernelTest extends EntityKernelTestBase {
+class LegacyHtmlLinkKernelTest extends EntityKernelTestBase {
 
   /**
    * {@inheritdoc}

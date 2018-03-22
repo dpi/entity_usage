@@ -13,13 +13,15 @@ use Drupal\paragraphs\Entity\ParagraphsType;
 /**
  * Tests entity usage tracking on entity reference revision fields.
  *
+ * THIS IS A LEGACY TEST AND SHOULD NOT BE FURTHER IMPROVED OR EXTENDED.
+ *
  * @group entity_usage
  * @requires module entity_reference_revisions
  * @requires module paragraphs
  *
  * @package Drupal\Tests\entity_usage\Kernel
  */
-class EntityReferenceRevisionsUsageTest extends KernelTestBase {
+class LegacyEntityReferenceRevisionsUsageTest extends KernelTestBase {
 
   /**
    * Modules to enable.

@@ -13,12 +13,14 @@ use Drupal\field\Tests\EntityReference\EntityReferenceTestTrait;
 /**
  * Tests basic usage tracking on generic entities.
  *
+ * THIS IS A LEGACY TEST AND SHOULD NOT BE FURTHER IMPROVED OR EXTENDED.
+ *
  * @group entity_usage
  *
  * @package Drupal\Tests\entity_usage\Kernel
  *
  */
-class EntityReferenceKernelTest extends EntityKernelTestBase {
+class LegacyEntityReferenceKernelTest extends EntityKernelTestBase {
 
   use EntityReferenceTestTrait;
 
