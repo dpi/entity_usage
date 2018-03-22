@@ -8,7 +8,7 @@ use Drupal\entity_usage\Events\Events;
 use Drupal\KernelTests\Core\Entity\EntityKernelTestBase;
 
 /**
- * Tests the basic API operations of our tracking service..
+ * Tests the basic API operations of our tracking service.
  *
  * @group entity_usage
  *
@@ -17,11 +17,9 @@ use Drupal\KernelTests\Core\Entity\EntityKernelTestBase;
 class EntityUsageTest extends EntityKernelTestBase {
 
   /**
-   * Modules to install.
-   *
-   * @var array
+   * {@inheritdoc}
    */
-  public static $modules = ['entity_usage'];
+  public static $modules = ['entity_test', 'entity_usage'];
 
   /**
    * The entity type used in this test.
@@ -79,31 +77,32 @@ class EntityUsageTest extends EntityKernelTestBase {
     // Create two test entities.
     $this->testEntities = $this->getTestEntities();
 
-    $this->state = \Drupal::state();
-    \Drupal::service('event_dispatcher')->addListener(Events::USAGE_REGISTER,
+    $this->state = $this->container->get('state');
+    $event_dispatcher = $this->container->get('event_dispatcher');
+    $event_dispatcher->addListener(Events::USAGE_REGISTER,
       [$this, 'usageRegisterEventRecorder']);
-    \Drupal::service('event_dispatcher')->addListener(Events::DELETE_BY_FIELD,
+    $event_dispatcher->addListener(Events::DELETE_BY_FIELD,
       [$this, 'usageDeleteByFieldEventRecorder']);
-    \Drupal::service('event_dispatcher')->addListener(Events::DELETE_BY_SOURCE_ENTITY,
+    $event_dispatcher->addListener(Events::DELETE_BY_SOURCE_ENTITY,
       [$this, 'usageDeleteBySourceEntityEventRecorder']);
-    \Drupal::service('event_dispatcher')->addListener(Events::DELETE_BY_TARGET_ENTITY,
+    $event_dispatcher->addListener(Events::DELETE_BY_TARGET_ENTITY,
       [$this, 'usageDeleteByTargetEntityEventRecorder']);
-    \Drupal::service('event_dispatcher')->addListener(Events::BULK_DELETE_DESTINATIONS,
+    $event_dispatcher->addListener(Events::BULK_DELETE_DESTINATIONS,
       [$this, 'usageBulkTargetDeleteEventRecorder']);
-    \Drupal::service('event_dispatcher')->addListener(Events::BULK_DELETE_SOURCES,
+    $event_dispatcher->addListener(Events::BULK_DELETE_SOURCES,
       [$this, 'usageBulkSourceDeleteEventRecorder']);
   }
 
   /**
-   * Tests the listSources() method.
+   * Tests the listSources() and listTargets() method.
    *
    * @covers \Drupal\entity_usage\EntityUsage::listSources
    * @covers \Drupal\entity_usage\EntityUsage::listTargets
    */
-  public function testGetSources() {
-    /** @var \Drupal\node\NodeInterface $target_entity */
+  public function testlistSources() {
+    /** @var \Drupal\Core\Entity\ContentEntityInterface $target_entity */
     $target_entity = $this->testEntities[0];
-    /** @var \Drupal\node\NodeInterface $source_entity */
+    /** @var \Drupal\Core\Entity\ContentEntityInterface $source_entity */
     $source_entity = $this->testEntities[1];
     $field_name = 'body';
     $this->injectedDatabase->insert($this->tableName)
@@ -122,8 +121,8 @@ class EntityUsageTest extends EntityKernelTestBase {
 
     /** @var \Drupal\entity_usage\EntityUsage $entity_usage */
     $entity_usage = $this->container->get('entity_usage.usage');
-    $source_usages = $entity_usage->listSources($target_entity);
-    $this->assertEquals([
+    $real_source_list = $entity_usage->listSources($target_entity);
+    $expected_source_list = [
       $source_entity->getEntityTypeId() => [
         $source_entity->id() => [
           0 => [
@@ -135,10 +134,11 @@ class EntityUsageTest extends EntityKernelTestBase {
           ],
         ],
       ],
-    ], $source_usages, 'Returned the correct usages.');
+    ];
+    $this->assertEquals($expected_source_list, $real_source_list);
 
-    $target_usages = $entity_usage->listTargets($source_entity);
-    $this->assertEquals([
+    $real_target_list = $entity_usage->listTargets($source_entity);
+    $expected_target_list = [
       $target_entity->getEntityTypeId() => [
         $target_entity->id() => [
           0 => [
@@ -148,7 +148,8 @@ class EntityUsageTest extends EntityKernelTestBase {
           ],
         ],
       ],
-    ], $target_usages, 'Returned the correct usages.');
+    ];
+    $this->assertEquals($expected_target_list, $real_target_list);
 
     // Clean back the environment.
     $this->injectedDatabase->truncate($this->tableName);
@@ -165,7 +166,7 @@ class EntityUsageTest extends EntityKernelTestBase {
     /** @var \Drupal\entity_usage\EntityUsage $entity_usage */
     $entity_usage = $this->container->get('entity_usage.usage');
 
-    // Track an usage up.
+    // Register a new usage.
     $entity_usage->registerUsage($entity->id(), $entity->getEntityTypeId(), 1, 'foo', 'en', 1, 'entity_reference', $field_name, 1);
 
     $event = \Drupal::state()->get('entity_usage_events_test.usage_register', []);
@@ -184,21 +185,41 @@ class EntityUsageTest extends EntityKernelTestBase {
     $real_usage = $this->injectedDatabase->select($this->tableName, 'e')
       ->fields('e', ['count'])
       ->condition('e.target_id', $entity->id())
+      ->condition('e.target_type', $entity->getEntityTypeId())
       ->execute()
       ->fetchField();
 
     $this->assertEquals(1, $real_usage);
 
-    // Track an usage down.
+    // Delete the record.
     $entity_usage->registerUsage($entity->id(), $entity->getEntityTypeId(), 1, 'foo', 'en', 1, 'entity_reference', $field_name, 0);
 
     $real_usage = $this->injectedDatabase->select($this->tableName, 'e')
       ->fields('e', ['count'])
       ->condition('e.target_id', $entity->id())
+      ->condition('e.target_type', $entity->getEntityTypeId())
       ->execute()
       ->fetchField();
 
-    $this->assertEquals(0, $real_usage);
+    $this->assertSame(FALSE, $real_usage);
+
+    // Test that config settings are respected.
+    $this->container->get('config.factory')
+      ->getEditable('entity_usage.settings')
+      // No entities tracked at all.
+      ->set('track_enabled_target_entity_types', [])
+      ->save();
+    drupal_flush_all_caches();
+    $this->container->get('entity_usage.usage')->registerUsage($entity->id(), $entity->getEntityTypeId(), 1, 'foo', 'en', 1, 'entity_reference', $field_name, 1);
+
+    $real_usage = $this->injectedDatabase->select($this->tableName, 'e')
+      ->fields('e', ['count'])
+      ->condition('e.target_id', $entity->id())
+      ->condition('e.target_type', $entity->getEntityTypeId())
+      ->execute()
+      ->fetchField();
+
+    $this->assertSame(FALSE, $real_usage);
 
     // Clean back the environment.
     $this->injectedDatabase->truncate($this->tableName);
@@ -228,7 +249,7 @@ class EntityUsageTest extends EntityKernelTestBase {
     // In entity_usage_test_entity_usage_block_tracking() we block all
     // transactions that try to add "31" as count. We expect then the usage to
     // be 0.
-    $this->assertEquals(0, $real_usage, 'Usage tracking correctly blocked.');
+    $this->assertEquals(0, $real_usage);
 
     // Clean back the environment.
     $this->injectedDatabase->truncate($this->tableName);
@@ -282,7 +303,7 @@ class EntityUsageTest extends EntityKernelTestBase {
       ->condition('e.target_type', $entity_type)
       ->execute()
       ->fetchField();
-    $this->assertSame(FALSE, $count, 'Successfully deleted all records of this type.');
+    $this->assertSame(FALSE, $count);
 
     // Clean back the environment.
     $this->injectedDatabase->truncate($this->tableName);
@@ -293,7 +314,7 @@ class EntityUsageTest extends EntityKernelTestBase {
    *
    * @covers \Drupal\entity_usage\EntityUsage::bulkDeleteSources
    */
-  public function testBulkDeleteHosts() {
+  public function testBulkDeleteSources() {
     $entity_type = $this->testEntities[0]->getEntityTypeId();
 
     // Create 2 fake registers on the database table, one for each entity.
@@ -325,6 +346,7 @@ class EntityUsageTest extends EntityKernelTestBase {
     $this->assertSame($event['source_id'], NULL);
     $this->assertSame($event['source_type'], $entity_type);
     $this->assertSame($event['source_langcode'], NULL);
+    $this->assertSame($event['source_vid'], NULL);
     $this->assertSame($event['method'], NULL);
     $this->assertSame($event['field_name'], NULL);
     $this->assertSame($event['count'], NULL);
@@ -335,7 +357,206 @@ class EntityUsageTest extends EntityKernelTestBase {
       ->condition('e.source_type', $entity_type)
       ->execute()
       ->fetchField();
-    $this->assertSame(FALSE, $count, 'Successfully deleted all records of this type.');
+    $this->assertSame(FALSE, $count);
+
+    // Clean back the environment.
+    $this->injectedDatabase->truncate($this->tableName);
+  }
+
+  /**
+   * Tests the deleteByField() method.
+   *
+   * @covers \Drupal\entity_usage\EntityUsage::deleteByField
+   */
+  public function testDeleteByField() {
+    $entity_type = $this->testEntities[0]->getEntityTypeId();
+
+    // Create 2 fake registers on the database table, one for each entity.
+    $i = 0;
+    foreach ($this->testEntities as $entity) {
+      $this->injectedDatabase->insert($this->tableName)
+        ->fields([
+          'target_id' => 1,
+          'target_type' => 'foo',
+          'source_id' => $entity->id(),
+          'source_type' => $entity_type,
+          'source_langcode' => $entity->language()->getId(),
+          'source_vid' => $entity->getRevisionId() ?: 0,
+          'method' => 'entity_reference',
+          'field_name' => 'body' . $i++,
+          'count' => 1,
+        ])
+        ->execute();
+    }
+
+    /** @var \Drupal\entity_usage\EntityUsage $entity_usage */
+    $entity_usage = $this->container->get('entity_usage.usage');
+    // Delete only one of them, by field.
+    $entity_usage->deleteByField($entity_type, 'body1');
+
+    $event = \Drupal::state()->get('entity_usage_events_test.usage_delete_by_field', []);
+
+    $this->assertSame($event['event_name'], Events::DELETE_BY_FIELD);
+    $this->assertSame($event['target_id'], NULL);
+    $this->assertSame($event['target_type'], NULL);
+    $this->assertSame($event['source_id'], NULL);
+    $this->assertSame($event['source_type'], $entity_type);
+    $this->assertSame($event['source_langcode'], NULL);
+    $this->assertSame($event['source_vid'], NULL);
+    $this->assertSame($event['method'], NULL);
+    $this->assertSame($event['field_name'], 'body1');
+    $this->assertSame($event['count'], NULL);
+
+    $result = $this->injectedDatabase->select($this->tableName, 'e')
+      ->fields('e')
+      ->condition('e.source_type', $entity_type)
+      ->execute()
+      ->fetchAll();
+    $expected_result = [
+      'target_id' => 1,
+      'target_type' => 'foo',
+      'source_id' => $this->testEntities[0]->id(),
+      'source_type' => $entity_type,
+      'source_langcode' => $this->testEntities[0]->language()->getId(),
+      'source_vid' => $this->testEntities[0]->getRevisionId() ?: 0,
+      'method' => 'entity_reference',
+      'field_name' => 'body0',
+      'count' => 1,
+    ];
+    $this->assertEquals([(object) $expected_result], $result);
+
+    // Clean back the environment.
+    $this->injectedDatabase->truncate($this->tableName);
+  }
+
+  /**
+   * Tests the deleteBySourceEntity() method.
+   *
+   * @covers \Drupal\entity_usage\EntityUsage::deleteBySourceEntity
+   */
+  public function testDeleteBySourceEntity() {
+    // Create 2 fake registers on the database table, one for each entity.
+    $i = 0;
+    foreach ($this->testEntities as $entity) {
+      $i++;
+      $this->injectedDatabase->insert($this->tableName)
+        ->fields([
+          'target_id' => $i,
+          'target_type' => 'fake_type_' . $i,
+          'source_id' => $entity->id(),
+          'source_type' => $entity->getEntityTypeId(),
+          'source_langcode' => $entity->language()->getId(),
+          'source_vid' => $entity->getRevisionId() ?: 0,
+          'method' => 'entity_reference',
+          'field_name' => 'body',
+          'count' => 1,
+        ])
+        ->execute();
+    }
+
+    /** @var \Drupal\entity_usage\EntityUsage $entity_usage */
+    $entity_usage = $this->container->get('entity_usage.usage');
+    // Delete only one of them, by source.
+    $entity_usage->deleteBySourceEntity($this->testEntities[0]->id(), $this->testEntities[0]->getEntityTypeId());
+
+    $event = \Drupal::state()->get('entity_usage_events_test.usage_delete_by_source_entity', []);
+
+    $this->assertSame($event['event_name'], Events::DELETE_BY_SOURCE_ENTITY);
+    $this->assertSame($event['target_id'], NULL);
+    $this->assertSame($event['target_type'], NULL);
+    $this->assertSame($event['source_id'], $this->testEntities[0]->id());
+    $this->assertSame($event['source_type'], $this->testEntities[0]->getEntityTypeId());
+    $this->assertSame($event['source_langcode'], NULL);
+    $this->assertSame($event['source_vid'], NULL);
+    $this->assertSame($event['method'], NULL);
+    $this->assertSame($event['field_name'], NULL);
+    $this->assertSame($event['count'], NULL);
+
+    // The non-affected record is still there.
+    $real_target_list = $entity_usage->listTargets($this->testEntities[1]);
+    $expected_target_list = [
+      'fake_type_2' => [
+        '2' => [
+          0 => [
+            'method' => 'entity_reference',
+            'field_name' => 'body',
+            'count' => '1',
+          ],
+        ],
+      ],
+    ];
+    $this->assertEquals($expected_target_list, $real_target_list);
+
+    // The affected record is gone.
+    $real_target_list = $entity_usage->listSources($this->testEntities[0]);
+    $this->assertEquals([], $real_target_list);
+
+    // Clean back the environment.
+    $this->injectedDatabase->truncate($this->tableName);
+  }
+
+  /**
+   * Tests the deleteByTargetEntity() method.
+   *
+   * @covers \Drupal\entity_usage\EntityUsage::deleteByTargetEntity
+   */
+  public function testDeleteByTargetEntity() {
+    // Create 2 fake registers on the database table, one for each entity.
+    $i = 0;
+    foreach ($this->testEntities as $entity) {
+      $i++;
+      $this->injectedDatabase->insert($this->tableName)
+        ->fields([
+          'target_id' => $entity->id(),
+          'target_type' => $entity->getEntityTypeId(),
+          'source_id' => $i,
+          'source_type' => 'fake_type_' . $i,
+          'source_langcode' => 'en',
+          'source_vid' => $i,
+          'method' => 'entity_reference',
+          'field_name' => 'body' . $i,
+          'count' => 1,
+        ])
+        ->execute();
+    }
+
+    /** @var \Drupal\entity_usage\EntityUsage $entity_usage */
+    $entity_usage = $this->container->get('entity_usage.usage');
+    // Delete only one of them, by target.
+    $entity_usage->deleteByTargetEntity($this->testEntities[0]->id(), $this->testEntities[0]->getEntityTypeId());
+
+    $event = \Drupal::state()->get('entity_usage_events_test.usage_delete_by_target_entity', []);
+
+    $this->assertSame($event['event_name'], Events::DELETE_BY_TARGET_ENTITY);
+    $this->assertSame($event['target_id'], $this->testEntities[0]->id());
+    $this->assertSame($event['target_type'], $this->testEntities[0]->getEntityTypeId());
+    $this->assertSame($event['source_id'], NULL);
+    $this->assertSame($event['source_type'], NULL);
+    $this->assertSame($event['source_langcode'], NULL);
+    $this->assertSame($event['method'], NULL);
+    $this->assertSame($event['field_name'], NULL);
+    $this->assertSame($event['count'], NULL);
+
+    // The non-affected record is still there.
+    $real_source_list = $entity_usage->listSources($this->testEntities[1]);
+    $expected_source_list = [
+      'fake_type_2' => [
+        '2' => [
+          0 => [
+            'source_langcode' => 'en',
+            'source_vid' => '2',
+            'method' => 'entity_reference',
+            'field_name' => 'body2',
+            'count' => 1,
+          ],
+        ],
+      ],
+    ];
+    $this->assertEquals($expected_source_list, $real_source_list);
+
+    // The affected record is gone.
+    $real_source_list = $entity_usage->listSources($this->testEntities[0]);
+    $this->assertEquals([], $real_source_list);
 
     // Clean back the environment.
     $this->injectedDatabase->truncate($this->tableName);
