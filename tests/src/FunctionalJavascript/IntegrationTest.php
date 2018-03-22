@@ -179,6 +179,22 @@ class IntegrationTest extends EntityUsageJavascriptTestBase {
         ],
       ],
     ], 'Correct usage found.');
+
+    // Create node 6 referencing a non existing UUID using a linkit markup to
+    // test removed entities.
+    $embedded_text = '<p>foo <a data-entity-substitution="canonical" data-entity-type="node" data-entity-uuid="c7cae398-3c36-47d4-8ef0-a17902e76ff4">I do not exists</a> bar</p>';
+    $node6 = Node::create([
+      'type' => 'eu_test_ct',
+      'title' => 'Node 6',
+      'field_eu_test_rich_text' => [
+        'value' => $embedded_text,
+        'format' => 'eu_test_text_format',
+      ],
+    ]);
+    $node6->save();
+    // Check that the usage for this source is empty.
+    $usage = $usage_service->listTargets($node6);
+    $this->assertEquals([], $usage, 'Correct usage found.');
   }
 
   /**
