@@ -89,17 +89,12 @@ class ListUsageController extends ControllerBase {
           $this->t('Language'),
           $this->t('Revision ID'),
           $this->t('Field name'),
-          $this->t('Count'),
         ];
         $rows = [];
         foreach ($all_usages as $source_type => $source_ids) {
-          foreach ($source_ids as $source_id => $entity_usages) {
-            /** @var \Drupal\Core\Entity\EntityInterface $source_entity */
-            $source_entity = $this->entityTypeManager->getStorage($source_type)->load($source_id);
-            // Skip early if this entity for some reason doesn't exist anymore.
-            if (!$source_entity) {
-              continue;
-            }
+          // Of those, only loop over existing entities.
+          foreach ($this->entityTypeManager->getStorage($source_type)->loadMultiple(array_keys($source_ids)) as $source_id => $source_entity) {
+            $entity_usages = $source_ids[$source_id];
             $field_definitions = $this->entityFieldManager->getFieldDefinitions($source_type, $source_entity->bundle());
             foreach ($entity_usages as $usage_details) {
               if ($entity instanceof RevisionableInterface) {
@@ -132,7 +127,6 @@ class ListUsageController extends ControllerBase {
                 $usage_details['source_langcode'],
                 $usage_details['source_vid'] ?: '',
                 $field_label,
-                $usage_details['count'],
               ];
             }
           }

@@ -74,7 +74,6 @@ class ListControllerTest extends EntityUsageJavascriptTestBase {
     $this->assertSession()->pageTextContains('Language');
     $this->assertSession()->pageTextContains('Revision ID');
     $this->assertSession()->pageTextContains('Field name');
-    $this->assertSession()->pageTextContains('Count');
 
     // Check both referencing nodes are linked.
     $this->assertSession()->linkExists('Node 2');
@@ -93,8 +92,6 @@ class ListControllerTest extends EntityUsageJavascriptTestBase {
     $this->assertEquals('3', $first_row_vid->getText());
     $first_row_field_label = $this->xpath('//table/tbody/tr[1]/td[5]')[0];
     $this->assertEquals('Text', $first_row_field_label->getText());
-    $first_row_count = $this->xpath('//table/tbody/tr[1]/td[6]')[0];
-    $this->assertEquals('1', $first_row_count->getText());
 
     $second_row_title = $this->xpath('//table/tbody/tr[2]/td[1]')[0];
     $this->assertEquals('Node 2', $second_row_title->getText());
@@ -106,8 +103,6 @@ class ListControllerTest extends EntityUsageJavascriptTestBase {
     $this->assertEquals('2', $second_row_vid->getText());
     $second_row_field_label = $this->xpath('//table/tbody/tr[2]/td[5]')[0];
     $this->assertEquals('Related nodes', $second_row_field_label->getText());
-    $second_row_count = $this->xpath('//table/tbody/tr[2]/td[6]')[0];
-    $this->assertEquals('1', $second_row_count->getText());
   }
 
 }
