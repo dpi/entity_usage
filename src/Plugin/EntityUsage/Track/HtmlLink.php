@@ -7,7 +7,6 @@ use Drupal\Core\Config\ConfigFactoryInterface;
 use Drupal\Core\Entity\EntityFieldManagerInterface;
 use Drupal\Core\Entity\EntityRepositoryInterface;
 use Drupal\Core\Entity\EntityTypeManagerInterface;
-use Drupal\Core\Extension\ModuleHandlerInterface;
 use Drupal\Core\Path\PathValidatorInterface;
 use Drupal\Core\StreamWrapper\PublicStream;
 use Drupal\entity_usage\EntityUsage;
@@ -20,16 +19,10 @@ use Symfony\Component\DependencyInjection\ContainerInterface;
  *   id = "html_link",
  *   label = @Translation("HTML links"),
  *   description = @Translation("Tracks relationships created with standard links inside formatted text fields."),
+ *   field_types = {"text", "text_long", "text_with_summary"},
  * )
  */
 class HtmlLink extends TextFieldEmbedBase {
-
-  /**
-   * Entity type manager service.
-   *
-   * @var \Drupal\Core\Entity\EntityTypeManagerInterface
-   */
-  protected $entityTypeManager;
 
   /**
    * The Drupal Path Validator service.
@@ -56,24 +49,21 @@ class HtmlLink extends TextFieldEmbedBase {
    *   The plugin implementation definition.
    * @param \Drupal\entity_usage\EntityUsage $usage_service
    *   The usage tracking service.
+   * @param \Drupal\Core\Entity\EntityTypeManagerInterface $entity_type_manager
+   *   The EntityTypeManager service.
    * @param \Drupal\Core\Entity\EntityFieldManagerInterface $entity_field_manager
    *   The EntityFieldManager service.
    * @param \Drupal\Core\Config\ConfigFactoryInterface $config_factory
    *   The factory for configuration objects.
-   * @param \Drupal\Core\Extension\ModuleHandlerInterface $module_handler
-   *   The ModuleHandler service.
    * @param \Drupal\Core\Entity\EntityRepositoryInterface $entity_repository
    *   The EntityRepositoryInterface service.
-   * @param \Drupal\Core\Entity\EntityTypeManagerInterface $entity_type_manager
-   *   The EntityTypeManager service.
    * @param \Drupal\Core\Path\PathValidatorInterface $path_validator
    *   The Drupal Path Validator service.
    * @param \Drupal\Core\StreamWrapper\PublicStream $public_stream
    *   The Public Stream service.
    */
-  public function __construct(array $configuration, $plugin_id, $plugin_definition, EntityUsage $usage_service, EntityFieldManagerInterface $entity_field_manager, ConfigFactoryInterface $config_factory, ModuleHandlerInterface $module_handler, EntityRepositoryInterface $entity_repository, EntityTypeManagerInterface $entity_type_manager, PathValidatorInterface $path_validator, PublicStream $public_stream) {
-    parent::__construct($configuration, $plugin_id, $plugin_definition, $usage_service, $entity_field_manager, $config_factory, $module_handler, $entity_repository);
-    $this->entityTypeManager = $entity_type_manager;
+  public function __construct(array $configuration, $plugin_id, $plugin_definition, EntityUsage $usage_service, EntityTypeManagerInterface $entity_type_manager, EntityFieldManagerInterface $entity_field_manager, ConfigFactoryInterface $config_factory, EntityRepositoryInterface $entity_repository, PathValidatorInterface $path_validator, PublicStream $public_stream) {
+    parent::__construct($configuration, $plugin_id, $plugin_definition, $usage_service, $entity_type_manager, $entity_field_manager, $config_factory, $entity_repository);
     $this->pathValidator = $path_validator;
     $this->publicFileDirectory = $public_stream->getDirectoryPath();
   }
@@ -87,11 +77,10 @@ class HtmlLink extends TextFieldEmbedBase {
       $plugin_id,
       $plugin_definition,
       $container->get('entity_usage.usage'),
+      $container->get('entity_type.manager'),
       $container->get('entity_field.manager'),
       $container->get('config.factory'),
-      $container->get('module_handler'),
       $container->get('entity.repository'),
-      $container->get('entity_type.manager'),
       $container->get('path.validator'),
       $container->get('stream_wrapper.public')
     );

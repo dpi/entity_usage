@@ -10,7 +10,8 @@ use Drupal\Component\Utility\Html;
  * @EntityUsageTrack(
  *   id = "linkit",
  *   label = @Translation("LinkIt"),
- *   description = @Translation("Tracks relationships created with 'LinkIt' in formatted text or link fields."),
+ *   description = @Translation("Tracks relationships created with 'LinkIt' in formatted text fields."),
+ *   field_types = {"text", "text_long", "text_with_summary"},
  * )
  */
 class LinkIt extends TextFieldEmbedBase {

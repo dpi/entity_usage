@@ -23,19 +23,26 @@ class EntityUsageTrack extends Plugin {
   /**
    * The human-readable name of the tracking method.
    *
-   * @ingroup plugin_translatable
-   *
    * @var \Drupal\Core\Annotation\Translation
+   *
+   * @ingroup plugin_translatable
    */
   public $label;
 
   /**
    * A brief description of the tracking method.
    *
-   * @ingroup plugin_translatable
+   * @var \Drupal\Core\Annotation\Translation
    *
-   * @var \Drupal\Core\Annotation\Translation (optional)
+   * @ingroup plugin_translatable
    */
   public $description = '';
+
+  /**
+   * The field types that this plugin is able to track.
+   *
+   * @var string[]
+   */
+  public $field_types = [];
 
 }
