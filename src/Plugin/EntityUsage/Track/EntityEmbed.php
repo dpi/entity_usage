@@ -9,8 +9,8 @@ use Drupal\Component\Utility\Html;
  *
  * @EntityUsageTrack(
  *   id = "entity_embed",
- *   label = @Translation("Entities embedded with Entity Embed"),
- *   description = @Translation("Tracks usage of entities related when embedded with Entity Embed."),
+ *   label = @Translation("Entity Embed"),
+ *   description = @Translation("Tracks relationships created with 'Entity Embed' in formatted text fields."),
  * )
  */
 class EntityEmbed extends TextFieldEmbedBase {

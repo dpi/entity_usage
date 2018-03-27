@@ -22,11 +22,11 @@ interface EntityUsageInterface {
    * hook_entity_usage_block_tracking() will be invoked, so other modules will
    * have an opportunity to block this record before it is written to DB.
    *
-   * @param int $target_id
+   * @param int|string $target_id
    *   The target entity ID.
    * @param string $target_type
    *   The target entity type.
-   * @param int $source_id
+   * @param int|string $source_id
    *   The source entity ID.
    * @param string $source_type
    *   The source entity type.
@@ -74,7 +74,7 @@ interface EntityUsageInterface {
   /**
    * Delete all records for a given source entity.
    *
-   * @param int $source_id
+   * @param int|string $source_id
    *   The source entity ID.
    * @param string $source_type
    *   The source entity type.
@@ -88,7 +88,7 @@ interface EntityUsageInterface {
   /**
    * Delete all records for a given target entity.
    *
-   * @param int $target_id
+   * @param int|string $target_id
    *   The target entity ID.
    * @param string $target_type
    *   The target entity type.

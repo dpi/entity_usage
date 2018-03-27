@@ -2,7 +2,6 @@
 
 namespace Drupal\entity_usage\Form;
 
-use Drupal\Core\Entity\ContentEntityInterface;
 use Drupal\Core\Entity\EntityTypeManagerInterface;
 use Drupal\Core\Form\FormBase;
 use Drupal\Core\Form\FormStateInterface;
@@ -86,9 +85,19 @@ class BatchUpdateForm extends FormBase {
     $operations = [];
     $to_track = \Drupal::config('entity_usage.settings')->get('track_enabled_source_entity_types');
     foreach ($this->entityTypeManager->getDefinitions() as $entity_type_id => $entity_type) {
-      // Only look for content entities that are marked for tracking on the
-      // settings form.
-      if ($entity_type->entityClassImplements('\Drupal\Core\Entity\ContentEntityInterface') && (!is_array($to_track) || in_array($entity_type_id, $to_track, TRUE))) {
+      // Only look for entities enabled for tracking on the settings form.
+      $track_this_entity_type = FALSE;
+      if (!is_array($to_track) && ($entity_type->entityClassImplements('\Drupal\Core\Entity\ContentEntityInterface'))) {
+        // When no settings are defined, track all content entities by default,
+        // except for Files and Users.
+        if (!in_array($entity_type_id, ['file', 'user'])) {
+          $track_this_entity_type = TRUE;
+        }
+      }
+      elseif (is_array($to_track) && in_array($entity_type_id, $to_track, TRUE)) {
+        $track_this_entity_type = TRUE;
+      }
+      if ($track_this_entity_type) {
         $operations[] = ['Drupal\entity_usage\Form\BatchUpdateForm::updateSourcesBatchWorker', [$entity_type_id]];
       }
     }
@@ -136,7 +145,7 @@ class BatchUpdateForm extends FormBase {
       ->sort($entity_type_key)
       ->execute();
 
-    /** @var \Drupal\Core\Entity\ContentEntityInterface $entity */
+    /** @var \Drupal\Core\Entity\EntityInterface $entity */
     $entity = $entity_storage->load(reset($entity_ids));
     if ($entity) {
       if ($entity->getEntityType()->isRevisionable()) {
@@ -149,7 +158,7 @@ class BatchUpdateForm extends FormBase {
         $revision_ids = array_keys($result);
 
         foreach ($revision_ids as $revision_id) {
-          /** @var \Drupal\Core\Entity\ContentEntityInterface $entity_revision */
+          /** @var \Drupal\Core\Entity\EntityInterface $entity_revision */
           if (!$entity_revision = $entity_storage->loadRevision($revision_id)) {
             continue;
           }

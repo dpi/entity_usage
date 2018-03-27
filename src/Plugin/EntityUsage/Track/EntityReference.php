@@ -3,10 +3,10 @@
 namespace Drupal\entity_usage\Plugin\EntityUsage\Track;
 
 use Drupal\Core\Config\ConfigFactoryInterface;
-use Drupal\Core\Config\Entity\ConfigEntityTypeInterface;
-use Drupal\Core\Entity\ContentEntityInterface;
 use Drupal\Core\Entity\EntityFieldManagerInterface;
+use Drupal\Core\Entity\EntityInterface;
 use Drupal\Core\Entity\EntityTypeManagerInterface;
+use Drupal\Core\Entity\RevisionableInterface;
 use Drupal\entity_usage\EntityUsage;
 use Drupal\entity_usage\EntityUsageTrackBase;
 use Symfony\Component\DependencyInjection\ContainerInterface;
@@ -16,8 +16,8 @@ use Symfony\Component\DependencyInjection\ContainerInterface;
  *
  * @EntityUsageTrack(
  *   id = "entity_reference",
- *   label = @Translation("Entity Reference Fields"),
- *   description = @Translation("Tracks usage of entities related in entity_reference fields."),
+ *   label = @Translation("Entity Reference"),
+ *   description = @Translation("Tracks relationships created with 'Entity Reference' fields."),
  * )
  */
 class EntityReference extends EntityUsageTrackBase {
@@ -70,11 +70,12 @@ class EntityReference extends EntityUsageTrackBase {
   /**
    * {@inheritdoc}
    */
-  public function trackOnEntityCreation(ContentEntityInterface $source_entity) {
-    foreach ($this->entityReferenceFieldsAvailable($source_entity) as $field_name) {
-      if (!$source_entity->$field_name->isEmpty()) {
+  public function trackOnEntityCreation(EntityInterface $source_entity) {
+    $entity_reference_fields = array_keys($this->getReferencingFields($source_entity, ['entity_reference', 'entity_reference_revisions']));
+    foreach ($entity_reference_fields as $field_name) {
+      if (!$source_entity->{$field_name}->isEmpty()) {
         /** @var \Drupal\Core\Field\Plugin\Field\FieldType\EntityReferenceItem $field_item */
-        foreach ($source_entity->$field_name as $field_item) {
+        foreach ($source_entity->{$field_name} as $field_item) {
           // This item got added, add a tracking record.
           $this->incrementEntityReferenceUsage($source_entity, $field_name, $field_item->target_id);
         }
@@ -85,10 +86,14 @@ class EntityReference extends EntityUsageTrackBase {
   /**
    * {@inheritdoc}
    */
-  public function trackOnEntityUpdate(ContentEntityInterface $source_entity) {
-    foreach ($this->entityReferenceFieldsAvailable($source_entity) as $field_name) {
+  public function trackOnEntityUpdate(EntityInterface $source_entity) {
+    $entity_reference_fields = array_keys($this->getReferencingFields($source_entity, ['entity_reference', 'entity_reference_revisions']));
+    foreach ($entity_reference_fields as $field_name) {
       // If we create a new revision, just add the new tracking records.
-      if ($source_entity->getRevisionId() != $source_entity->original->getRevisionId() && !$source_entity->$field_name->isEmpty()) {
+      if (($source_entity instanceof RevisionableInterface) &&
+        $source_entity->getRevisionId() != $source_entity->original->getRevisionId() &&
+        !$source_entity->{$field_name}->isEmpty()) {
+
         $this->trackOnEntityCreation($source_entity);
         return;
       }
@@ -127,67 +132,39 @@ class EntityReference extends EntityUsageTrackBase {
   }
 
   /**
-   * Retrieve the entity_reference fields on a given entity.
-   *
-   * @param \Drupal\Core\Entity\ContentEntityInterface $source_entity
-   *   The entity object.
-   *
-   * @return array
-   *   An array of field_names that could reference to other content entities.
-   */
-  protected function entityReferenceFieldsAvailable(ContentEntityInterface $source_entity) {
-    /** @var \Drupal\Core\Field\FieldDefinitionInterface[] $fields */
-    $fields = $this->getReferencingFields($source_entity, ['entity_reference', 'entity_reference_revisions']);
-
-    $return_fields = [];
-    if (!empty($fields)) {
-      // Make sure we only leave the fields that are referencing content
-      // entities.
-      foreach ($fields as $key => $field) {
-        $target_type = $field->getItemDefinition()->getSettings()['target_type'];
-        $source_entity_type = $this->entityTypeManager->getStorage($target_type)->getEntityType();
-        if ($source_entity_type instanceof ConfigEntityTypeInterface) {
-          unset($fields[$key]);
-        }
-      }
-      $return_fields = array_keys($fields);
-    }
-
-    return $return_fields;
-  }
-
-  /**
    * Helper method to increment the usage in entity_reference fields.
    *
-   * @param \Drupal\Core\Entity\ContentEntityInterface $source_entity
+   * @param \Drupal\Core\Entity\EntityInterface $source_entity
    *   The source entity object.
    * @param string $field_name
    *   The name of the entity_reference field, present in $source_entity.
    * @param int $target_id
    *   The id of the target entity.
    */
-  protected function incrementEntityReferenceUsage(ContentEntityInterface $source_entity, $field_name, $target_id) {
+  protected function incrementEntityReferenceUsage(EntityInterface $source_entity, $field_name, $target_id) {
     /** @var \Drupal\field\Entity\FieldConfig $definition */
     $definition = $this->entityFieldManager->getFieldDefinitions($source_entity->getEntityTypeId(), $source_entity->bundle())[$field_name];
     $target_type = $definition->getSetting('target_type');
-    $this->usageService->registerUsage($target_id, $target_type, $source_entity->id(), $source_entity->getEntityTypeId(), $source_entity->language()->getId(), $source_entity->getRevisionId(), $this->pluginId, $field_name);
+    $source_vid = ($source_entity instanceof RevisionableInterface && $source_entity->getRevisionId()) ? $source_entity->getRevisionId() : 0;
+    $this->usageService->registerUsage($target_id, $target_type, $source_entity->id(), $source_entity->getEntityTypeId(), $source_entity->language()->getId(), $source_vid, $this->pluginId, $field_name);
   }
 
   /**
    * Helper method to decrement the usage in entity_reference fields.
    *
-   * @param \Drupal\Core\Entity\ContentEntityInterface $source_entity
+   * @param \Drupal\Core\Entity\EntityInterface $source_entity
    *   The source entity object.
    * @param string $field_name
    *   The name of the entity_reference field, present in $source_entity.
    * @param int $target_id
    *   The id of the target entity.
    */
-  protected function decrementEntityReferenceUsage(ContentEntityInterface $source_entity, $field_name, $target_id) {
+  protected function decrementEntityReferenceUsage(EntityInterface $source_entity, $field_name, $target_id) {
     /** @var \Drupal\field\Entity\FieldConfig $definition */
     $definition = $this->entityFieldManager->getFieldDefinitions($source_entity->getEntityTypeId(), $source_entity->bundle())[$field_name];
     $target_type = $definition->getSetting('target_type');
-    $this->usageService->registerUsage($target_id, $target_type, $source_entity->id(), $source_entity->getEntityTypeId(), $source_entity->language()->getId(), $source_entity->getRevisionId(), $this->pluginId, $field_name, 0);
+    $source_vid = ($source_entity instanceof RevisionableInterface && $source_entity->getRevisionId()) ? $source_entity->getRevisionId() : 0;
+    $this->usageService->registerUsage($target_id, $target_type, $source_entity->id(), $source_entity->getEntityTypeId(), $source_entity->language()->getId(), $source_vid, $this->pluginId, $field_name, 0);
   }
 
 }

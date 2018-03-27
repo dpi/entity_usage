@@ -4,9 +4,10 @@ namespace Drupal\entity_usage\Controller;
 
 use Drupal\Core\Access\AccessResult;
 use Drupal\Core\Controller\ControllerBase;
-use Drupal\Core\Entity\ContentEntityInterface;
 use Drupal\Core\Entity\EntityFieldManagerInterface;
+use Drupal\Core\Entity\EntityInterface;
 use Drupal\Core\Entity\EntityTypeManagerInterface;
+use Drupal\Core\Entity\RevisionableInterface;
 use Drupal\entity_usage\EntityUsageInterface;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
@@ -73,11 +74,6 @@ class ListUsageController extends ControllerBase {
    */
   public function listUsagePage($entity_type, $entity_id) {
     $entity_types = $this->entityTypeManager->getDefinitions();
-
-    if (!is_string($entity_type) || !is_numeric($entity_id) || !array_key_exists($entity_type, $entity_types)) {
-      throw new NotFoundHttpException();
-    }
-
     $entity = $this->entityTypeManager->getStorage($entity_type)->load($entity_id);
     if ($entity) {
       $all_usages = $this->entityUsage->listSources($entity);
@@ -98,38 +94,46 @@ class ListUsageController extends ControllerBase {
         $rows = [];
         foreach ($all_usages as $source_type => $source_ids) {
           foreach ($source_ids as $source_id => $entity_usages) {
-            /** @var \Drupal\Core\Entity\ContentEntityInterface $source_entity */
+            /** @var \Drupal\Core\Entity\EntityInterface $source_entity */
             $source_entity = $this->entityTypeManager->getStorage($source_type)->load($source_id);
+            // Skip early if this entity for some reason doesn't exist anymore.
+            if (!$source_entity) {
+              continue;
+            }
             $field_definitions = $this->entityFieldManager->getFieldDefinitions($source_type, $source_entity->bundle());
             foreach ($entity_usages as $usage_details) {
-              /** @var \Drupal\Core\Entity\ContentEntityInterface $source_entity */
-              $source_entity_revision = $this->entityTypeManager->getStorage($source_type)
-                ->loadRevision($usage_details['source_vid']);
-              if ($source_entity_revision && $translation = $source_entity_revision->getTranslation($usage_details['source_langcode'])) {
-                // Only show revision translations if they were affected.
-                /** @var \Drupal\Core\Entity\ContentEntityInterface $translation */
-                if (!$translation->isRevisionTranslationAffected()) {
-                  continue;
+              if ($entity instanceof RevisionableInterface) {
+                $source_entity_revision = $this->entityTypeManager->getStorage($source_type)
+                  ->loadRevision($usage_details['source_vid']);
+                if ($source_entity_revision &&
+                  $source_entity->hasTranslation($usage_details['source_langcode']) &&
+                  $translation = $source_entity_revision->getTranslation($usage_details['source_langcode'])) {
+                  // Only show revision translations if they were affected.
+                  /** @var \Drupal\Core\Entity\ContentEntityInterface $translation */
+                  if (!$translation->isRevisionTranslationAffected()) {
+                    continue;
+                  }
+
+                  $link = $this->getSourceEntityLink($translation);
                 }
-
-                $link = $this->getSourceEntityLink($translation);
-
-                // If the label is empty it means this usage shouldn't be shown
-                // on the UI, just skip this row.
-                if (empty($link)) {
-                  continue;
-                }
-
-                $field_label = isset($field_definitions[$usage_details['field_name']]) ? $field_definitions[$usage_details['field_name']]->getLabel() : $this->t('Unknown');
-                $rows[] = [
-                  $link,
-                  $entity_types[$source_type]->getLabel(),
-                  $usage_details['source_langcode'],
-                  $usage_details['source_vid'] ?: '',
-                  $field_label,
-                  $usage_details['count'],
-                ];
               }
+              else {
+                $link = $this->getSourceEntityLink($source_entity);
+              }
+              // If the label is empty it means this usage shouldn't be shown
+              // on the UI, just skip this row.
+              if (empty($link)) {
+                continue;
+              }
+              $field_label = isset($field_definitions[$usage_details['field_name']]) ? $field_definitions[$usage_details['field_name']]->getLabel() : $this->t('Unknown');
+              $rows[] = [
+                $link,
+                $entity_types[$source_type]->getLabel(),
+                $usage_details['source_langcode'],
+                $usage_details['source_vid'] ?: '',
+                $field_label,
+                $usage_details['count'],
+              ];
             }
           }
         }
@@ -171,7 +175,7 @@ class ListUsageController extends ControllerBase {
   /**
    * Retrieve a link to the source entity.
    *
-   * @param \Drupal\Core\Entity\ContentEntityInterface $source_entity
+   * @param \Drupal\Core\Entity\EntityInterface $source_entity
    *   The source entity.
    * @param string|null $text
    *   (optional) The link text for the anchor tag as a translated string.
@@ -185,7 +189,7 @@ class ListUsageController extends ControllerBase {
    *   return the link to its parent entity, relying on the fact that paragraphs
    *   have only one single parent and don't have canonical template.
    */
-  protected function getSourceEntityLink(ContentEntityInterface $source_entity, $text = NULL) {
+  protected function getSourceEntityLink(EntityInterface $source_entity, $text = NULL) {
     // Note that $paragraph_entity->label() will return a string of type:
     // "{parent label} > {parent field}", which is actually OK for us.
     $entity_label = $source_entity->access('view label') ? $source_entity->label() : $this->t('- Restricted access -');

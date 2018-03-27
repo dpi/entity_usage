@@ -89,20 +89,24 @@ class EntityUsageSettingsForm extends ConfigFormBase {
   public function buildForm(array $form, FormStateInterface $form_state) {
     $config = $this->config('entity_usage.settings');
     $all_entity_types = $this->entityTypeManager->getDefinitions();
+    $content_entity_types = [];
 
     // Filter the entity types.
-    /** @var \Drupal\Core\Entity\ContentEntityTypeInterface[] $entity_type_options */
+    /** @var \Drupal\Core\Entity\EntityTypeInterface[] $entity_type_options */
     $entity_type_options = [];
     $tabs_options = [];
     foreach ($all_entity_types as $entity_type) {
-      if (!($entity_type instanceof ContentEntityTypeInterface)) {
-        continue;
+      if (($entity_type instanceof ContentEntityTypeInterface)) {
+        $content_entity_types[$entity_type->id()] = $entity_type->getLabel();
       }
       $entity_type_options[$entity_type->id()] = $entity_type->getLabel();
       if ($entity_type->hasLinkTemplate('canonical')) {
         $tabs_options[$entity_type->id()] = $entity_type->getLabel();
       }
     }
+    // Files and users shouldn't be tracked by default.
+    unset($content_entity_types['file']);
+    unset($content_entity_types['user']);
 
     // Tabs configuration.
     $form['local_task_enabled_entity_types'] = [
@@ -122,7 +126,7 @@ class EntityUsageSettingsForm extends ConfigFormBase {
     // Entity types (source).
     $form['track_enabled_source_entity_types'] = [
       '#type' => 'details',
-      '#open' => TRUE,
+      '#open' => FALSE,
       '#title' => $this->t('Enabled source entity types'),
       '#description' => $this->t('Check which entity types should be tracked when source.'),
       '#tree' => TRUE,
@@ -131,14 +135,15 @@ class EntityUsageSettingsForm extends ConfigFormBase {
       '#type' => 'checkboxes',
       '#title' => $this->t('Source entity types'),
       '#options' => $entity_type_options,
-      '#default_value' => $config->get('track_enabled_source_entity_types') ?: array_keys($entity_type_options),
+      // If no custom settings exist, content entities are tracked by default.
+      '#default_value' => $config->get('track_enabled_source_entity_types') ?: array_keys($content_entity_types),
       '#required' => TRUE,
     ];
 
     // Entity types (target).
     $form['track_enabled_target_entity_types'] = [
       '#type' => 'details',
-      '#open' => TRUE,
+      '#open' => FALSE,
       '#title' => $this->t('Enabled target entity types'),
       '#description' => $this->t('Check which entity types should be tracked when target.'),
       '#tree' => TRUE,
@@ -147,7 +152,8 @@ class EntityUsageSettingsForm extends ConfigFormBase {
       '#type' => 'checkboxes',
       '#title' => $this->t('Target entity types'),
       '#options' => $entity_type_options,
-      '#default_value' => $config->get('track_enabled_target_entity_types') ?: array_keys($entity_type_options),
+      // If no custom settings exist, content entities are tracked by default.
+      '#default_value' => $config->get('track_enabled_target_entity_types') ?: array_keys($content_entity_types),
       '#required' => TRUE,
     ];
 

@@ -103,12 +103,17 @@ class EntityUsage implements EntityUsageInterface {
       return;
     }
 
+    // Entities can have string IDs. We support that by using different columns
+    // on each case.
+    $target_id_column = $this->isInt($target_id) ? 'target_id' : 'target_id_string';
+    $source_id_column = $this->isInt($source_id) ? 'source_id' : 'source_id_string';
+
     // If $count is 0, we want to delete the record.
     if ($count <= 0) {
       $this->connection->delete($this->tableName)
-        ->condition('target_id', $target_id)
+        ->condition($target_id_column, $target_id)
         ->condition('target_type', $target_type)
-        ->condition('source_id', $source_id)
+        ->condition($source_id_column, $source_id)
         ->condition('source_type', $source_type)
         ->condition('source_langcode', $source_langcode)
         ->condition('source_vid', $source_vid)
@@ -119,9 +124,9 @@ class EntityUsage implements EntityUsageInterface {
     else {
       $this->connection->merge($this->tableName)
         ->keys([
-          'target_id' => $target_id,
+          $target_id_column => $target_id,
           'target_type' => $target_type,
-          'source_id' => $source_id,
+          $source_id_column => $source_id,
           'source_type' => $source_type,
           'source_langcode' => $source_langcode,
           'source_vid' => $source_vid ?: 0,
@@ -177,8 +182,12 @@ class EntityUsage implements EntityUsageInterface {
    * {@inheritdoc}
    */
   public function deleteBySourceEntity($source_id, $source_type, $source_langcode = NULL, $source_vid = NULL) {
+    // Entities can have string IDs. We support that by using different columns
+    // on each case.
+    $source_id_column = $this->isInt($source_id) ? 'source_id' : 'source_id_string';
+
     $query = $this->connection->delete($this->tableName)
-      ->condition('source_id', $source_id)
+      ->condition($source_id_column, $source_id)
       ->condition('source_type', $source_type);
     if ($source_langcode) {
       $query->condition('source_langcode', $source_langcode);
@@ -196,8 +205,12 @@ class EntityUsage implements EntityUsageInterface {
    * {@inheritdoc}
    */
   public function deleteByTargetEntity($target_id, $target_type) {
+    // Entities can have string IDs. We support that by using different columns
+    // on each case.
+    $target_id_column = $this->isInt($target_id) ? 'target_id' : 'target_id_string';
+
     $query = $this->connection->delete($this->tableName)
-      ->condition('target_id', $target_id)
+      ->condition($target_id_column, $target_id)
       ->condition('target_type', $target_type);
     $query->execute();
 
@@ -209,9 +222,13 @@ class EntityUsage implements EntityUsageInterface {
    * {@inheritdoc}
    */
   public function listSources(EntityInterface $target_entity) {
+    // Entities can have string IDs. We support that by using different columns
+    // on each case.
+    $target_id_column = $this->isInt($target_entity->id()) ? 'target_id' : 'target_id_string';
     $result = $this->connection->select($this->tableName, 'e')
       ->fields('e', [
         'source_id',
+        'source_id_string',
         'source_type',
         'source_langcode',
         'source_vid',
@@ -219,7 +236,7 @@ class EntityUsage implements EntityUsageInterface {
         'field_name',
         'count',
       ])
-      ->condition('target_id', $target_entity->id())
+      ->condition($target_id_column, $target_entity->id())
       ->condition('target_type', $target_entity->getEntityTypeId())
       ->condition('count', 0, '>')
       ->orderBy('source_type')
@@ -230,7 +247,8 @@ class EntityUsage implements EntityUsageInterface {
 
     $references = [];
     foreach ($result as $usage) {
-      $references[$usage->source_type][$usage->source_id][] = [
+      $source_id_value = !empty($usage->source_id) ? $usage->source_id : $usage->source_id_string;
+      $references[$usage->source_type][(string) $source_id_value][] = [
         'source_langcode' => $usage->source_langcode,
         'source_vid' => $usage->source_vid,
         'method' => $usage->method,
@@ -246,15 +264,19 @@ class EntityUsage implements EntityUsageInterface {
    * {@inheritdoc}
    */
   public function listTargets(EntityInterface $source_entity) {
+    // Entities can have string IDs. We support that by using different columns
+    // on each case.
+    $source_id_column = $this->isInt($source_entity->id()) ? 'source_id' : 'source_id_string';
     $result = $this->connection->select($this->tableName, 'e')
       ->fields('e', [
         'target_id',
+        'target_id_string',
         'target_type',
         'method',
         'field_name',
         'count',
       ])
-      ->condition('source_id', $source_entity->id())
+      ->condition($source_id_column, $source_entity->id())
       ->condition('source_type', $source_entity->getEntityTypeId())
       ->condition('count', 0, '>')
       ->orderBy('target_id', 'DESC')
@@ -262,7 +284,8 @@ class EntityUsage implements EntityUsageInterface {
 
     $references = [];
     foreach ($result as $usage) {
-      $references[$usage->target_type][$usage->target_id][] = [
+      $target_id_value = !empty($usage->target_id) ? $usage->target_id : $usage->target_id_string;
+      $references[$usage->target_type][(string) $target_id_value][] = [
         'method' => $usage->method,
         'field_name' => $usage->field_name,
         'count' => $usage->count,
@@ -270,6 +293,20 @@ class EntityUsage implements EntityUsageInterface {
     }
 
     return $references;
+  }
+
+  /**
+   * Check if a value is an integer, or an integer string.
+   *
+   * @param int|string $value
+   *   The value to check.
+   *
+   * @return bool
+   *   TRUE if the value is a numeric integer or a string containing an integer,
+   *   FALSE otherwise.
+   */
+  protected function isInt($value) {
+    return ((string) (int) $value === (string) $value);
   }
 
 }

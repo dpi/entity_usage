@@ -49,7 +49,7 @@ class RouteSubscriber extends RouteSubscriberBase {
     $configured_types = $this->config->get('entity_usage.settings')->get('local_task_enabled_entity_types') ?: [];
 
     foreach ($this->entityTypeManager->getDefinitions() as $entity_type_id => $entity_type) {
-      if (($entity_type instanceof ContentEntityTypeInterface) && $canonical = $entity_type->getLinkTemplate('canonical')) {
+      if ($canonical = $entity_type->getLinkTemplate('canonical')) {
         if (!in_array($entity_type_id, $configured_types, TRUE)) {
           continue;
         }

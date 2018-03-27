@@ -2,6 +2,7 @@
 
 namespace Drupal\Tests\entity_usage\Kernel;
 
+use Drupal\Core\Entity\RevisionableInterface;
 use Drupal\entity_test\Entity\EntityTest;
 use Drupal\entity_usage\Events\EntityUsageEvent;
 use Drupal\entity_usage\Events\Events;
@@ -38,7 +39,7 @@ class EntityUsageTest extends EntityKernelTestBase {
   /**
    * Some test entities.
    *
-   * @var \Drupal\Core\Entity\ContentEntityInterface[]
+   * @var \Drupal\Core\Entity\EntityInterface[]
    */
   protected $testEntities;
 
@@ -100,10 +101,11 @@ class EntityUsageTest extends EntityKernelTestBase {
    * @covers \Drupal\entity_usage\EntityUsage::listTargets
    */
   public function testlistSources() {
-    /** @var \Drupal\Core\Entity\ContentEntityInterface $target_entity */
+    /** @var \Drupal\Core\Entity\EntityInterface $target_entity */
     $target_entity = $this->testEntities[0];
-    /** @var \Drupal\Core\Entity\ContentEntityInterface $source_entity */
+    /** @var \Drupal\Core\Entity\EntityInterface $source_entity */
     $source_entity = $this->testEntities[1];
+    $source_vid = ($source_entity instanceof RevisionableInterface && $source_entity->getRevisionId()) ? $source_entity->getRevisionId() : 0;
     $field_name = 'body';
     $this->injectedDatabase->insert($this->tableName)
       ->fields([
@@ -112,7 +114,7 @@ class EntityUsageTest extends EntityKernelTestBase {
         'source_id' => $source_entity->id(),
         'source_type' => $source_entity->getEntityTypeId(),
         'source_langcode' => $source_entity->language()->getId(),
-        'source_vid' => $source_entity->getRevisionId() ?: 0,
+        'source_vid' => $source_vid,
         'method' => 'entity_reference',
         'field_name' => $field_name,
         'count' => 1,
@@ -124,7 +126,7 @@ class EntityUsageTest extends EntityKernelTestBase {
     $real_source_list = $entity_usage->listSources($target_entity);
     $expected_source_list = [
       $source_entity->getEntityTypeId() => [
-        $source_entity->id() => [
+        (string) $source_entity->id() => [
           0 => [
             'source_langcode' => $source_entity->language()->getId(),
             'source_vid' => $source_entity->getRevisionId() ?: 0,
@@ -140,7 +142,7 @@ class EntityUsageTest extends EntityKernelTestBase {
     $real_target_list = $entity_usage->listTargets($source_entity);
     $expected_target_list = [
       $target_entity->getEntityTypeId() => [
-        $target_entity->id() => [
+        (string) $target_entity->id() => [
           0 => [
             'method' => 'entity_reference',
             'field_name' => $field_name,
@@ -319,6 +321,7 @@ class EntityUsageTest extends EntityKernelTestBase {
 
     // Create 2 fake registers on the database table, one for each entity.
     foreach ($this->testEntities as $entity) {
+      $source_vid = ($entity instanceof RevisionableInterface && $entity->getRevisionId()) ? $entity->getRevisionId() : 0;
       $this->injectedDatabase->insert($this->tableName)
         ->fields([
           'target_id' => 1,
@@ -326,7 +329,7 @@ class EntityUsageTest extends EntityKernelTestBase {
           'source_id' => $entity->id(),
           'source_type' => $entity_type,
           'source_langcode' => $entity->language()->getId(),
-          'source_vid' => $entity->getRevisionId() ?: 0,
+          'source_vid' => $source_vid,
           'method' => 'entity_reference',
           'field_name' => 'body',
           'count' => 1,
@@ -374,6 +377,7 @@ class EntityUsageTest extends EntityKernelTestBase {
     // Create 2 fake registers on the database table, one for each entity.
     $i = 0;
     foreach ($this->testEntities as $entity) {
+      $source_vid = ($entity instanceof RevisionableInterface && $entity->getRevisionId()) ? $entity->getRevisionId() : 0;
       $this->injectedDatabase->insert($this->tableName)
         ->fields([
           'target_id' => 1,
@@ -381,7 +385,7 @@ class EntityUsageTest extends EntityKernelTestBase {
           'source_id' => $entity->id(),
           'source_type' => $entity_type,
           'source_langcode' => $entity->language()->getId(),
-          'source_vid' => $entity->getRevisionId() ?: 0,
+          'source_vid' => $source_vid,
           'method' => 'entity_reference',
           'field_name' => 'body' . $i++,
           'count' => 1,
@@ -412,13 +416,16 @@ class EntityUsageTest extends EntityKernelTestBase {
       ->condition('e.source_type', $entity_type)
       ->execute()
       ->fetchAll();
+    $source_vid = ($this->testEntities[0] instanceof RevisionableInterface && $this->testEntities[0]->getRevisionId()) ? $this->testEntities[0]->getRevisionId() : 0;
     $expected_result = [
-      'target_id' => 1,
+      'target_id' => '1',
+      'target_id_string' => NULL,
       'target_type' => 'foo',
-      'source_id' => $this->testEntities[0]->id(),
+      'source_id' => (string) $this->testEntities[0]->id(),
+      'source_id_string' => NULL,
       'source_type' => $entity_type,
       'source_langcode' => $this->testEntities[0]->language()->getId(),
-      'source_vid' => $this->testEntities[0]->getRevisionId() ?: 0,
+      'source_vid' => $source_vid,
       'method' => 'entity_reference',
       'field_name' => 'body0',
       'count' => 1,
@@ -439,6 +446,7 @@ class EntityUsageTest extends EntityKernelTestBase {
     $i = 0;
     foreach ($this->testEntities as $entity) {
       $i++;
+      $source_vid = ($entity instanceof RevisionableInterface && $entity->getRevisionId()) ? $entity->getRevisionId() : 0;
       $this->injectedDatabase->insert($this->tableName)
         ->fields([
           'target_id' => $i,
@@ -446,7 +454,7 @@ class EntityUsageTest extends EntityKernelTestBase {
           'source_id' => $entity->id(),
           'source_type' => $entity->getEntityTypeId(),
           'source_langcode' => $entity->language()->getId(),
-          'source_vid' => $entity->getRevisionId() ?: 0,
+          'source_vid' => $source_vid,
           'method' => 'entity_reference',
           'field_name' => 'body',
           'count' => 1,

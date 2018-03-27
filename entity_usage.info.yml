@@ -9,3 +9,4 @@ test_dependencies:
   - entity_reference_revisions:entity_reference_revisions
   - paragraphs:paragraphs
   - webform:webform
+  - block_field:block_field

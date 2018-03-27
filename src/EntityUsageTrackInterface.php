@@ -3,7 +3,7 @@
 namespace Drupal\entity_usage;
 
 use Drupal\Component\Plugin\PluginInspectionInterface;
-use Drupal\Core\Entity\ContentEntityInterface;
+use Drupal\Core\Entity\EntityInterface;
 
 /**
  * Defines the interface for entity_usage track methods.
@@ -44,23 +44,23 @@ interface EntityUsageTrackInterface extends PluginInspectionInterface {
   /**
    * Track usage updates on the creation of entities.
    *
-   * @param \Drupal\Core\Entity\ContentEntityInterface $source_entity
+   * @param \Drupal\Core\Entity\EntityInterface $source_entity
    *   The source entity.
    */
-  public function trackOnEntityCreation(ContentEntityInterface $source_entity);
+  public function trackOnEntityCreation(EntityInterface $source_entity);
 
   /**
    * Track usage updates on the edition of entities.
    *
-   * @param \Drupal\Core\Entity\ContentEntityInterface $source_entity
+   * @param \Drupal\Core\Entity\EntityInterface $source_entity
    *   The source entity.
    */
-  public function trackOnEntityUpdate(ContentEntityInterface $source_entity);
+  public function trackOnEntityUpdate(EntityInterface $source_entity);
 
   /**
    * Retrieve fields of the given types on an entity.
    *
-   * @param \Drupal\Core\Entity\ContentEntityInterface $source_entity
+   * @param \Drupal\Core\Entity\EntityInterface $source_entity
    *   The source entity object.
    * @param string[] $field_types
    *   A list of field types.
@@ -68,6 +68,6 @@ interface EntityUsageTrackInterface extends PluginInspectionInterface {
    * @return \Drupal\Core\Field\FieldDefinitionInterface[]
    *   An array of fields that could reference to other content entities.
    */
-  public function getReferencingFields(ContentEntityInterface $source_entity, array $field_types);
+  public function getReferencingFields(EntityInterface $source_entity, array $field_types);
 
 }

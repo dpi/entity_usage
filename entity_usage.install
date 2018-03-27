@@ -17,6 +17,13 @@ function entity_usage_schema() {
         'type' => 'int',
         'unsigned' => TRUE,
         'not null' => TRUE,
+        'default' => 0,
+      ],
+      'target_id_string' => [
+        'description' => 'The target ID, when the entity uses string IDs.',
+        'type' => 'varchar_ascii',
+        'length' => 128,
+        'not null' => FALSE,
       ],
       'target_type' => [
         'description' => 'The target entity type.',
@@ -27,10 +34,16 @@ function entity_usage_schema() {
       ],
       'source_id' => [
         'description' => 'The source entity ID.',
-        'type' => 'varchar_ascii',
-        'length' => 64,
+        'type' => 'int',
+        'unsigned' => TRUE,
         'not null' => TRUE,
         'default' => 0,
+      ],
+      'source_id_string' => [
+        'description' => 'The source ID, when the entity uses string IDs.',
+        'type' => 'varchar_ascii',
+        'length' => 128,
+        'not null' => FALSE,
       ],
       'source_type' => [
         'description' => 'The source entity type.',
@@ -75,10 +88,19 @@ function entity_usage_schema() {
         'default' => 0,
       ],
     ],
-    'primary key' => ['target_id', 'target_type', 'source_id', 'source_type', 'source_langcode', 'source_vid', 'method', 'field_name'],
+    'primary key' => [
+      'target_id',
+      'target_type',
+      'source_id',
+      'source_type',
+      'source_langcode',
+      'source_vid',
+      'method',
+      'field_name',
+    ],
     'indexes' => [
       'target_entity' => ['target_type', 'target_id'],
-      'target_entity_count' => ['target_id', 'target_type', 'count'],
+      'target_entity_string' => ['target_type', 'target_id_string'],
     ],
   ];
   return $schema;
@@ -116,9 +138,19 @@ function entity_usage_update_8202(&$sandbox) {
 
     $to_track = \Drupal::config('entity_usage.settings')->get('track_enabled_source_entity_types');
     foreach (\Drupal::entityTypeManager()->getDefinitions() as $entity_type_id => $entity_type) {
-      // Only look for content entities that are marked for tracking on the
-      // settings form.
-      if ($entity_type->entityClassImplements('\Drupal\Core\Entity\ContentEntityInterface') && (!is_array($to_track) || in_array($entity_type_id, $to_track, TRUE))) {
+      // Only look for entities enabled for tracking on the settings form.
+      $track_this_entity_type = FALSE;
+      if (!is_array($to_track) && ($entity_type->entityClassImplements('\Drupal\Core\Entity\ContentEntityInterface'))) {
+        // When no settings are defined, track all content entities by default,
+        // except for Files and Users.
+        if (!in_array($entity_type_id, ['file', 'user'])) {
+          $track_this_entity_type = TRUE;
+        }
+      }
+      elseif (is_array($to_track) && in_array($entity_type_id, $to_track, TRUE)) {
+        $track_this_entity_type = TRUE;
+      }
+      if ($track_this_entity_type) {
         // Delete current usage statistics for these entities.
         \Drupal::service('entity_usage.usage')->bulkDeleteSources($entity_type_id);
         // Add all existing ids to be tracked again.
@@ -148,19 +180,20 @@ function entity_usage_update_8202(&$sandbox) {
     $entity_id = $sandbox['entities'][$i]['entity_id'];
     if ($entity_type && $entity_id) {
       $entity_storage = \Drupal::entityTypeManager()->getStorage($entity_type);
-      /** @var \Drupal\Core\Entity\ContentEntityInterface $entity */
+      /** @var \Drupal\Core\Entity\EntityInterface $entity */
       $entity = $entity_storage->load($entity_id);
       if ($entity->getEntityType()->isRevisionable()) {
-        // Track all revisions and translations of the source entity. Sources are
-        // tracked as if they were new entities.
-        $result = $entity_storage->getQuery()->allRevisions()
+        // Track all revisions and translations of the source entity. Sources
+        // are tracked as if they were new entities.
+        $result = $entity_storage->getQuery()
+          ->allRevisions()
           ->condition($entity->getEntityType()->getKey('id'), $entity->id())
           ->sort($entity->getEntityType()->getKey('revision'), 'DESC')
           ->execute();
         $revision_ids = array_keys($result);
 
         foreach ($revision_ids as $revision_id) {
-          /** @var \Drupal\Core\Entity\ContentEntityInterface $entity_revision */
+          /** @var \Drupal\Core\Entity\EntityInterface $entity_revision */
           if (!$entity_revision = $entity_storage->loadRevision($revision_id)) {
             continue;
           }

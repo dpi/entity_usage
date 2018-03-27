@@ -14,13 +14,6 @@ use Drupal\node\Entity\Node;
 class ViewsTest extends EntityUsageJavascriptTestBase {
 
   /**
-   * {@inheritdoc}
-   */
-  public function setUp() {
-    parent::setUp();
-  }
-
-  /**
    * Tests the views integration.
    */
   public function testViewsIntegration() {

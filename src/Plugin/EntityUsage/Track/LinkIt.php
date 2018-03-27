@@ -9,8 +9,8 @@ use Drupal\Component\Utility\Html;
  *
  * @EntityUsageTrack(
  *   id = "linkit",
- *   label = @Translation("Entities embedded with LinkIt"),
- *   description = @Translation("Tracks usage of entities related when embedded with the LinkIt module."),
+ *   label = @Translation("LinkIt"),
+ *   description = @Translation("Tracks relationships created with 'LinkIt' in formatted text or link fields."),
  * )
  */
 class LinkIt extends TextFieldEmbedBase {

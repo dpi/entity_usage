@@ -31,18 +31,21 @@ class ConfigurationFormTest extends EntityUsageJavascriptTestBase {
     $assert_session = $this->assertSession();
 
     $all_entity_types = \Drupal::entityTypeManager()->getDefinitions();
-    /** @var \Drupal\Core\Entity\ContentEntityTypeInterface[] $entity_types */
+    $content_entity_types = [];
+    /** @var \Drupal\Core\Entity\EntityTypeInterface[] $entity_types */
     $entity_types = [];
     $tabs = [];
     foreach ($all_entity_types as $entity_type) {
-      if (!($entity_type instanceof ContentEntityTypeInterface)) {
-        continue;
+      if (($entity_type instanceof ContentEntityTypeInterface)) {
+        $content_entity_types[$entity_type->id()] = $entity_type->getLabel();
       }
       $entity_types[$entity_type->id()] = $entity_type->getLabel();
       if ($entity_type->hasLinkTemplate('canonical')) {
         $tabs[$entity_type->id()] = $entity_type->getLabel();
       }
     }
+    unset($content_entity_types['file']);
+    unset($content_entity_types['user']);
 
     // Check the form is using the expected permission-based access.
     $this->drupalGet('/admin/config/entity-usage/settings');
@@ -100,8 +103,13 @@ class ConfigurationFormTest extends EntityUsageJavascriptTestBase {
     foreach ($entity_types as $entity_type_id => $entity_type) {
       $field_name = "track_enabled_source_entity_types[entity_types][$entity_type_id]";
       $assert_session->fieldExists($field_name);
-      // By default all entity types are tracked.
-      $assert_session->checkboxChecked($field_name);
+      // By default all content entity types are tracked.
+      if (in_array($entity_type_id, array_keys($content_entity_types))) {
+        $assert_session->checkboxChecked($field_name);
+      }
+      else {
+        $assert_session->checkboxNotChecked($field_name);
+      }
     }
     // @todo Finish me testing the actual functionality.
 
@@ -113,8 +121,13 @@ class ConfigurationFormTest extends EntityUsageJavascriptTestBase {
     foreach ($entity_types as $entity_type_id => $entity_type) {
       $field_name = "track_enabled_target_entity_types[entity_types][$entity_type_id]";
       $assert_session->fieldExists($field_name);
-      // By default all entity types are tracked.
-      $assert_session->checkboxChecked($field_name);
+      // By default all content entity types are tracked.
+      if (in_array($entity_type_id, array_keys($content_entity_types))) {
+        $assert_session->checkboxChecked($field_name);
+      }
+      else {
+        $assert_session->checkboxNotChecked($field_name);
+      }
     }
     // @todo Finish me testing the actual functionality.
 

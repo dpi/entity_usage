@@ -10,5 +10,12 @@
     "issues": "http://drupal.org/project/issues/entity_usage",
     "source": "http://cgit.drupalcode.org/entity_usage"
   },
-  "require": { }
+  "require": { },
+  "require-dev": {
+    "drupal/entity_embed": "~1.0",
+    "drupal/entity_reference_revisions": "~1.0",
+    "drupal/paragraphs": "~1.0",
+    "drupal/webform": "~5.0",
+    "drupal/block_field": "~1.0"
+  }
 }

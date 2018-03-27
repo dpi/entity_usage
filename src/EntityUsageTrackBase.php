@@ -3,8 +3,8 @@
 namespace Drupal\entity_usage;
 
 use Drupal\Core\Config\ConfigFactoryInterface;
-use Drupal\Core\Entity\ContentEntityInterface;
 use Drupal\Core\Entity\EntityFieldManagerInterface;
+use Drupal\Core\Entity\EntityInterface;
 use Drupal\Core\Plugin\ContainerFactoryPluginInterface;
 use Drupal\Core\Plugin\PluginBase;
 use Symfony\Component\DependencyInjection\ContainerInterface;
@@ -111,21 +111,21 @@ abstract class EntityUsageTrackBase extends PluginBase implements EntityUsageTra
   /**
    * {@inheritdoc}
    */
-  public function trackOnEntityCreation(ContentEntityInterface $source_entity) {
+  public function trackOnEntityCreation(EntityInterface $source_entity) {
 
   }
 
   /**
    * {@inheritdoc}
    */
-  public function trackOnEntityUpdate(ContentEntityInterface $source_entity) {
+  public function trackOnEntityUpdate(EntityInterface $source_entity) {
 
   }
 
   /**
    * {@inheritdoc}
    */
-  public function getReferencingFields(ContentEntityInterface $source_entity, array $field_types) {
+  public function getReferencingFields(EntityInterface $source_entity, array $field_types) {
     $source_entity_type_id = $source_entity->getEntityTypeId();
 
     $all_fields_on_bundle = $this->entityFieldManager->getFieldDefinitions($source_entity_type_id, $source_entity->bundle());

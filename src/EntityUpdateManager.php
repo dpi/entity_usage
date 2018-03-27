@@ -3,8 +3,8 @@
 namespace Drupal\entity_usage;
 
 use Drupal\Core\Config\ConfigFactoryInterface;
-use Drupal\Core\Entity\ContentEntityInterface;
 use Drupal\Core\Entity\EntityInterface;
+use Drupal\Core\Entity\TranslatableInterface;
 
 /**
  * Class EntityUpdateManager.
@@ -54,24 +54,32 @@ class EntityUpdateManager {
   /**
    * Track updates on creation of potential source entities.
    *
-   * @param \Drupal\Core\Entity\ContentEntityInterface $entity
+   * @param \Drupal\Core\Entity\EntityInterface $entity
    *   The entity we are dealing with.
    */
-  public function trackUpdateOnCreation(ContentEntityInterface $entity) {
-    if (!$this->allowEntityTracking($entity)) {
+  public function trackUpdateOnCreation(EntityInterface $entity) {
+    if (!$this->allowSourceEntityTracking($entity)) {
       return;
     }
 
     // Call all plugins that want to track entity usages. We need to call this
     // for all translations as well since Drupal stores new revisions for all
     // translations by default when saving an entity.
-    foreach ($entity->getTranslationLanguages() as $translation_language) {
-      if ($entity->hasTranslation($translation_language->getId())) {
-        /** @var \Drupal\Core\Entity\ContentEntityInterface $translation */
-        $translation = $entity->getTranslation($translation_language->getId());
-        foreach ($this->getEnabledPlugins() as $plugin) {
-          $plugin->trackOnEntityCreation($translation);
+    if ($entity instanceof TranslatableInterface) {
+      foreach ($entity->getTranslationLanguages() as $translation_language) {
+        if ($entity->hasTranslation($translation_language->getId())) {
+          /** @var \Drupal\Core\Entity\EntityInterface $translation */
+          $translation = $entity->getTranslation($translation_language->getId());
+          foreach ($this->getEnabledPlugins() as $plugin) {
+            $plugin->trackOnEntityCreation($translation);
+          }
         }
+      }
+    }
+    else {
+      // Not translatable, just call the plugins with the entity itself.
+      foreach ($this->getEnabledPlugins() as $plugin) {
+        $plugin->trackOnEntityCreation($entity);
       }
     }
   }
@@ -79,32 +87,41 @@ class EntityUpdateManager {
   /**
    * Track updates on edit / update of potential source entities.
    *
-   * @param \Drupal\Core\Entity\ContentEntityInterface $entity
+   * @param \Drupal\Core\Entity\EntityInterface $entity
    *   The entity we are dealing with.
    */
-  public function trackUpdateOnEdition(ContentEntityInterface $entity) {
-    if (!$this->allowEntityTracking($entity)) {
+  public function trackUpdateOnEdition(EntityInterface $entity) {
+    if (!$this->allowSourceEntityTracking($entity)) {
       return;
     }
 
     // Call all plugins that want to track entity usages. We need to call this
     // for all translations as well since Drupal stores new revisions for all
     // translations by default when saving an entity.
-    foreach ($entity->getTranslationLanguages() as $translation_language) {
-      if ($entity->hasTranslation($translation_language->getId())) {
-        /** @var \Drupal\Core\Entity\ContentEntityInterface $translation */
-        $translation = $entity->getTranslation($translation_language->getId());
-        foreach ($this->getEnabledPlugins() as $plugin) {
-          $plugin->trackOnEntityUpdate($translation);
+    if ($entity instanceof TranslatableInterface) {
+      foreach ($entity->getTranslationLanguages() as $translation_language) {
+        if ($entity->hasTranslation($translation_language->getId())) {
+          /** @var \Drupal\Core\Entity\ContentEntityInterface $translation */
+          $translation = $entity->getTranslation($translation_language->getId());
+          foreach ($this->getEnabledPlugins() as $plugin) {
+            $plugin->trackOnEntityUpdate($translation);
+          }
         }
       }
     }
+    else {
+      // Not translatable, just call the plugins with the entity itself.
+      foreach ($this->getEnabledPlugins() as $plugin) {
+        $plugin->trackOnEntityUpdate($entity);
+      }
+    }
+
   }
 
   /**
    * Track updates on deletion of entities.
    *
-   * @param \Drupal\Core\Entity\ContentEntityInterface $entity
+   * @param \Drupal\Core\Entity\EntityInterface $entity
    *   The entity we are dealing with.
    * @param string $type
    *   What type of deletion is being performed:
@@ -115,11 +132,7 @@ class EntityUpdateManager {
    *
    * @throws \InvalidArgumentException
    */
-  public function trackUpdateOnDeletion(ContentEntityInterface $entity, $type = 'default') {
-    if (!($entity instanceof ContentEntityInterface)) {
-      return;
-    }
-
+  public function trackUpdateOnDeletion(EntityInterface $entity, $type = 'default') {
     // When an entity is being deleted the logic is much simpler and we don't
     // even need to call the plugins. Just delete the records that affect this
     // entity both as target and source.
@@ -144,7 +157,7 @@ class EntityUpdateManager {
   }
 
   /**
-   * Check if an entity is allowed to be tracked.
+   * Check if an entity is allowed to be tracked as source.
    *
    * @param \Drupal\Core\Entity\EntityInterface $entity
    *   The entity object.
@@ -152,18 +165,18 @@ class EntityUpdateManager {
    * @return bool
    *   Whether the entity can be tracked or not.
    */
-  protected function allowEntityTracking(EntityInterface $entity) {
-    if (!($entity instanceof ContentEntityInterface)) {
-      return FALSE;
-    }
-
-    // Check if entity type is enabled, all entity types are enabled by default.
+  protected function allowSourceEntityTracking(EntityInterface $entity) {
+    $allow_tracking = FALSE;
+    $entity_type = $entity->getEntityType();
     $enabled_source_entity_types = $this->config->get('track_enabled_source_entity_types');
-    if (is_array($enabled_source_entity_types) && !in_array($entity->getEntityTypeId(), $enabled_source_entity_types, TRUE)) {
-      return FALSE;
+    if (!is_array($enabled_source_entity_types) && ($entity_type->entityClassImplements('\Drupal\Core\Entity\ContentEntityInterface'))) {
+      // When no settings are defined, track all content entities by default.
+      $allow_tracking = TRUE;
     }
-
-    return TRUE;
+    elseif (is_array($enabled_source_entity_types) && in_array($entity_type->id(), $enabled_source_entity_types, TRUE)) {
+      $allow_tracking = TRUE;
+    }
+    return $allow_tracking;
   }
 
   /**

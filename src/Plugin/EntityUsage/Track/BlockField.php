@@ -2,6 +2,7 @@
 
 namespace Drupal\entity_usage\Plugin\EntityUsage\Track;
 
+use Drupal\block_field\BlockFieldItemInterface;
 use Drupal\Core\Config\ConfigFactoryInterface;
 use Drupal\Core\Entity\EntityFieldManagerInterface;
 use Drupal\Core\Entity\EntityInterface;
@@ -9,19 +10,18 @@ use Drupal\Core\Entity\EntityTypeManagerInterface;
 use Drupal\Core\Entity\RevisionableInterface;
 use Drupal\entity_usage\EntityUsage;
 use Drupal\entity_usage\EntityUsageTrackBase;
-use Drupal\link\LinkItemInterface;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 
 /**
- * Tracks usage of entities related in Link fields.
+ * Tracks usage of entities related in block_field fields.
  *
  * @EntityUsageTrack(
- *   id = "link",
- *   label = @Translation("Link Fields"),
- *   description = @Translation("Tracks relationships created with 'Link' fields."),
+ *   id = "block_field",
+ *   label = @Translation("Block Field"),
+ *   description = @Translation("Tracks relationships created with 'Block Field' fields."),
  * )
  */
-class Link extends EntityUsageTrackBase {
+class BlockField extends EntityUsageTrackBase {
 
   /**
    * Entity field manager service.
@@ -80,8 +80,8 @@ class Link extends EntityUsageTrackBase {
    * {@inheritdoc}
    */
   public function trackOnEntityCreation(EntityInterface $source_entity) {
-    $link_fields = array_keys($this->getReferencingFields($source_entity, ['link']));
-    foreach ($link_fields as $field_name) {
+    $block_fields = array_keys($this->getReferencingFields($source_entity, ['block_field']));
+    foreach ($block_fields as $field_name) {
       if (!$source_entity->{$field_name}->isEmpty()) {
         /** @var \Drupal\link\Plugin\Field\FieldType\LinkItem $field_item */
         foreach ($source_entity->{$field_name} as $field_item) {
@@ -101,8 +101,8 @@ class Link extends EntityUsageTrackBase {
    * {@inheritdoc}
    */
   public function trackOnEntityUpdate(EntityInterface $source_entity) {
-    $link_fields = array_keys($this->getReferencingFields($source_entity, ['link']));
-    foreach ($link_fields as $field_name) {
+    $block_fields = array_keys($this->getReferencingFields($source_entity, ['block_field']));
+    foreach ($block_fields as $field_name) {
       if (($source_entity instanceof RevisionableInterface) &&
         $source_entity->getRevisionId() != $source_entity->original->getRevisionId() &&
         !$source_entity->{$field_name}->isEmpty()) {
@@ -154,33 +154,49 @@ class Link extends EntityUsageTrackBase {
   }
 
   /**
-   * Gets the target entity of a link item.
+   * Gets the target entity of a block field item.
    *
-   * @param \Drupal\link\LinkItemInterface $link
-   *   The LinkItem to get the target entity from.
+   * @param \Drupal\block_field\BlockFieldItemInterface $item
+   *   The Block Field item to get the target entity from.
    *
    * @return string|null
    *   Target Type and ID glued together with a '|' or NULL if no entity linked.
    */
-  protected function getTargetEntity(LinkItemInterface $link) {
-    // Check if the link is referencing an entity.
-    $url = $link->getUrl();
-    if (!$url->isRouted() || !preg_match('/^entity\./', $url->getRouteName())) {
+  protected function getTargetEntity(BlockFieldItemInterface $item) {
+    $block_instance = $item->getBlock();
+    if (!$block_instance) {
       return NULL;
     }
 
-    // Ge the target entity type and ID.
-    $route_parameters = $url->getRouteParameters();
-    $target_type = array_keys($route_parameters)[0];
-    $target_id = $route_parameters[$target_type];
+    $target_type = NULL;
+    $target_id = NULL;
 
-    // Only return a valid result is the target entity exists.
-    if (!$this->entityTypeManager->getStorage($target_type)->load($target_id)) {
-      return NULL;
+    // If there is a view inside this block, track the view entity instead.
+    if ($block_instance->getBaseId() === 'views_block') {
+      list($view_name, $display_id) = explode('-', $block_instance->getDerivativeId(), 2);
+      // @todo worth trying to track the display id as well?
+      // At this point the view is supposed to exist. Only track it if so.
+      if ($this->entityTypeManager->getStorage('view')->load($view_name)) {
+        $target_type = 'view';
+        $target_id = $view_name;
+      }
+    }
+    // @todo other special cases apart from views?
+    else {
+      // @todo DI.
+      $id = $block_instance->getConfiguration()['id'];
+      if ($this->entityTypeManager->getStorage('block_content')->load($id)) {
+        // Doing this here means that an initial save operation of a host entity
+        // will likely not track this block, once it does not exist at this
+        // point. However, it's preferable to miss that and ensure we only track
+        // lodable entities.
+        $target_type = 'block_content';
+        $target_id = $block_instance->getConfiguration()['id'];
+      }
     }
 
     // Glue the target type and ID together for easy comparison.
-    return $target_type . '|' . $target_id;
+    return ($target_type && $target_id) ? $target_type . '|' . $target_id : NULL;
   }
 
 }

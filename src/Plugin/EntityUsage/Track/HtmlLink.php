@@ -18,8 +18,8 @@ use Symfony\Component\DependencyInjection\ContainerInterface;
  *
  * @EntityUsageTrack(
  *   id = "html_link",
- *   label = @Translation("Entities linked with HTML links"),
- *   description = @Translation("Tracks usage of entities referenced from regular HTML Links"),
+ *   label = @Translation("HTML links"),
+ *   description = @Translation("Tracks relationships created with standard links inside formatted text fields."),
  * )
  */
 class HtmlLink extends TextFieldEmbedBase {
