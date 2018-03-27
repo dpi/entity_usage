@@ -6,6 +6,7 @@
  */
 
 use Drupal\Core\Routing\RouteMatchInterface;
+use Drupal\field\FieldStorageConfigInterface;
 use Drupal\Core\Entity\EntityInterface;
 
 /**
@@ -57,4 +58,12 @@ function entity_usage_entity_translation_delete(EntityInterface $translation) {
  */
 function entity_usage_entity_revision_delete(EntityInterface $entity) {
   \Drupal::service('entity_usage.entity_update_manager')->trackUpdateOnDeletion($entity, 'revision');
+}
+
+/**
+ * Implements hook_ENTITY_TYPE_delete().
+ */
+function entity_usage_field_storage_config_delete(FieldStorageConfigInterface $field) {
+  // Delete all usages tracked through this field.
+  \Drupal::service('entity_usage.usage')->deleteByField($field->getTargetEntityTypeId(), $field->getName());
 }
