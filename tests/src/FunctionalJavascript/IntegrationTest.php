@@ -6,16 +6,20 @@ use Drupal\Core\Field\FieldStorageDefinitionInterface;
 use Drupal\field\Entity\FieldConfig;
 use Drupal\field\Entity\FieldStorageConfig;
 use Drupal\link\LinkItemInterface;
-use Drupal\node\Entity\Node;
+use Drupal\Tests\entity_usage\Traits\EntityUsageLastEntityQueryTrait;
 
 /**
- * Basic functional tests for the usage tracking plugins.
+ * Basic functional tests for the usage tracking.
+ *
+ * This will also implicitly test the Entity Reference and Link plugins.
  *
  * @package Drupal\Tests\entity_usage\FunctionalJavascript
  *
  * @group entity_usage
  */
 class IntegrationTest extends EntityUsageJavascriptTestBase {
+
+  use EntityUsageLastEntityQueryTrait;
 
   /**
    * {@inheritdoc}
@@ -28,7 +32,8 @@ class IntegrationTest extends EntityUsageJavascriptTestBase {
    * Tests the tracking of nodes in some simple CRUD operations.
    */
   public function testCrudTracking() {
-    $page = $this->getSession()->getPage();
+    $session = $this->getSession();
+    $page = $session->getPage();
     $assert_session = $this->assertSession();
 
     /** @var \Drupal\entity_usage\EntityUsage $usage_service */
@@ -38,100 +43,218 @@ class IntegrationTest extends EntityUsageJavascriptTestBase {
     $this->drupalGet('/node/add/eu_test_ct');
     $page->fillField('title[0][value]', 'Node 1');
     $page->pressButton('Save');
+    $session->wait(500);
     $assert_session->pageTextContains('eu_test_ct Node 1 has been created.');
     $this->saveHtmlOutput();
-    $node1 = Node::load(1);
+    $node1 = $this->getLastEntityOfType('node', TRUE);
+
+    // Nobody is using this guy for now.
+    $usage = $usage_service->listSources($node1);
+    $this->assertEquals([], $usage);
 
     // Create node 2 referencing node 1 using reference field.
     $this->drupalGet('/node/add/eu_test_ct');
     $page->fillField('title[0][value]', 'Node 2');
-    $page->fillField('field_eu_test_related_nodes[0][target_id]', 'Node 1 (1)');
+    $page->fillField('field_eu_test_related_nodes[0][target_id]', "Node 1 ({$node1->id()})");
     $page->pressButton('Save');
+    $session->wait(500);
     $assert_session->pageTextContains('eu_test_ct Node 2 has been created.');
     $this->saveHtmlOutput();
-    $node2 = Node::load(2);
+    $node2 = $this->getLastEntityOfType('node', TRUE);
     // Check that we correctly registered the relation between N2 and N1.
     $usage = $usage_service->listSources($node1);
-    $this->assertEquals($usage['node'], [
-      $node2->id() => [
-        0 => [
-          'source_langcode' => 'en',
-          'source_vid' => $node2->getRevisionId(),
-          'method' => 'entity_reference',
-          'field_name' => 'field_eu_test_related_nodes',
-          'count' => 1,
+    $expected = [
+      'node' => [
+        $node2->id() => [
+          [
+            'source_langcode' => $node2->language()->getId(),
+            'source_vid' => $node2->getRevisionId(),
+            'method' => 'entity_reference',
+            'field_name' => 'field_eu_test_related_nodes',
+            'count' => 1,
+          ],
         ],
       ],
-    ], 'Correct usage found.');
+    ];
+    $this->assertequals($expected, $usage);
 
-    // Create node 3 referencing node 2 using embedded text.
-    // $this->drupalGet('/node/add/eu_test_ct'); .
-    // $page->fillField('title[0][value]', 'Node 3'); .
-    // @TODO ^ The Ckeditor is creating some trouble to do this in a simple way.
-    // For now let's just avoid all this ckeditor interaction (which is not what
-    // we are really testing) and create a node programatically, which triggers
-    // the tracking as well.
-    $uuid_node2 = $node2->uuid();
-    $embedded_text = '<drupal-entity data-embed-button="node" data-entity-embed-display="entity_reference:entity_reference_label" data-entity-embed-display-settings="{&quot;link&quot;:1}" data-entity-type="node" data-entity-uuid="' . $uuid_node2 . '"></drupal-entity>';
-    $node3 = Node::create([
-      'type' => 'eu_test_ct',
-      'title' => 'Node 3',
-      'field_eu_test_rich_text' => [
-        'value' => $embedded_text,
-        'format' => 'eu_test_text_format',
+    // Create a new entity reference field.
+    $storage = FieldStorageConfig::create([
+      'field_name' => 'field_eu_test_related_nodes2',
+      'entity_type' => 'node',
+      'type' => 'entity_reference',
+      'settings' => [
+        'target_type' => 'node',
       ],
     ]);
-    $node3->save();
-    // Check that we correctly registered the relation between N3 and N2.
-    $usage = $usage_service->listSources($node2);
-    $this->assertEquals($usage['node'], [
-      $node3->id() => [
-        0 => [
-          'source_langcode' => 'en',
-          'source_vid' => $node3->getRevisionId(),
-          'method' => 'entity_embed',
-          'field_name' => 'field_eu_test_rich_text',
-          'count' => 1,
+    $storage->save();
+    FieldConfig::create([
+      'bundle' => 'eu_test_ct',
+      'entity_type' => 'node',
+      'field_name' => 'field_eu_test_related_nodes2',
+      'label' => 'Related Nodes 2',
+      'settings' => [
+        'handler' => 'default:node',
+        'handler_settings' => [
+          'target_bundles' => ['eu_test_ct'],
+          'auto_create' => FALSE,
         ],
       ],
-    ], 'Correct usage found.');
+    ])->save();
+    // Define our widget and formatter for this field.
+    entity_get_form_display('node', 'eu_test_ct', 'default')
+      ->setComponent('field_eu_test_related_nodes2', [
+        'type' => 'entity_reference_autocomplete',
+      ])
+      ->save();
+    entity_get_display('node', 'eu_test_ct', 'default')
+      ->setComponent('field_eu_test_related_nodes2', [
+        'type' => 'entity_reference_label',
+      ])
+      ->save();
 
-    // Create node 4 referencing node 2 using both methods.
-    $node4 = Node::create([
-      'type' => 'eu_test_ct',
-      'title' => 'Node 4',
-      'field_eu_test_related_nodes' => [
-        'target_id' => '2',
+    // Create Node 3 referencing N2 and N1 one in each field.
+    $this->drupalGet('/node/add/eu_test_ct');
+    $page->fillField('title[0][value]', 'Node 3');
+    $page->fillField('field_eu_test_related_nodes[0][target_id]', "Node 1 ({$node1->id()})");
+    $page->fillField('field_eu_test_related_nodes2[0][target_id]', "Node 2 ({$node2->id()})");
+    $page->pressButton('Save');
+    $session->wait(500);
+    $assert_session->pageTextContains('eu_test_ct Node 3 has been created.');
+    $this->saveHtmlOutput();
+    $node3 = $this->getLastEntityOfType('node', TRUE);
+    // Check that both of these relationships are tracked.
+    $usage = $usage_service->listTargets($node3);
+    $expected = [
+      'node' => [
+        $node1->id() => [
+          [
+            'method' => 'entity_reference',
+            'field_name' => 'field_eu_test_related_nodes',
+            'count' => 1,
+          ],
+        ],
+        $node2->id() => [
+          [
+            'method' => 'entity_reference',
+            'field_name' => 'field_eu_test_related_nodes2',
+            'count' => 1,
+          ],
+        ],
       ],
-      'field_eu_test_rich_text' => [
-        'value' => $embedded_text,
-        'format' => 'eu_test_text_format',
+    ];
+    $this->assertequals($expected, $usage);
+    // If we delete the field storage the usage should update accordingly.
+    $storage->delete();
+    $usage = $usage_service->listTargets($node3);
+    $expected = [
+      'node' => [
+        $node1->id() => [
+          [
+            'method' => 'entity_reference',
+            'field_name' => 'field_eu_test_related_nodes',
+            'count' => 1,
+          ],
+        ],
       ],
-    ]);
-    $node4->save();
-    // Check that we registered correctly the relation between N4 and N2.
+    ];
+    $this->assertequals($expected, $usage);
+
+    // Edit Node 3, remove the reference to Node 1, check we update usage.
+    $this->drupalGet("/node/{$node3->id()}/edit");
+    $page->fillField('field_eu_test_related_nodes[0][target_id]', '');
+    $page->pressButton('Save');
+    $session->wait(500);
+    $assert_session->pageTextContains('eu_test_ct Node 3 has been updated');
+    $this->saveHtmlOutput();
+    // Node 3 isn't referencing any content now.
+    $usage = $usage_service->listTargets($node3);
+    $this->assertequals([], $usage);
+    // Node 2 isn't referenced by any content now.
     $usage = $usage_service->listSources($node2);
-    $expected_count = [
+    $this->assertequals([], $usage);
+
+    // Create node 4 referencing N2 and N3 on the same field.
+    $this->drupalGet('/node/add/eu_test_ct');
+    $page->fillField('title[0][value]', 'Node 4');
+    $page->fillField('field_eu_test_related_nodes[0][target_id]', "Node 2 ({$node2->id()})");
+    $add_another_button = $assert_session->elementExists('css', 'input[name="field_eu_test_related_nodes_add_more"]');
+    $add_another_button->press();
+    $new_input = $assert_session->waitForField('field_eu_test_related_nodes[1][target_id]');
+    $this->assertNotNull($new_input);
+    $new_input->setValue("Node 3 ({$node3->id()})");
+    $page->pressButton('Save');
+    $session->wait(500);
+    $assert_session->pageTextContains('eu_test_ct Node 4 has been created.');
+    $this->saveHtmlOutput();
+    $node4 = $this->getLastEntityOfType('node', TRUE);
+    // Check that both of these relationships are tracked.
+    $usage = $usage_service->listTargets($node4);
+    $expected = [
+      'node' => [
+        $node2->id() => [
+          [
+            'method' => 'entity_reference',
+            'field_name' => 'field_eu_test_related_nodes',
+            'count' => 1,
+          ],
+        ],
+        $node3->id() => [
+          [
+            'method' => 'entity_reference',
+            'field_name' => 'field_eu_test_related_nodes',
+            'count' => 1,
+          ],
+        ],
+      ],
+    ];
+    $this->assertequals($expected, $usage);
+
+    // Deleting one of the targets updates the info accordingly.
+    $node2->delete();
+    $usage = $usage_service->listTargets($node4);
+    $expected = [
       'node' => [
         $node3->id() => [
-          0 => [
-            'source_langcode' => 'en',
-            'source_vid' => $node3->getRevisionId(),
-            'method' => 'entity_embed',
-            'field_name' => 'field_eu_test_rich_text',
+          [
+            'method' => 'entity_reference',
+            'field_name' => 'field_eu_test_related_nodes',
             'count' => 1,
           ],
         ],
-        $node4->id() => [
-          0 => [
-            'source_langcode' => 'en',
-            'source_vid' => $node4->getRevisionId(),
-            'method' => 'entity_embed',
-            'field_name' => 'field_eu_test_rich_text',
+      ],
+    ];
+    $this->assertequals($expected, $usage);
+
+    // Adding the same node twice on the same field counts as 1 usage.
+    $this->drupalGet("/node/{$node4->id()}/edit");
+    $page->fillField('field_eu_test_related_nodes[0][target_id]', "Node 3 ({$node3->id()})");
+    $page->fillField('field_eu_test_related_nodes[1][target_id]', "Node 3 ({$node3->id()})");
+    $page->pressButton('Save');
+    $session->wait(500);
+    $assert_session->pageTextContains('eu_test_ct Node 4 has been updated');
+    $this->saveHtmlOutput();
+    // There should be only one usage record from source N4 -> target N3:
+    $usage = $usage_service->listTargets($node4);
+    $expected = [
+      'node' => [
+        $node3->id() => [
+          [
+            'method' => 'entity_reference',
+            'field_name' => 'field_eu_test_related_nodes',
             'count' => 1,
           ],
-          1 => [
-            'source_langcode' => 'en',
+        ],
+      ],
+    ];
+    $this->assertequals($expected, $usage);
+    // There should be only one record the other way around.
+    $usage = $usage_service->listSources($node3);
+    $expected = [
+      'node' => [
+        $node4->id() => [
+          [
+            'source_langcode' => $node4->language()->getId(),
             'source_vid' => $node4->getRevisionId(),
             'method' => 'entity_reference',
             'field_name' => 'field_eu_test_related_nodes',
@@ -140,68 +263,20 @@ class IntegrationTest extends EntityUsageJavascriptTestBase {
         ],
       ],
     ];
-    $this->assertEquals($usage['node'], $expected_count['node'], 'Correct usage found.');
+    $this->assertequals($expected, $usage);
 
-    // Delete node 2 and verify that we clean up usages.
-    $node2->delete();
-    $usage = $usage_service->listSources($node1);
-    $this->assertEquals($usage, [], 'Usage for node1 correctly cleaned up.');
-    $database = \Drupal::database();
-    $count = $database->select('entity_usage', 'e')
-      ->fields('e', ['count'])
-      ->condition('e.target_type', 'node')
-      ->condition('e.target_id', '2')
-      ->execute()
-      ->fetchField();
-    $this->assertSame(FALSE, $count, 'Usage for node2 correctly cleaned up.');
-
-    // Create node 5 referencing node 4 using a linkit markup.
-    $embedded_text = '<p>foo <a data-entity-substitution="canonical" data-entity-type="node" data-entity-uuid="' . $node4->uuid() . '">linked text</a> bar</p>';
-    $node5 = Node::create([
-      'type' => 'eu_test_ct',
-      'title' => 'Node 5',
-      'field_eu_test_rich_text' => [
-        'value' => $embedded_text,
-        'format' => 'eu_test_text_format',
-      ],
-    ]);
-    $node5->save();
-    // Check that we registered correctly the relation between N5 and N2.
-    $usage = $usage_service->listSources($node4);
-    $this->assertEquals($usage['node'], [
-      $node5->id() => [
-        0 => [
-          'source_langcode' => 'en',
-          'source_vid' => $node5->getRevisionId(),
-          'method' => 'linkit',
-          'field_name' => 'field_eu_test_rich_text',
-          'count' => 1,
-        ],
-      ],
-    ], 'Correct usage found.');
-
-    // Create node 6 referencing a non existing UUID using a linkit markup to
-    // test removed entities.
-    $embedded_text = '<p>foo <a data-entity-substitution="canonical" data-entity-type="node" data-entity-uuid="c7cae398-3c36-47d4-8ef0-a17902e76ff4">I do not exists</a> bar</p>';
-    $node6 = Node::create([
-      'type' => 'eu_test_ct',
-      'title' => 'Node 6',
-      'field_eu_test_rich_text' => [
-        'value' => $embedded_text,
-        'format' => 'eu_test_text_format',
-      ],
-    ]);
-    $node6->save();
-    // Check that the usage for this source is empty.
-    $usage = $usage_service->listTargets($node6);
-    $this->assertEquals([], $usage, 'Correct usage found.');
+    // Deleting the source node should make the usage disappear.
+    $node4->delete();
+    $usage = $usage_service->listSources($node3);
+    $this->assertequals([], $usage);
   }
 
   /**
    * Tests the tracking of nodes in link fields.
    */
   public function testLinkTracking() {
-    $page = $this->getSession()->getPage();
+    $session = $this->getSession();
+    $page = $session->getPage();
     $assert_session = $this->assertSession();
 
     /** @var \Drupal\entity_usage\EntityUsage $usage_service */
@@ -225,7 +300,6 @@ class IntegrationTest extends EntityUsageJavascriptTestBase {
       ],
     ]);
     $field->save();
-
     entity_get_form_display('node', 'eu_test_ct', 'default')
       ->setComponent('field_link1', ['type' => 'link_default'])
       ->save();
@@ -238,79 +312,74 @@ class IntegrationTest extends EntityUsageJavascriptTestBase {
     $this->drupalGet('/node/add/eu_test_ct');
     $page->fillField('title[0][value]', 'Node 1');
     $page->pressButton('Save');
-    $this->getSession()->wait(500);
+    $session->wait(500);
     $assert_session->pageTextContains('eu_test_ct Node 1 has been created.');
     $this->saveHtmlOutput();
-    $node1_id = \Drupal::entityQuery('node')
-      ->sort('created', 'DESC')
-      ->execute();
-    $node1_id = reset($node1_id);
-    $this->assertNotNull($node1_id);
-    $node1 = \Drupal::entityTypeManager()->getStorage('node')
-      ->loadUnchanged($node1_id);
+    /** @var \Drupal\node\NodeInterface $node1 */
+    $node1 = $this->getLastEntityOfType('node', TRUE);
 
     // Create Node 2, referencing Node 1.
     $this->drupalGet('/node/add/eu_test_ct');
     $page->fillField('title[0][value]', 'Node 2');
-    $page->fillField('field_link1[0][uri]', "Node 1 ($node1_id)");
+    $page->fillField('field_link1[0][uri]', "Node 1 ({$node1->id()})");
     $page->fillField('field_link1[0][title]', "Linked text");
     $page->pressButton('Save');
-    $this->getSession()->wait(500);
+    $session->wait(500);
     $assert_session->pageTextContains('eu_test_ct Node 2 has been created.');
     $this->saveHtmlOutput();
-    $node2_id = \Drupal::entityQuery('node')
-      ->sort('created', 'DESC')
-      ->execute();
-    $node2_id = reset($node2_id);
-    $this->assertNotNull($node2_id);
-    /** @var \Drupal\node\NodeInterface $node2 */
-    $node2 = \Drupal::entityTypeManager()->getStorage('node')
-      ->loadUnchanged($node2_id);
+    $node2 = $this->getLastEntityOfType('node', TRUE);
     // Check that the usage of Node 1 points to Node 2.
     $usage = $usage_service->listSources($node1);
-    $this->assertEquals([
-      $node2_id => [
-        0 => [
-          'source_langcode' => 'en',
-          'source_vid' => $node2->getRevisionId(),
-          'method' => 'link',
-          'field_name' => 'field_link1',
-          'count' => 1,
+    $expected = [
+      'node' => [
+        $node2->id() => [
+          0 => [
+            'source_langcode' => 'en',
+            'source_vid' => $node2->getRevisionId(),
+            'method' => 'link',
+            'field_name' => 'field_link1',
+            'count' => 1,
+          ],
         ],
       ],
-    ], $usage['node']);
+    ];
+    $this->assertEquals($expected, $usage);
 
     // Edit Node 2, remove reference.
-    $this->drupalGet("/node/{$node2_id}/edit");
+    $this->drupalGet("/node/{$node2->id()}/edit");
     $page->fillField('field_link1[0][uri]', '');
     $page->fillField('field_link1[0][title]', '');
     $page->pressButton('Save');
+    $session->wait(500);
     $assert_session->pageTextContains('eu_test_ct Node 2 has been updated.');
     $this->saveHtmlOutput();
     // Verify the usage was released.
     $usage = $usage_service->listSources($node1);
     $this->assertEquals([], $usage);
 
-    // Reference Node 1 again, and then delete the source node.
-    $this->drupalGet("/node/{$node2_id}/edit");
-    $page->fillField('field_link1[0][uri]', "Node 1 ($node1_id)");
+    // Reference Node 1 again, now using the node path instead of label.
+    $this->drupalGet("/node/{$node2->id()}/edit");
+    $page->fillField('field_link1[0][uri]', "entity:node/{$node1->id()}");
     $page->fillField('field_link1[0][title]', "Linked text");
     $page->pressButton('Save');
     $assert_session->pageTextContains('eu_test_ct Node 2 has been updated.');
     $this->saveHtmlOutput();
     // Usage now should be there.
     $usage = $usage_service->listSources($node1);
-    $this->assertEquals([
-      $node2_id => [
-        0 => [
-          'source_langcode' => 'en',
-          'source_vid' => $node2->getRevisionId(),
-          'method' => 'link',
-          'field_name' => 'field_link1',
-          'count' => 1,
+    $expected = [
+      'node' => [
+        $node2->id() => [
+          0 => [
+            'source_langcode' => 'en',
+            'source_vid' => $node2->getRevisionId(),
+            'method' => 'link',
+            'field_name' => 'field_link1',
+            'count' => 1,
+          ],
         ],
       ],
-    ], $usage['node']);
+    ];
+    $this->assertEquals($expected, $usage);
     // Delete the source and usage should be released.
     $node2->delete();
     $usage = $usage_service->listSources($node1);

@@ -71,7 +71,6 @@ class ConfigurationFormTest extends EntityUsageJavascriptTestBase {
         ],
       ],
     ])->save();
-
     // Define our widget and formatter for this field.
     entity_get_form_display('node', 'eu_test_ct', 'default')
       ->setComponent('field_eu_test_related_media', [
