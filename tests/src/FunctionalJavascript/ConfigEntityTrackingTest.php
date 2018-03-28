@@ -22,6 +22,7 @@ class ConfigEntityTrackingTest extends EntityUsageJavascriptTestBase {
    * {@inheritdoc}
    */
   protected static $modules = [
+    'views',
     'webform',
     'block',
     'block_field',
@@ -149,7 +150,7 @@ class ConfigEntityTrackingTest extends EntityUsageJavascriptTestBase {
    */
   public function testBlockFieldTracking() {
 
-    // Create an entity reference field pointing to a webform.
+    // Create block field on the node type.
     $storage = FieldStorageConfig::create([
       'field_name' => 'field_eu_test_related_views',
       'entity_type' => 'node',

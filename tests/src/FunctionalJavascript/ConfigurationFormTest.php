@@ -3,7 +3,11 @@
 namespace Drupal\Tests\entity_usage\FunctionalJavascript;
 
 use Drupal\Core\Entity\ContentEntityTypeInterface;
+use Drupal\field\Entity\FieldConfig;
+use Drupal\field\Entity\FieldStorageConfig;
+use Drupal\media\Entity\Media;
 use Drupal\node\Entity\Node;
+use Drupal\Tests\media\Functional\MediaFunctionalTestCreateMediaTypeTrait;
 
 /**
  * Tests the configuration form.
@@ -14,11 +18,17 @@ use Drupal\node\Entity\Node;
  */
 class ConfigurationFormTest extends EntityUsageJavascriptTestBase {
 
+  use MediaFunctionalTestCreateMediaTypeTrait;
+
   /**
    * {@inheritdoc}
    */
   protected static $modules = [
     'block',
+    'file',
+    'image',
+    'media',
+    'media_test_source',
   ];
 
   /**
@@ -29,6 +39,50 @@ class ConfigurationFormTest extends EntityUsageJavascriptTestBase {
     $session = $this->getSession();
     $page = $session->getPage();
     $assert_session = $this->assertSession();
+
+    // Create a media type and media asset.
+    $media_type = $this->createMediaType();
+    $media1 = Media::create([
+      'bundle' => $media_type->id(),
+      'name' => 'Target media 1',
+    ]);
+    $media1->save();
+    // Create an entity reference field pointing to a media entity. We will use
+    // this to test different entity types tracking settings.
+    $storage = FieldStorageConfig::create([
+      'field_name' => 'field_eu_test_related_media',
+      'entity_type' => 'node',
+      'type' => 'entity_reference',
+      'settings' => [
+        'target_type' => 'media',
+      ],
+    ]);
+    $storage->save();
+    FieldConfig::create([
+      'bundle' => 'eu_test_ct',
+      'entity_type' => 'node',
+      'field_name' => 'field_eu_test_related_media',
+      'label' => 'Related Media',
+      'settings' => [
+        'handler' => 'default:media',
+        'handler_settings' => [
+          'target_bundles' => [$media_type->id()],
+          'auto_create' => FALSE,
+        ],
+      ],
+    ])->save();
+
+    // Define our widget and formatter for this field.
+    entity_get_form_display('node', 'eu_test_ct', 'default')
+      ->setComponent('field_eu_test_related_media', [
+        'type' => 'entity_reference_autocomplete',
+      ])
+      ->save();
+    entity_get_display('node', 'eu_test_ct', 'default')
+      ->setComponent('field_eu_test_related_media', [
+        'type' => 'entity_reference_label',
+      ])
+      ->save();
 
     $all_entity_types = \Drupal::entityTypeManager()->getDefinitions();
     $content_entity_types = [];
@@ -61,6 +115,14 @@ class ConfigurationFormTest extends EntityUsageJavascriptTestBase {
     $assert_session->titleEquals('Entity Usage Settings | Drupal');
 
     // Test the local tasks configuration.
+    $node = Node::create([
+      'type' => 'eu_test_ct',
+      'title' => 'Test node',
+    ]);
+    $node->save();
+    $this->drupalGet("/node/{$node->id()}");
+    $assert_session->pageTextNotContains('Usage');
+    $this->drupalGet('/admin/config/entity-usage/settings');
     $summary = $assert_session->elementExists('css', '#edit-local-task-enabled-entity-types summary');
     $this->assertEquals('Enabled local tasks', $summary->getText());
     $assert_session->pageTextContains('Check in which entity types there should be a tab (local task) linking to the usage page.');
@@ -76,24 +138,24 @@ class ConfigurationFormTest extends EntityUsageJavascriptTestBase {
     $this->saveHtmlOutput();
     $assert_session->pageTextContains('The configuration options have been saved.');
     $assert_session->checkboxChecked('local_task_enabled_entity_types[entity_types][node]');
-    $node = Node::create([
+    $node1 = Node::create([
       'type' => 'eu_test_ct',
-      'title' => 'Test node',
+      'title' => 'Test node 1',
     ]);
-    $node->save();
-    $this->drupalGet("/node/{$node->id()}");
+    $node1->save();
+    $this->drupalGet("/node/{$node1->id()}");
     $assert_session->pageTextContains('Usage');
     $page->clickLink('Usage');
     $this->saveHtmlOutput();
     // We should be at /node/*/usage.
-    $this->assertTrue(strpos($session->getCurrentUrl(), "/node/{$node->id()}/usage") !== FALSE);
-    $assert_session->pageTextContains('Entity usage information for Test node');
+    $this->assertContains("/node/{$node1->id()}/usage", $session->getCurrentUrl());
+    $assert_session->pageTextContains('Entity usage information for Test node 1');
     $assert_session->pageTextContains('There are no recorded usages for ');
     // We still have the local tabs available.
     $page->clickLink('View');
     $this->saveHtmlOutput();
     // We should be back at the node view.
-    $assert_session->titleEquals('Test node | Drupal');
+    $assert_session->titleEquals('Test node 1 | Drupal');
 
     // Test enabled source entity types config.
     $this->drupalGet('/admin/config/entity-usage/settings');
@@ -111,7 +173,6 @@ class ConfigurationFormTest extends EntityUsageJavascriptTestBase {
         $assert_session->checkboxNotChecked($field_name);
       }
     }
-    // @todo Finish me testing the actual functionality.
 
     // Test enabled target entity types config.
     $this->drupalGet('/admin/config/entity-usage/settings');
@@ -129,7 +190,104 @@ class ConfigurationFormTest extends EntityUsageJavascriptTestBase {
         $assert_session->checkboxNotChecked($field_name);
       }
     }
-    // @todo Finish me testing the actual functionality.
+
+    // Test that the source / target configuration works.
+    // When both node and media are enabled, creating a node pointing to that
+    // media asset should record an usage.
+    $node2 = Node::create([
+      'type' => 'eu_test_ct',
+      'title' => 'Test node 2',
+      'field_eu_test_related_media' => [$media1->id()],
+    ]);
+    $node2->save();
+    $usage = \Drupal::service('entity_usage.usage')->listSources($media1);
+    $expected = [
+      'node' => [
+        $node2->id() => [
+          [
+            'source_langcode' => $node2->language()->getId(),
+            'source_vid' => $node2->getRevisionId(),
+            'method' => 'entity_reference',
+            'field_name' => 'field_eu_test_related_media',
+            'count' => 1,
+          ],
+        ],
+      ],
+    ];
+    $this->assertequals($expected, $usage);
+    $node2->delete();
+    $usage = \Drupal::service('entity_usage.usage')->listSources($media1);
+    $this->assertequals([], $usage);
+    // Disabling media as target should prevent the record from being tracked.
+    $summary = $assert_session->elementExists('css', '#edit-track-enabled-target-entity-types summary');
+    $summary->click();
+    $page->uncheckField('track_enabled_target_entity_types[entity_types][media]');
+    $page->pressButton('Save configuration');
+    $this->saveHtmlOutput();
+    drupal_flush_all_caches();
+    $assert_session->pageTextContains('The configuration options have been saved.');
+    $node3 = Node::create([
+      'type' => 'eu_test_ct',
+      'title' => 'Test node 3',
+      'field_eu_test_related_media' => [$media1->id()],
+    ]);
+    $node3->save();
+    $usage = \Drupal::service('entity_usage.usage')->listSources($media1);
+    $this->assertequals([], $usage);
+    // Enabling media as target and disabling node as source should be the same.
+    $summary = $assert_session->elementExists('css', '#edit-track-enabled-source-entity-types summary');
+    $summary->click();
+    $page->uncheckField('track_enabled_source_entity_types[entity_types][node]');
+    $summary = $assert_session->elementExists('css', '#edit-track-enabled-target-entity-types summary');
+    $summary->click();
+    $page->checkField('track_enabled_target_entity_types[entity_types][media]');
+    $page->pressButton('Save configuration');
+    $this->saveHtmlOutput();
+    drupal_flush_all_caches();
+    $assert_session->pageTextContains('The configuration options have been saved.');
+    $node4 = Node::create([
+      'type' => 'eu_test_ct',
+      'title' => 'Test node 4',
+      'field_eu_test_related_media' => [$media1->id()],
+    ]);
+    $node4->save();
+    $usage = \Drupal::service('entity_usage.usage')->listSources($media1);
+    $this->assertequals([], $usage);
+    // Enable back both of them and we start tracking again.
+    $summary = $assert_session->elementExists('css', '#edit-track-enabled-source-entity-types summary');
+    $summary->click();
+    $page->checkField('track_enabled_source_entity_types[entity_types][node]');
+    $summary = $assert_session->elementExists('css', '#edit-track-enabled-target-entity-types summary');
+    $summary->click();
+    $page->checkField('track_enabled_target_entity_types[entity_types][media]');
+    $page->pressButton('Save configuration');
+    $this->saveHtmlOutput();
+    drupal_flush_all_caches();
+    $assert_session->pageTextContains('The configuration options have been saved.');
+    $node5 = Node::create([
+      'type' => 'eu_test_ct',
+      'title' => 'Test node 5',
+      'field_eu_test_related_media' => [$media1->id()],
+    ]);
+    $node5->save();
+    $usage = \Drupal::service('entity_usage.usage')->listSources($media1);
+    $expected = [
+      'node' => [
+        $node5->id() => [
+          [
+            'source_langcode' => $node5->language()->getId(),
+            'source_vid' => $node5->getRevisionId(),
+            'method' => 'entity_reference',
+            'field_name' => 'field_eu_test_related_media',
+            'count' => 1,
+          ],
+        ],
+      ],
+    ];
+    $this->assertequals($expected, $usage);
+    $node5->delete();
+    $usage = \Drupal::service('entity_usage.usage')->listSources($media1);
+    $this->assertequals([], $usage);
 
     // Test enabled plugins.
     $this->drupalGet('/admin/config/entity-usage/settings');
@@ -147,7 +305,23 @@ class ConfigurationFormTest extends EntityUsageJavascriptTestBase {
       // By default all plugins are active.
       $assert_session->checkboxChecked($field_name);
     }
-    // @todo Finish me testing the actual functionality.
+    // Disable entity_reference and check usage is not tracked.
+    $summary = $assert_session->elementExists('css', '#edit-track-enabled-plugins summary');
+    $this->assertEquals('Enabled tracking plugins', $summary->getText());
+    $summary->click();
+    $page->uncheckField('track_enabled_plugins[plugins][entity_reference]');
+    $page->pressButton('Save configuration');
+    $this->saveHtmlOutput();
+    drupal_flush_all_caches();
+    $assert_session->pageTextContains('The configuration options have been saved.');
+    $node6 = Node::create([
+      'type' => 'eu_test_ct',
+      'title' => 'Test node 6',
+      'field_eu_test_related_media' => [$media1->id()],
+    ]);
+    $node6->save();
+    $usage = \Drupal::service('entity_usage.usage')->listSources($media1);
+    $this->assertequals([], $usage);
 
     // Test generic settings.
     $this->drupalGet('/admin/config/entity-usage/settings');
@@ -158,7 +332,10 @@ class ConfigurationFormTest extends EntityUsageJavascriptTestBase {
     $assert_session->checkboxNotChecked('track_enabled_base_fields');
     $assert_session->pageTextContains('Track referencing basefields');
     $assert_session->pageTextContains('If enabled, relationships generated through non-configurable fields (basefields) will also be tracked.');
-    // @todo Finish me testing the actual functionality.
+    // Check the allowed domains element is there.
+    $assert_session->elementExists('css', 'textarea[name="site_domains"]');
+    $assert_session->elementContains('css', '#edit-generic-settings', 'Domains for this website');
+    $assert_session->elementContains('css', '#edit-generic-settings', 'A comma or new-line separated list of domain names for this website. Absolute URL\'s in content will be checked against these domains to allow usage tracking.');
   }
 
 }
