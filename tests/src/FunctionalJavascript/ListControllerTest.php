@@ -3,6 +3,7 @@
 namespace Drupal\Tests\entity_usage\FunctionalJavascript;
 
 use Drupal\node\Entity\Node;
+use Drupal\Tests\entity_usage\Traits\EntityUsageLastEntityQueryTrait;
 use Drupal\user\Entity\Role;
 
 /**
@@ -13,6 +14,8 @@ use Drupal\user\Entity\Role;
  * @group entity_usage
  */
 class ListControllerTest extends EntityUsageJavascriptTestBase {
+
+  use EntityUsageLastEntityQueryTrait;
 
   /**
    * {@inheritdoc}
@@ -38,18 +41,19 @@ class ListControllerTest extends EntityUsageJavascriptTestBase {
     $this->drupalGet('/node/add/eu_test_ct');
     $page->fillField('title[0][value]', 'Node 1');
     $page->pressButton('Save');
-    $this->assertSession()->pageTextContains('eu_test_ct Node 1 has been created.');
-    $node1 = Node::load(1);
     $this->saveHtmlOutput();
+    $this->assertSession()->pageTextContains('eu_test_ct Node 1 has been created.');
+    /** @var \Drupal\node\NodeInterface $node1 */
+    $node1 = $this->getLastEntityOfType('node', TRUE);
 
     // Create node 2 referencing node 1 using reference field.
     $this->drupalGet('/node/add/eu_test_ct');
     $page->fillField('title[0][value]', 'Node 2');
     $page->fillField('field_eu_test_related_nodes[0][target_id]', 'Node 1 (1)');
     $page->pressButton('Save');
-    $this->assertSession()->pageTextContains('eu_test_ct Node 2 has been created.');
-    $node2 = Node::load(2);
     $this->saveHtmlOutput();
+    $this->assertSession()->pageTextContains('eu_test_ct Node 2 has been created.');
+    $node2 = $this->getLastEntityOfType('node', TRUE);
 
     // Create node 3 also referencing node 1 in an embed text field.
     $uuid_node1 = $node1->uuid();
@@ -65,7 +69,7 @@ class ListControllerTest extends EntityUsageJavascriptTestBase {
     $node3->save();
 
     // Visit the page that tracks usage of node 1 and check everything is there.
-    $this->drupalGet('/admin/content/entity-usage/node/1');
+    $this->drupalGet("/admin/content/entity-usage/node/{$node1->id()}");
     $this->assertSession()->pageTextContains('Entity usage information for Node 1');
 
     // Check table headers are present.
@@ -103,6 +107,32 @@ class ListControllerTest extends EntityUsageJavascriptTestBase {
     $this->assertEquals('2', $second_row_vid->getText());
     $second_row_field_label = $this->xpath('//table/tbody/tr[2]/td[5]')[0];
     $this->assertEquals('Related nodes', $second_row_field_label->getText());
+
+    // Artifitially create some garbage in the database and make sure it doesn't
+    // show up on the usage page.
+    \Drupal::database()->insert('entity_usage')
+      ->fields([
+        'target_id' => $node1->id(),
+        'target_type' => $node1->getEntityTypeId(),
+        'source_id' => '1234',
+        'source_type' => 'user',
+        'source_langcode' => 'en',
+        'source_vid' => '5678',
+        'method' => 'entity_reference',
+        'field_name' => 'field_foo',
+        'count' => '1',
+      ])
+      ->execute();
+    // Check the usage is there.
+    $usage = \Drupal::service('entity_usage.usage')->listSources($node1);
+    $this->assertTrue(!empty($usage['user']));
+    // Check the usage list skips it when showing results.
+    $this->drupalGet("/admin/content/entity-usage/node/{$node1->id()}");
+    $this->assertSession()->pageTextContains('Entity usage information for Node 1');
+    $this->assertSession()->elementNotContains('css', 'table', '1234');
+    $this->assertSession()->elementNotContains('css', 'table', 'user');
+    $this->assertSession()->elementNotContains('css', 'table', '5678');
+    $this->assertSession()->elementNotContains('css', 'table', 'field_foo');
   }
 
 }
