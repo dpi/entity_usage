@@ -18,7 +18,7 @@ use Drupal\field\Entity\FieldConfig;
  *
  * @package Drupal\Tests\entity_usage\Kernel
  */
-class LegacyHtmlLinkKernelTest extends EntityKernelTestBase {
+class EntityUsageLegacyHtmlLinkKernelTest extends EntityKernelTestBase {
 
   /**
    * {@inheritdoc}

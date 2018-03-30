@@ -213,10 +213,10 @@ class ConfigurationFormTest extends EntityUsageJavascriptTestBase {
         ],
       ],
     ];
-    $this->assertequals($expected, $usage);
+    $this->assertEquals($expected, $usage);
     $node2->delete();
     $usage = \Drupal::service('entity_usage.usage')->listSources($media1);
-    $this->assertequals([], $usage);
+    $this->assertEquals([], $usage);
     // Disabling media as target should prevent the record from being tracked.
     $summary = $assert_session->elementExists('css', '#edit-track-enabled-target-entity-types summary');
     $summary->click();
@@ -232,7 +232,7 @@ class ConfigurationFormTest extends EntityUsageJavascriptTestBase {
     ]);
     $node3->save();
     $usage = \Drupal::service('entity_usage.usage')->listSources($media1);
-    $this->assertequals([], $usage);
+    $this->assertEquals([], $usage);
     // Enabling media as target and disabling node as source should be the same.
     $summary = $assert_session->elementExists('css', '#edit-track-enabled-source-entity-types summary');
     $summary->click();
@@ -251,7 +251,7 @@ class ConfigurationFormTest extends EntityUsageJavascriptTestBase {
     ]);
     $node4->save();
     $usage = \Drupal::service('entity_usage.usage')->listSources($media1);
-    $this->assertequals([], $usage);
+    $this->assertEquals([], $usage);
     // Enable back both of them and we start tracking again.
     $summary = $assert_session->elementExists('css', '#edit-track-enabled-source-entity-types summary');
     $summary->click();
@@ -283,10 +283,10 @@ class ConfigurationFormTest extends EntityUsageJavascriptTestBase {
         ],
       ],
     ];
-    $this->assertequals($expected, $usage);
+    $this->assertEquals($expected, $usage);
     $node5->delete();
     $usage = \Drupal::service('entity_usage.usage')->listSources($media1);
-    $this->assertequals([], $usage);
+    $this->assertEquals([], $usage);
 
     // Test enabled plugins.
     $this->drupalGet('/admin/config/entity-usage/settings');
@@ -320,7 +320,7 @@ class ConfigurationFormTest extends EntityUsageJavascriptTestBase {
     ]);
     $node6->save();
     $usage = \Drupal::service('entity_usage.usage')->listSources($media1);
-    $this->assertequals([], $usage);
+    $this->assertEquals([], $usage);
 
     // Test generic settings.
     $this->drupalGet('/admin/config/entity-usage/settings');

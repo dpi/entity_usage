@@ -234,7 +234,7 @@ class ConfigEntityTrackingTest extends EntityUsageJavascriptTestBase {
         ],
       ],
     ];
-    $this->assertequals($expected, $usage);
+    $this->assertEquals($expected, $usage);
   }
 
 }

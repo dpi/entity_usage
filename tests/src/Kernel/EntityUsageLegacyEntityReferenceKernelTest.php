@@ -20,7 +20,7 @@ use Drupal\field\Tests\EntityReference\EntityReferenceTestTrait;
  * @package Drupal\Tests\entity_usage\Kernel
  *
  */
-class LegacyEntityReferenceKernelTest extends EntityKernelTestBase {
+class EntityUsageLegacyEntityReferenceKernelTest extends EntityKernelTestBase {
 
   use EntityReferenceTestTrait;
 

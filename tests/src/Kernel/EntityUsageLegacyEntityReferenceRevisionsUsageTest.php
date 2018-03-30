@@ -21,7 +21,7 @@ use Drupal\paragraphs\Entity\ParagraphsType;
  *
  * @package Drupal\Tests\entity_usage\Kernel
  */
-class LegacyEntityReferenceRevisionsUsageTest extends KernelTestBase {
+class EntityUsageLegacyEntityReferenceRevisionsUsageTest extends KernelTestBase {
 
   /**
    * Modules to enable.

@@ -44,8 +44,8 @@ class IntegrationTest extends EntityUsageJavascriptTestBase {
     $page->fillField('title[0][value]', 'Node 1');
     $page->pressButton('Save');
     $session->wait(500);
-    $assert_session->pageTextContains('eu_test_ct Node 1 has been created.');
     $this->saveHtmlOutput();
+    $assert_session->pageTextContains('eu_test_ct Node 1 has been created.');
     $node1 = $this->getLastEntityOfType('node', TRUE);
 
     // Nobody is using this guy for now.
@@ -58,8 +58,8 @@ class IntegrationTest extends EntityUsageJavascriptTestBase {
     $page->fillField('field_eu_test_related_nodes[0][target_id]', "Node 1 ({$node1->id()})");
     $page->pressButton('Save');
     $session->wait(500);
-    $assert_session->pageTextContains('eu_test_ct Node 2 has been created.');
     $this->saveHtmlOutput();
+    $assert_session->pageTextContains('eu_test_ct Node 2 has been created.');
     $node2 = $this->getLastEntityOfType('node', TRUE);
     // Check that we correctly registered the relation between N2 and N1.
     $usage = $usage_service->listSources($node1);
@@ -76,7 +76,7 @@ class IntegrationTest extends EntityUsageJavascriptTestBase {
         ],
       ],
     ];
-    $this->assertequals($expected, $usage);
+    $this->assertEquals($expected, $usage);
 
     // Create a new entity reference field.
     $storage = FieldStorageConfig::create([
@@ -120,8 +120,8 @@ class IntegrationTest extends EntityUsageJavascriptTestBase {
     $page->fillField('field_eu_test_related_nodes2[0][target_id]', "Node 2 ({$node2->id()})");
     $page->pressButton('Save');
     $session->wait(500);
-    $assert_session->pageTextContains('eu_test_ct Node 3 has been created.');
     $this->saveHtmlOutput();
+    $assert_session->pageTextContains('eu_test_ct Node 3 has been created.');
     $node3 = $this->getLastEntityOfType('node', TRUE);
     // Check that both of these relationships are tracked.
     $usage = $usage_service->listTargets($node3);
@@ -143,7 +143,7 @@ class IntegrationTest extends EntityUsageJavascriptTestBase {
         ],
       ],
     ];
-    $this->assertequals($expected, $usage);
+    $this->assertEquals($expected, $usage);
     // If we delete the field storage the usage should update accordingly.
     $storage->delete();
     $usage = $usage_service->listTargets($node3);
@@ -158,21 +158,21 @@ class IntegrationTest extends EntityUsageJavascriptTestBase {
         ],
       ],
     ];
-    $this->assertequals($expected, $usage);
+    $this->assertEquals($expected, $usage);
 
     // Edit Node 3, remove the reference to Node 1, check we update usage.
     $this->drupalGet("/node/{$node3->id()}/edit");
     $page->fillField('field_eu_test_related_nodes[0][target_id]', '');
     $page->pressButton('Save');
     $session->wait(500);
-    $assert_session->pageTextContains('eu_test_ct Node 3 has been updated');
     $this->saveHtmlOutput();
+    $assert_session->pageTextContains('eu_test_ct Node 3 has been updated');
     // Node 3 isn't referencing any content now.
     $usage = $usage_service->listTargets($node3);
-    $this->assertequals([], $usage);
+    $this->assertEquals([], $usage);
     // Node 2 isn't referenced by any content now.
     $usage = $usage_service->listSources($node2);
-    $this->assertequals([], $usage);
+    $this->assertEquals([], $usage);
 
     // Create node 4 referencing N2 and N3 on the same field.
     $this->drupalGet('/node/add/eu_test_ct');
@@ -185,8 +185,8 @@ class IntegrationTest extends EntityUsageJavascriptTestBase {
     $new_input->setValue("Node 3 ({$node3->id()})");
     $page->pressButton('Save');
     $session->wait(500);
-    $assert_session->pageTextContains('eu_test_ct Node 4 has been created.');
     $this->saveHtmlOutput();
+    $assert_session->pageTextContains('eu_test_ct Node 4 has been created.');
     $node4 = $this->getLastEntityOfType('node', TRUE);
     // Check that both of these relationships are tracked.
     $usage = $usage_service->listTargets($node4);
@@ -208,7 +208,7 @@ class IntegrationTest extends EntityUsageJavascriptTestBase {
         ],
       ],
     ];
-    $this->assertequals($expected, $usage);
+    $this->assertEquals($expected, $usage);
 
     // Deleting one of the targets updates the info accordingly.
     $node2->delete();
@@ -224,7 +224,7 @@ class IntegrationTest extends EntityUsageJavascriptTestBase {
         ],
       ],
     ];
-    $this->assertequals($expected, $usage);
+    $this->assertEquals($expected, $usage);
 
     // Adding the same node twice on the same field counts as 1 usage.
     $this->drupalGet("/node/{$node4->id()}/edit");
@@ -232,8 +232,8 @@ class IntegrationTest extends EntityUsageJavascriptTestBase {
     $page->fillField('field_eu_test_related_nodes[1][target_id]', "Node 3 ({$node3->id()})");
     $page->pressButton('Save');
     $session->wait(500);
-    $assert_session->pageTextContains('eu_test_ct Node 4 has been updated');
     $this->saveHtmlOutput();
+    $assert_session->pageTextContains('eu_test_ct Node 4 has been updated');
     // There should be only one usage record from source N4 -> target N3:
     $usage = $usage_service->listTargets($node4);
     $expected = [
@@ -247,7 +247,7 @@ class IntegrationTest extends EntityUsageJavascriptTestBase {
         ],
       ],
     ];
-    $this->assertequals($expected, $usage);
+    $this->assertEquals($expected, $usage);
     // There should be only one record the other way around.
     $usage = $usage_service->listSources($node3);
     $expected = [
@@ -263,12 +263,12 @@ class IntegrationTest extends EntityUsageJavascriptTestBase {
         ],
       ],
     ];
-    $this->assertequals($expected, $usage);
+    $this->assertEquals($expected, $usage);
 
     // Deleting the source node should make the usage disappear.
     $node4->delete();
     $usage = $usage_service->listSources($node3);
-    $this->assertequals([], $usage);
+    $this->assertEquals([], $usage);
   }
 
   /**
@@ -313,8 +313,8 @@ class IntegrationTest extends EntityUsageJavascriptTestBase {
     $page->fillField('title[0][value]', 'Node 1');
     $page->pressButton('Save');
     $session->wait(500);
-    $assert_session->pageTextContains('eu_test_ct Node 1 has been created.');
     $this->saveHtmlOutput();
+    $assert_session->pageTextContains('eu_test_ct Node 1 has been created.');
     /** @var \Drupal\node\NodeInterface $node1 */
     $node1 = $this->getLastEntityOfType('node', TRUE);
 
@@ -325,8 +325,8 @@ class IntegrationTest extends EntityUsageJavascriptTestBase {
     $page->fillField('field_link1[0][title]', "Linked text");
     $page->pressButton('Save');
     $session->wait(500);
-    $assert_session->pageTextContains('eu_test_ct Node 2 has been created.');
     $this->saveHtmlOutput();
+    $assert_session->pageTextContains('eu_test_ct Node 2 has been created.');
     $node2 = $this->getLastEntityOfType('node', TRUE);
     // Check that the usage of Node 1 points to Node 2.
     $usage = $usage_service->listSources($node1);
@@ -351,8 +351,8 @@ class IntegrationTest extends EntityUsageJavascriptTestBase {
     $page->fillField('field_link1[0][title]', '');
     $page->pressButton('Save');
     $session->wait(500);
-    $assert_session->pageTextContains('eu_test_ct Node 2 has been updated.');
     $this->saveHtmlOutput();
+    $assert_session->pageTextContains('eu_test_ct Node 2 has been updated.');
     // Verify the usage was released.
     $usage = $usage_service->listSources($node1);
     $this->assertEquals([], $usage);
@@ -362,8 +362,8 @@ class IntegrationTest extends EntityUsageJavascriptTestBase {
     $page->fillField('field_link1[0][uri]', "entity:node/{$node1->id()}");
     $page->fillField('field_link1[0][title]', "Linked text");
     $page->pressButton('Save');
-    $assert_session->pageTextContains('eu_test_ct Node 2 has been updated.');
     $this->saveHtmlOutput();
+    $assert_session->pageTextContains('eu_test_ct Node 2 has been updated.');
     // Usage now should be there.
     $usage = $usage_service->listSources($node1);
     $expected = [

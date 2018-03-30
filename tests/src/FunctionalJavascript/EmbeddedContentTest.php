@@ -39,8 +39,8 @@ class EmbeddedContentTest extends EntityUsageJavascriptTestBase {
     $page->fillField('title[0][value]', 'Node 1');
     $page->pressButton('Save');
     $session->wait(500);
-    $assert_session->pageTextContains('eu_test_ct Node 1 has been created.');
     $this->saveHtmlOutput();
+    $assert_session->pageTextContains('eu_test_ct Node 1 has been created.');
     $node1 = $this->getLastEntityOfType('node', TRUE);
 
     // Nobody is using this guy for now.
@@ -73,7 +73,7 @@ class EmbeddedContentTest extends EntityUsageJavascriptTestBase {
         ],
       ],
     ];
-    $this->assertequals($expected, $usage);
+    $this->assertEquals($expected, $usage);
 
     // Create node 3 referencing N2 and N1 on the same field.
     $embedded_text .= '<p>Foo bar</p>' . '<drupal-entity data-embed-button="node" data-entity-embed-display="entity_reference:entity_reference_label" data-entity-embed-display-settings="{&quot;link&quot;:1}" data-entity-type="node" data-entity-uuid="' . $node2->uuid() . '"></drupal-entity>';
@@ -106,7 +106,7 @@ class EmbeddedContentTest extends EntityUsageJavascriptTestBase {
         ],
       ],
     ];
-    $this->assertequals($expected, $usage);
+    $this->assertEquals($expected, $usage);
   }
 
   /**
@@ -125,8 +125,8 @@ class EmbeddedContentTest extends EntityUsageJavascriptTestBase {
     $page->fillField('title[0][value]', 'Node 1');
     $page->pressButton('Save');
     $session->wait(500);
-    $assert_session->pageTextContains('eu_test_ct Node 1 has been created.');
     $this->saveHtmlOutput();
+    $assert_session->pageTextContains('eu_test_ct Node 1 has been created.');
     $node1 = $this->getLastEntityOfType('node', TRUE);
 
     // Nobody is using this guy for now.
@@ -159,7 +159,7 @@ class EmbeddedContentTest extends EntityUsageJavascriptTestBase {
         ],
       ],
     ];
-    $this->assertequals($expected, $usage);
+    $this->assertEquals($expected, $usage);
 
     // Create node 3 referencing N2 and N1 on the same field.
     $embedded_text .= '<p>Foo bar</p>' . '<p>foo2 <a data-entity-substitution="canonical" data-entity-type="node" data-entity-uuid="' . $node2->uuid() . '">linked text 2</a> bar 2</p>';
@@ -192,7 +192,7 @@ class EmbeddedContentTest extends EntityUsageJavascriptTestBase {
         ],
       ],
     ];
-    $this->assertequals($expected, $usage);
+    $this->assertEquals($expected, $usage);
 
     // Create node 4 referencing a non existing UUID using a linkit markup to
     // test removed entities.
@@ -227,8 +227,8 @@ class EmbeddedContentTest extends EntityUsageJavascriptTestBase {
     $page->fillField('title[0][value]', 'Node 1');
     $page->pressButton('Save');
     $session->wait(500);
-    $assert_session->pageTextContains('eu_test_ct Node 1 has been created.');
     $this->saveHtmlOutput();
+    $assert_session->pageTextContains('eu_test_ct Node 1 has been created.');
     $node1 = $this->getLastEntityOfType('node', TRUE);
 
     // Nobody is using this guy for now.
@@ -261,7 +261,7 @@ class EmbeddedContentTest extends EntityUsageJavascriptTestBase {
         ],
       ],
     ];
-    $this->assertequals($expected, $usage);
+    $this->assertEquals($expected, $usage);
 
     // Create node 3 referencing N2 and N1 on the same field.
     $embedded_text .= '<p>Foo bar</p>' . '<p>foo2 <a href="/node/' . $node2->id() . '">linked text 2</a> bar 2</p>';
@@ -294,7 +294,7 @@ class EmbeddedContentTest extends EntityUsageJavascriptTestBase {
         ],
       ],
     ];
-    $this->assertequals($expected, $usage);
+    $this->assertEquals($expected, $usage);
 
     // Create node 4 referencing a non existing path to test removed entities.
     $embedded_text = '<p>foo <a href="/node/4324">linked text foo 2</a> bar</p>';
@@ -342,7 +342,7 @@ class EmbeddedContentTest extends EntityUsageJavascriptTestBase {
         ],
       ],
     ];
-    $this->assertequals($expected, $usage);
+    $this->assertEquals($expected, $usage);
 
     // Create a different field and make sure that a plugin tracking two
     // different field types works as expected.
@@ -392,7 +392,7 @@ class EmbeddedContentTest extends EntityUsageJavascriptTestBase {
         ],
       ],
     ];
-    $this->assertequals($expected, $usage);
+    $this->assertEquals($expected, $usage);
 
     // Create node 7 referencing node 6 using an aliased URL.
     $alias_url = '/i-am-an-alias';
@@ -422,7 +422,7 @@ class EmbeddedContentTest extends EntityUsageJavascriptTestBase {
         ],
       ],
     ];
-    $this->assertequals($expected, $usage);
+    $this->assertEquals($expected, $usage);
   }
 
 }
