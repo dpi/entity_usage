@@ -258,6 +258,34 @@ class RevisionsTranslationsTest extends EntityUsageJavascriptTestBase {
     $node1->delete();
     $usage = $usage_service->listSources($node1);
     $this->assertEquals([], $usage);
+
+    // If a node has really a lot of revisions, check that we clean all of them
+    // upon deletion.
+    $this->drupalGet('/node/add/eu_test_ct');
+    $page->fillField('title[0][value]', 'Node 4');
+    $page->fillField('field_eu_test_related_nodes[0][target_id]', "Node 2 ({$node2->id()})");
+    $page->pressButton('Save');
+    $session->wait(500);
+    $this->saveHtmlOutput();
+    $assert_session->pageTextContains('eu_test_ct Node 4 has been created.');
+    /** @var \Drupal\node\NodeInterface $node4 */
+    $node4 = $this->getLastEntityOfType('node', TRUE);
+    $num_revisions = 300;
+    for ($i = 1; $i < $num_revisions; $i++) {
+      $node4->setNewRevision(TRUE);
+      $node4->save();
+    }
+    $usage = $usage_service->listSources($node2);
+    $this->assertEquals($num_revisions, count($usage['node'][$node4->id()]));
+    // Delete the node through the UI and check all usages are gone.
+    $this->drupalGet("/node/{$node4->id()}/delete");
+    $page->pressButton('Delete');
+    $session->wait(500);
+    $this->saveHtmlOutput();
+    $assert_session->pageTextContains('has been deleted.');
+    $usage = $usage_service->listSources($node2);
+    $this->assertEquals([], $usage);
+
   }
 
   /**
@@ -283,6 +311,8 @@ class RevisionsTranslationsTest extends EntityUsageJavascriptTestBase {
     $authenticated_role->grantPermission('translate any entity');
     $authenticated_role->grantPermission('create content translations');
     $authenticated_role->grantPermission('administer languages');
+    $authenticated_role->grantPermission('administer entity usage');
+    $authenticated_role->grantPermission('access entity usage statistics');
     $authenticated_role->save();
 
     // Set our content type as translatable.
@@ -293,6 +323,14 @@ class RevisionsTranslationsTest extends EntityUsageJavascriptTestBase {
     $session->wait(500);
     $this->saveHtmlOutput();
     $assert_session->pageTextContains('Settings successfully updated.');
+
+    // Enable the usage page controller for nodes.
+    $this->drupalGet('/admin/config/entity-usage/settings');
+    $page->checkField('local_task_enabled_entity_types[entity_types][node]');
+    $page->pressButton('Save configuration');
+    $session->wait(500);
+    $this->saveHtmlOutput();
+    $assert_session->pageTextContains('The configuration options have been saved.');
 
     // Create a target Node 1 in EN.
     $this->drupalGet('/node/add/eu_test_ct');
@@ -393,6 +431,32 @@ class RevisionsTranslationsTest extends EntityUsageJavascriptTestBase {
       ],
     ];
     $this->assertEquals($expected, $usage);
+
+    // Check that the usage page of both N1 and N2 show what we expect.
+    $this->drupalGet("/node/{$node1->id()}/usage");
+    // Only one usage is there, from the EN translation.
+    $first_row_title = $this->xpath('//table/tbody/tr[1]/td[1]')[0];
+    $this->assertEquals($node3->label(), $first_row_title->getText());
+    $first_row_type = $this->xpath('//table/tbody/tr[1]/td[2]')[0];
+    $this->assertEquals('Content', $first_row_type->getText());
+    $first_row_langcode = $this->xpath('//table/tbody/tr[1]/td[3]')[0];
+    $this->assertEquals('en', $first_row_langcode->getText());
+    $first_row_field_label = $this->xpath('//table/tbody/tr[1]/td[5]')[0];
+    $this->assertEquals('Related nodes', $first_row_field_label->getText());
+    // There's no second row.
+    $assert_session->elementNotExists('xpath', '//table/tbody/tr[2]');
+    $this->drupalGet("/node/{$node2->id()}/usage");
+    // Only one usage is there, from the ES translation.
+    $first_row_title = $this->xpath('//table/tbody/tr[1]/td[1]')[0];
+    $this->assertEquals($node3->label(), $first_row_title->getText());
+    $first_row_type = $this->xpath('//table/tbody/tr[1]/td[2]')[0];
+    $this->assertEquals('Content', $first_row_type->getText());
+    $first_row_langcode = $this->xpath('//table/tbody/tr[1]/td[3]')[0];
+    $this->assertEquals('es', $first_row_langcode->getText());
+    $first_row_field_label = $this->xpath('//table/tbody/tr[1]/td[5]')[0];
+    $this->assertEquals('Related nodes', $first_row_field_label->getText());
+    // There's no second row.
+    $assert_session->elementNotExists('xpath', '//table/tbody/tr[2]');
 
     // If only a translation is updated, we register correctly the new usage.
     $this->drupalGet("/es/node/{$node3->id()}/edit");

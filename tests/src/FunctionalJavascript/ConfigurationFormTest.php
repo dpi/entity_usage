@@ -134,6 +134,7 @@ class ConfigurationFormTest extends EntityUsageJavascriptTestBase {
     // Enable it for nodes.
     $page->checkField('local_task_enabled_entity_types[entity_types][node]');
     $page->pressButton('Save configuration');
+    $session->wait(500);
     $this->saveHtmlOutput();
     $assert_session->pageTextContains('The configuration options have been saved.');
     $assert_session->checkboxChecked('local_task_enabled_entity_types[entity_types][node]');
