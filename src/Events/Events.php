@@ -48,4 +48,5 @@ final class Events {
    * @var string
    */
   const DELETE_BY_TARGET_ENTITY = 'entity_usage.delete_by_target_entity';
+
 }

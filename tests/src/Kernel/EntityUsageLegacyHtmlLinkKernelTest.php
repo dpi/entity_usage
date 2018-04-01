@@ -92,7 +92,7 @@ class EntityUsageLegacyHtmlLinkKernelTest extends EntityKernelTestBase {
       'field_name' => 'field_text_long',
       'entity_type' => $this->entityType,
       'type' => 'text_long',
-      'settings' => array(),
+      'settings' => [],
     ])->save();
     FieldConfig::create([
       'entity_type' => $this->entityType,

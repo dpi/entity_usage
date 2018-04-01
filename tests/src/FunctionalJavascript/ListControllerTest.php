@@ -80,9 +80,9 @@ class ListControllerTest extends EntityUsageJavascriptTestBase {
     $this->assertSession()->pageTextContains('Field name');
 
     // Check both referencing nodes are linked.
-    $this->assertSession()->linkExists('Node 2');
+    $this->assertSession()->linkExists($node2->label());
     $this->assertSession()->linkByHrefExists('/node/2');
-    $this->assertSession()->linkExists('Node 3');
+    $this->assertSession()->linkExists($node3->label());
     $this->assertSession()->linkByHrefExists('/node/3');
 
     // Make sure that all elements of the table are the expected ones.
