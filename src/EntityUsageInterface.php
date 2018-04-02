@@ -162,4 +162,53 @@ interface EntityUsageInterface {
    */
   public function listTargets(EntityInterface $source_entity);
 
+  /**
+   * Determines where an entity is used (deprecated).
+   *
+   * This method should not be used in new integrations, and is only provided
+   * as BC-layer for existing implementations. Note however that the count
+   * returned on 2.x will be different from the count returned on 1.x, once
+   * now we track all revisions / translations independently.
+   *
+   * @param \Drupal\Core\Entity\EntityInterface $entity
+   *   A target (referenced) entity.
+   * @param bool $include_method
+   *   (optional) Whether the results must be wrapped into an additional array
+   *   level, by the reference method. Defaults to FALSE.
+   *
+   * @return array
+   *   A nested array with usage data.The first level is keyed by the type of
+   *   the source entity, the second by the referencing objects ID. The value of
+   *   the second level contains the usage count, which will be summed for all
+   *   revisions and translations tracked.
+   *   Note that if $include_method is TRUE, the first level is keyed by the
+   *   reference method, and the second level will continue as explained above.
+   *
+   * @deprecated in branch 2.x.
+   *   Use \Drupal\entity_usage\EntityUsageInterface::listSources() instead.
+   */
+  public function listUsage(EntityInterface $entity, $include_method = FALSE);
+
+  /**
+   * Determines referenced entities (deprecated).
+   *
+   * This method should not be used in new integrations, and is only provided
+   * as BC-layer for existing implementations. Note however that the count
+   * returned on 2.x will be different from the count returned on 1.x, once
+   * now we track all revisions / translations independently.
+   *
+   * @param \Drupal\Core\Entity\EntityInterface $entity
+   *   A source entity.
+   *
+   * @return array
+   *   A nested array with usage data.The first level is keyed by the type of
+   *   the target entity, the second by the referencing objects ID. The value of
+   *   the second level contains the usage count, which will be summed for all
+   *   revisions and translations tracked.
+   *
+   * @deprecated in branch 2.x.
+   *   Use \Drupal\entity_usage\EntityUsageInterface::listTargets() instead.
+   */
+  public function listReferencedEntities(EntityInterface $entity);
+
 }

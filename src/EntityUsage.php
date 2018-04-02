@@ -309,4 +309,62 @@ class EntityUsage implements EntityUsageInterface {
     return ((string) (int) $value === (string) $value);
   }
 
+  /**
+   * {@inheritdoc}
+   */
+  public function listUsage(EntityInterface $entity, $include_method = FALSE) {
+    $result = $this->listSources($entity);
+    $references = [];
+    foreach ($result as $source_entity_type => $entity_record) {
+      foreach ($entity_record as $entity_id => $records) {
+        foreach ($records as $record) {
+          if ($include_method) {
+            if (empty($references[$record['method']][$source_entity_type][$entity_id])) {
+              // This is the first of this entity type/id, just store the count.
+              $references[$record['method']][$source_entity_type][$entity_id] = $record['count'];
+            }
+            else {
+              // Sum all counts for different revisions or translations.
+              $references[$record['method']][$source_entity_type][$entity_id] += $record['count'];
+            }
+          }
+          else {
+            if (empty($references[$source_entity_type][$entity_id])) {
+              // This is the first of this entity type/id, just store the count.
+              $references[$source_entity_type][$entity_id] = $record['count'];
+            }
+            else {
+              // Sum all counts for different revisions or translations.
+              $references[$source_entity_type][$entity_id] += $record['count'];
+            }
+          }
+        }
+      }
+    }
+    return $references;
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function listReferencedEntities(EntityInterface $entity) {
+    $result = $this->listTargets($entity);
+    $references = [];
+    foreach ($result as $target_entity_type => $entity_record) {
+      foreach ($entity_record as $entity_id => $records) {
+        foreach ($records as $record) {
+          if (empty($references[$target_entity_type][$entity_id])) {
+            // This is the first of this entity type/id, just store the count.
+            $references[$target_entity_type][$entity_id] = $record['count'];
+          }
+          else {
+            // Sum all counts for different revisions or translations.
+            $references[$target_entity_type][$entity_id] += $record['count'];
+          }
+        }
+      }
+    }
+    return $references;
+  }
+
 }

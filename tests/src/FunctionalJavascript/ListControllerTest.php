@@ -35,14 +35,17 @@ class ListControllerTest extends EntityUsageJavascriptTestBase {
    * @covers \Drupal\entity_usage\Controller\ListUsageController::listUsagePage
    */
   public function testListController() {
-    $page = $this->getSession()->getPage();
+    $session = $this->getSession();
+    $page = $session->getPage();
+    $assert_session = $this->assertSession();
 
     // Create node 1.
     $this->drupalGet('/node/add/eu_test_ct');
     $page->fillField('title[0][value]', 'Node 1');
     $page->pressButton('Save');
+    $session->wait(500);
     $this->saveHtmlOutput();
-    $this->assertSession()->pageTextContains('eu_test_ct Node 1 has been created.');
+    $assert_session->pageTextContains('eu_test_ct Node 1 has been created.');
     /** @var \Drupal\node\NodeInterface $node1 */
     $node1 = $this->getLastEntityOfType('node', TRUE);
 
@@ -51,8 +54,9 @@ class ListControllerTest extends EntityUsageJavascriptTestBase {
     $page->fillField('title[0][value]', 'Node 2');
     $page->fillField('field_eu_test_related_nodes[0][target_id]', 'Node 1 (1)');
     $page->pressButton('Save');
+    $session->wait(500);
     $this->saveHtmlOutput();
-    $this->assertSession()->pageTextContains('eu_test_ct Node 2 has been created.');
+    $assert_session->pageTextContains('eu_test_ct Node 2 has been created.');
     $node2 = $this->getLastEntityOfType('node', TRUE);
 
     // Create node 3 also referencing node 1 in an embed text field.
@@ -70,24 +74,19 @@ class ListControllerTest extends EntityUsageJavascriptTestBase {
 
     // Visit the page that tracks usage of node 1 and check everything is there.
     $this->drupalGet("/admin/content/entity-usage/node/{$node1->id()}");
-    $this->assertSession()->pageTextContains('Entity usage information for Node 1');
+    $assert_session->pageTextContains('Entity usage information for Node 1');
 
     // Check table headers are present.
-    $this->assertSession()->pageTextContains('Entity');
-    $this->assertSession()->pageTextContains('Type');
-    $this->assertSession()->pageTextContains('Language');
-    $this->assertSession()->pageTextContains('Revision ID');
-    $this->assertSession()->pageTextContains('Field name');
-
-    // Check both referencing nodes are linked.
-    $this->assertSession()->linkExists($node2->label());
-    $this->assertSession()->linkByHrefExists('/node/2');
-    $this->assertSession()->linkExists($node3->label());
-    $this->assertSession()->linkByHrefExists('/node/3');
+    $assert_session->pageTextContains('Entity');
+    $assert_session->pageTextContains('Type');
+    $assert_session->pageTextContains('Language');
+    $assert_session->pageTextContains('Revision ID');
+    $assert_session->pageTextContains('Field name');
 
     // Make sure that all elements of the table are the expected ones.
-    $first_row_title = $this->xpath('//table/tbody/tr[1]/td[1]')[0];
-    $this->assertEquals('Node 3', $first_row_title->getText());
+    $first_row_title_link = $assert_session->elementExists('xpath', '//table/tbody/tr[1]/td[1]/a');
+    $this->assertEquals('Node 3', $first_row_title_link->getText());
+    $this->assertContains($node3->toUrl()->toString(), $first_row_title_link->getAttribute('href'));
     $first_row_type = $this->xpath('//table/tbody/tr[1]/td[2]')[0];
     $this->assertEquals('Content', $first_row_type->getText());
     $first_row_langcode = $this->xpath('//table/tbody/tr[1]/td[3]')[0];
@@ -97,8 +96,9 @@ class ListControllerTest extends EntityUsageJavascriptTestBase {
     $first_row_field_label = $this->xpath('//table/tbody/tr[1]/td[5]')[0];
     $this->assertEquals('Text', $first_row_field_label->getText());
 
-    $second_row_title = $this->xpath('//table/tbody/tr[2]/td[1]')[0];
-    $this->assertEquals('Node 2', $second_row_title->getText());
+    $second_row_title_link = $assert_session->elementExists('xpath', '//table/tbody/tr[2]/td[1]/a');
+    $this->assertEquals('Node 2', $second_row_title_link->getText());
+    $this->assertContains($node2->toUrl()->toString(), $second_row_title_link->getAttribute('href'));
     $second_row_type = $this->xpath('//table/tbody/tr[2]/td[2]')[0];
     $this->assertEquals('Content', $second_row_type->getText());
     $second_row_langcode = $this->xpath('//table/tbody/tr[2]/td[3]')[0];
@@ -128,11 +128,11 @@ class ListControllerTest extends EntityUsageJavascriptTestBase {
     $this->assertTrue(!empty($usage['user']));
     // Check the usage list skips it when showing results.
     $this->drupalGet("/admin/content/entity-usage/node/{$node1->id()}");
-    $this->assertSession()->pageTextContains('Entity usage information for Node 1');
-    $this->assertSession()->elementNotContains('css', 'table', '1234');
-    $this->assertSession()->elementNotContains('css', 'table', 'user');
-    $this->assertSession()->elementNotContains('css', 'table', '5678');
-    $this->assertSession()->elementNotContains('css', 'table', 'field_foo');
+    $assert_session->pageTextContains('Entity usage information for Node 1');
+    $assert_session->elementNotContains('css', 'table', '1234');
+    $assert_session->elementNotContains('css', 'table', 'user');
+    $assert_session->elementNotContains('css', 'table', '5678');
+    $assert_session->elementNotContains('css', 'table', 'field_foo');
   }
 
 }
