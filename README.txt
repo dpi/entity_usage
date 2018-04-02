@@ -1,53 +1,58 @@
 Entity Usage
 ============
 
-This module is a proof-of-concept for a tool to track usage of entities by other
-entities in drupal.
+This module provides a tool to track entity relationships in Drupal.
 
-Currently only the tracking of entities linked to each other using one of the
-following methods is supported:
- - through entity_reference fields
- - embedded into text fields (using the "Entity Embed" module)
+Currently the following tracking methods are supported:
 
-There is no specific configuration, once enabled, the module will start tracking
-the relation between entities, getting updated on all CRUD entity operations.
+- Entities related trough entity_reference fields
+- Entities related trough link fields
+- Entities embedded into text fields using the Entity Embed module
+- Entities embedded into text fields using the LinkIt module
+- Standard HTML links inside text fields (when pointing to an entity URL).
+- Entities related through block_field fields (provided by the Block Field
+  module)
 
-A basic views integration is provided. To use the tracked information in a view,
-follow the following steps:
- 1) Create a view that has as base table any content entity (Node, User, Etc)
- 2) Add a relationship to your view named
-    "Information about the usage of this @entity_type"
- 3) After adding the relationship, add the field to your view:
-    "Usage count"
- 4) You will probably want to enable aggregation, to avoid duplicate rows and
- have the real count sum. To do that, go to the "Advanced" section of the view
- configuration, select "Use aggregation" to "Yes"
- 5) Go to the "Usage count" field you added before, open up the "Aggregation
- settings" form, and select "SUM".
+How it works
+============
 
-In your view (or anywhere else) you can build a link to the page where you can
-consult the details of the entities that use (reference) any given entity. Build
-the link using the following structure:
-  /admin/content/entity-usage/{entity_type}/{entity_id}
-Make sure the visitors of this page have the permission to 'access entity usage
-statistics' enabled.
+A relationship between two entities is considered so when a source entity
+points to a target entity through one of the methods described above.
 
-This module is in early development phase. Please help testing it and provide
-feedback on the issue queue.
+You can configure what entity types should be tracked when source, and what
+entity types should be tracked as target. By default all content entities
+(except files and users) are tracked as source.
 
-==== FOR DEVELOPERS ====
+You can also configure what plugins (from the tracking methods indicated above)
+should be active. By default all plugins are active.
 
-The tracking information recorded by this module is stored at the "entity_usage"
-table.
+When a source entity is created / updated / deleted, all active plugins are
+called to register potential relationships.
 
-You can use the service
-  \Drupal::service('entity_usage.usage')->listSources($entity);
-to get the statistics anywhere in your code.
+Content entities can have a local task link (Tab) on its canonical page linking
+to a "Usage" information page, where users can see where that entity is being
+used. You can configure which entity types should have a local task displaying
+usage information.
 
-If you want to provide your own tracking method (additionally to the methods
-provided by the module: entity_reference and entity_embed), you only need to
-implement a plugin of type EntityUsageTrack, which will be used on all CRUD
-entity operations. Examples of how to implement the plugin can be found in
- src/Plugin/EntityUsage/Track
+In order to configure these and other settings, navigate to "Configuration ->
+Content Authoring -> Entity Usage Settings" (or go to the URL
+/admin/config/entity-usage/settings).
 
-Feedback is very welcome on the issue queue.
+You can also display usage information in Views, or retrieve them in custom
+code. Please refer to the online handbook to learn more.
+
+Batch update
+============
+
+The module provides a tool to erase and regenerate all tracked information about
+usage of entities on your site.
+Go to the URL /admin/config/entity-usage/batch-update in order to start the
+batch operation.
+
+Project page and Online handbook
+================================
+
+More information can be found on the project page:
+  https://www.drupal.org/project/entity_usage
+and on the online handbook:
+  https://www.drupal.org/docs/8/modules/entity-usage
