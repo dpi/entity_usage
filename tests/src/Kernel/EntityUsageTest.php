@@ -576,7 +576,7 @@ class EntityUsageTest extends EntityKernelTestBase {
    * @covers \Drupal\entity_usage\EntityUsage::listUsage
    * @covers \Drupal\entity_usage\EntityUsage::listReferencedEntities
    */
-  public function testLegacyMethods() {
+  public function testEntityUsageLegacyMethods() {
     /** @var \Drupal\Core\Entity\EntityInterface $target_entity */
     $target_entity = $this->testEntities[0];
     /** @var \Drupal\Core\Entity\EntityInterface $source_entity */

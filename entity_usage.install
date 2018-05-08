@@ -5,6 +5,9 @@
  * Install, update and uninstall functions for entity_usage module.
  */
 
+use Drupal\Core\Url;
+use Drupal\Core\Site\Settings;
+
 /**
  * Implements hook_schema().
  */
@@ -127,9 +130,22 @@ function entity_usage_update_8201(&$sandbox) {
 }
 
 /**
- * Re-generate entity_usage statistics.
+ * Trigger entity usage statistics in the new schema.
  */
 function entity_usage_update_8202(&$sandbox) {
+  // This flag is here only to ensure that sites that have already executed
+  // update 8202 will not run entity_usage_post_update_regenerate_2x() again.
+  \Drupal::state()->set('entity_usage_2x_regenerate', TRUE);
+}
+
+/**
+ * Re-generate entity_usage statistics.
+ */
+function entity_usage_post_update_regenerate_2x(&$sandbox) {
+  if (!\Drupal::state()->get('entity_usage_2x_regenerate')) {
+    return;
+  }
+
   // First pass.
   if (empty($sandbox['total'])) {
     $sandbox['current_key'] = 0;
@@ -168,6 +184,16 @@ function entity_usage_update_8202(&$sandbox) {
         }
       }
     }
+  }
+
+  // Abort the batch process if the site is big enough for this process to be
+  // a very long-running process.
+  $limit = Settings::get('entity_usage_2x_regenerate_limit', 2000);
+  if ($sandbox['total'] > $limit) {
+    $sandbox = [];
+    return t('The automatic regeneration of usage statistics was skipped because it could be potentially slow on this site. Make sure you visit the <a href="@batch_url">batch update</a> page and trigger the update manually.', [
+      '@batch_url' => Url::fromRoute('entity_usage.batch_update')->toString(),
+    ]);
   }
 
   // Worker.
