@@ -247,27 +247,5 @@ function entity_usage_post_update_regenerate_2x(&$sandbox) {
  * Include "target_id_string" also as primary key in schema.
  */
 function entity_usage_update_8203(&$sandbox) {
-  $schema = \Drupal::database()->schema();
-  $schema->dropPrimaryKey('entity_usage');
-  // If the "target_id_string" is becoming part of the primary key, it cannot be
-  // null.
-  $schema->changeField('entity_usage', 'target_id_string', 'target_id_string', [
-    'description' => 'The target ID, when the entity uses string IDs.',
-    'type' => 'varchar_ascii',
-    'length' => 128,
-    'not null' => TRUE,
-    'default' => '',
-  ]);
-  $new_primary_keys = [
-    'target_id',
-    'target_id_string',
-    'target_type',
-    'source_id',
-    'source_type',
-    'source_langcode',
-    'source_vid',
-    'method',
-    'field_name',
-  ];
-  $schema->addPrimaryKey('entity_usage', $new_primary_keys);
+  // Left empty on purpose.
 }
