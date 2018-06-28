@@ -219,10 +219,10 @@ class EntityUsageSettingsForm extends ConfigFormBase {
     $site_domains = array_values(array_filter(explode(',', $site_domains)));
 
     $config->set('track_enabled_base_fields', (bool) $form_state->getValue('track_enabled_base_fields'))
-      ->set('track_enabled_source_entity_types', $form_state->getValue('track_enabled_source_entity_types')['entity_types'])
-      ->set('track_enabled_target_entity_types', $form_state->getValue('track_enabled_target_entity_types')['entity_types'])
-      ->set('track_enabled_plugins', $form_state->getValue('track_enabled_plugins')['plugins'])
-      ->set('local_task_enabled_entity_types', $form_state->getValue('local_task_enabled_entity_types')['entity_types'])
+      ->set('local_task_enabled_entity_types', array_values(array_filter($form_state->getValue('local_task_enabled_entity_types')['entity_types'])))
+      ->set('track_enabled_source_entity_types', array_values(array_filter($form_state->getValue('track_enabled_source_entity_types')['entity_types'])))
+      ->set('track_enabled_target_entity_types', array_values(array_filter($form_state->getValue('track_enabled_target_entity_types')['entity_types'])))
+      ->set('track_enabled_plugins', array_values(array_filter($form_state->getValue('track_enabled_plugins')['plugins'])))
       ->set('site_domains', $site_domains)
       ->save();
 
