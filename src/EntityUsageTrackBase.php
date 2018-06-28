@@ -140,7 +140,7 @@ abstract class EntityUsageTrackBase extends PluginBase implements EntityUsageTra
     $trackable_field_types = $this->getApplicableFieldTypes();
     $fields = array_keys($this->getReferencingFields($source_entity, $trackable_field_types));
     foreach ($fields as $field_name) {
-      if (!$source_entity->{$field_name}->isEmpty()) {
+      if ($source_entity->hasField($field_name) && !$source_entity->{$field_name}->isEmpty()) {
         /** @var \Drupal\Core\Field\FieldItemInterface $field_item */
         foreach ($source_entity->{$field_name} as $field_item) {
           // The entity is being created with value on this field, so we just
@@ -165,6 +165,7 @@ abstract class EntityUsageTrackBase extends PluginBase implements EntityUsageTra
     foreach ($fields as $field_name) {
       if (($source_entity instanceof RevisionableInterface) &&
         $source_entity->getRevisionId() != $source_entity->original->getRevisionId() &&
+        $source_entity->hasField($field_name) &&
         !$source_entity->{$field_name}->isEmpty()) {
 
         $this->trackOnEntityCreation($source_entity);
@@ -174,7 +175,7 @@ abstract class EntityUsageTrackBase extends PluginBase implements EntityUsageTra
       // We are updating an existing revision, compare target entities to see if
       // we need to add or remove tracking records.
       $current_targets = [];
-      if (!$source_entity->{$field_name}->isEmpty()) {
+      if ($source_entity->hasField($field_name) && !$source_entity->{$field_name}->isEmpty()) {
         foreach ($source_entity->{$field_name} as $field_item) {
           $target_entities = $this->getTargetEntities($field_item);
           foreach ($target_entities as $target_entity) {
@@ -184,7 +185,7 @@ abstract class EntityUsageTrackBase extends PluginBase implements EntityUsageTra
       }
 
       $original_targets = [];
-      if (!$source_entity->original->{$field_name}->isEmpty()) {
+      if ($source_entity->hasField($field_name) && !$source_entity->original->{$field_name}->isEmpty()) {
         foreach ($source_entity->original->{$field_name} as $field_item) {
           $target_entities = $this->getTargetEntities($field_item);
           foreach ($target_entities as $target_entity) {
