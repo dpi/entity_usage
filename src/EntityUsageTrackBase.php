@@ -185,7 +185,7 @@ abstract class EntityUsageTrackBase extends PluginBase implements EntityUsageTra
       }
 
       $original_targets = [];
-      if ($source_entity->hasField($field_name) && !$source_entity->original->{$field_name}->isEmpty()) {
+      if ($source_entity->original->hasField($field_name) && !$source_entity->original->{$field_name}->isEmpty()) {
         foreach ($source_entity->original->{$field_name} as $field_item) {
           $target_entities = $this->getTargetEntities($field_item);
           foreach ($target_entities as $target_entity) {
