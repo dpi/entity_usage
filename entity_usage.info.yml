@@ -11,3 +11,4 @@ test_dependencies:
   - paragraphs:paragraphs
   - webform:webform
   - block_field:block_field
+  - dynamic_entity_reference:dynamic_entity_reference

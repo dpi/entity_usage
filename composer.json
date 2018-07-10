@@ -16,6 +16,7 @@
     "drupal/entity_reference_revisions": "~1.0",
     "drupal/paragraphs": "~1.0",
     "drupal/webform": "~5.0",
-    "drupal/block_field": "~1.0"
+    "drupal/block_field": "~1.0",
+    "drupal/dynamic_entity_reference": "~1.0"
   }
 }
