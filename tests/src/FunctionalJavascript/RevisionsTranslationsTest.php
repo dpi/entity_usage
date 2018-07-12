@@ -436,8 +436,8 @@ class RevisionsTranslationsTest extends EntityUsageJavascriptTestBase {
     $first_row_type = $this->xpath('//table/tbody/tr[1]/td[2]')[0];
     $this->assertEquals('Content', $first_row_type->getText());
     $first_row_langcode = $this->xpath('//table/tbody/tr[1]/td[3]')[0];
-    $this->assertEquals('en', $first_row_langcode->getText());
-    $first_row_field_label = $this->xpath('//table/tbody/tr[1]/td[5]')[0];
+    $this->assertEquals('English', $first_row_langcode->getText());
+    $first_row_field_label = $this->xpath('//table/tbody/tr[1]/td[4]')[0];
     $this->assertEquals('Related nodes', $first_row_field_label->getText());
     // There's no second row.
     $assert_session->elementNotExists('xpath', '//table/tbody/tr[2]');
@@ -448,9 +448,11 @@ class RevisionsTranslationsTest extends EntityUsageJavascriptTestBase {
     $first_row_type = $this->xpath('//table/tbody/tr[1]/td[2]')[0];
     $this->assertEquals('Content', $first_row_type->getText());
     $first_row_langcode = $this->xpath('//table/tbody/tr[1]/td[3]')[0];
-    $this->assertEquals('es', $first_row_langcode->getText());
-    $first_row_field_label = $this->xpath('//table/tbody/tr[1]/td[5]')[0];
+    $this->assertEquals('English', $first_row_langcode->getText());
+    $first_row_field_label = $this->xpath('//table/tbody/tr[1]/td[4]')[0];
     $this->assertEquals('Related nodes', $first_row_field_label->getText());
+    $first_row_used_in = $this->xpath('//table/tbody/tr[1]/td[6]')[0];
+    $this->assertEquals('Translations or previous revisions', $first_row_used_in->getText());
     // There's no second row.
     $assert_session->elementNotExists('xpath', '//table/tbody/tr[2]');
 

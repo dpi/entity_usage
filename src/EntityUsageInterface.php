@@ -137,14 +137,19 @@ interface EntityUsageInterface {
    *
    * @param \Drupal\Core\Entity\EntityInterface $target_entity
    *   A target entity.
+   * @param bool $nest_results
+   *   (optional) Whether the results should be returned in a nested structure.
+   *   Defaults to TRUE.
    *
    * @return array
    *   A nested array with usage data. The first level is keyed by the type of
    *   the source entities, the second by the source id. The value of the second
    *   level contains all other information like the method used by the source
-   *   to reference the target, the field name and the source language code.
+   *   to reference the target, the field name and the source language code. If
+   *   $nest_results is FALSE, the returned array will be an indexed array where
+   *   values are arrays containing all DB columns for the records.
    */
-  public function listSources(EntityInterface $target_entity);
+  public function listSources(EntityInterface $target_entity, $nest_results = TRUE);
 
   /**
    * Provide a list of all referenced target entities for a source entity.

@@ -221,7 +221,7 @@ class EntityUsage implements EntityUsageInterface {
   /**
    * {@inheritdoc}
    */
-  public function listSources(EntityInterface $target_entity) {
+  public function listSources(EntityInterface $target_entity, $nest_results = TRUE) {
     // Entities can have string IDs. We support that by using different columns
     // on each case.
     $target_id_column = $this->isInt($target_entity->id()) ? 'target_id' : 'target_id_string';
@@ -247,14 +247,27 @@ class EntityUsage implements EntityUsageInterface {
 
     $references = [];
     foreach ($result as $usage) {
-      $source_id_value = !empty($usage->source_id) ? $usage->source_id : $usage->source_id_string;
-      $references[$usage->source_type][(string) $source_id_value][] = [
-        'source_langcode' => $usage->source_langcode,
-        'source_vid' => $usage->source_vid,
-        'method' => $usage->method,
-        'field_name' => $usage->field_name,
-        'count' => $usage->count,
-      ];
+      $source_id_value = !empty($usage->source_id) ? (string) $usage->source_id : (string) $usage->source_id_string;
+      if ($nest_results) {
+        $references[$usage->source_type][$source_id_value][] = [
+          'source_langcode' => $usage->source_langcode,
+          'source_vid' => $usage->source_vid,
+          'method' => $usage->method,
+          'field_name' => $usage->field_name,
+          'count' => $usage->count,
+        ];
+      }
+      else {
+        $references[] = [
+          'source_type' => $usage->source_type,
+          'source_id' => $source_id_value,
+          'source_langcode' => $usage->source_langcode,
+          'source_vid' => $usage->source_vid,
+          'method' => $usage->method,
+          'field_name' => $usage->field_name,
+          'count' => $usage->count,
+        ];
+      }
     }
 
     return $references;

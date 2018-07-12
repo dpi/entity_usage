@@ -8,9 +8,10 @@ use Drupal\Core\Entity\EntityFieldManagerInterface;
 use Drupal\Core\Entity\EntityInterface;
 use Drupal\Core\Entity\EntityTypeManagerInterface;
 use Drupal\Core\Entity\RevisionableInterface;
+use Drupal\Core\Language\LanguageInterface;
+use Drupal\Core\Link;
 use Drupal\entity_usage\EntityUsageInterface;
 use Symfony\Component\DependencyInjection\ContainerInterface;
-
 
 /**
  * Controller for our pages.
@@ -31,6 +32,13 @@ class ListUsageController extends ControllerBase {
    * @var \Drupal\entity_usage\EntityUsageInterface
    */
   protected $entityUsage;
+
+  /**
+   * All source rows for this target entity.
+   *
+   * @var array
+   */
+  protected $allRows;
 
   /**
    * ListUsageController constructor.
@@ -73,78 +81,153 @@ class ListUsageController extends ControllerBase {
    * @throws \Symfony\Component\HttpKernel\Exception\NotFoundHttpException
    */
   public function listUsagePage($entity_type, $entity_id) {
-    $entity_types = $this->entityTypeManager->getDefinitions();
-    $entity = $this->entityTypeManager->getStorage($entity_type)->load($entity_id);
-    if ($entity) {
-      $all_usages = $this->entityUsage->listSources($entity);
-      if (empty($all_usages)) {
-        $build = [
-          '#markup' => $this->t('There are no recorded usages for entity of type: @type with id: @id', ['@type' => $entity_type, '@id' => $entity_id]),
-        ];
-      }
-      else {
-        $header = [
-          $this->t('Entity'),
-          $this->t('Type'),
-          $this->t('Language'),
-          $this->t('Revision ID'),
-          $this->t('Field name'),
-        ];
-        $rows = [];
-        foreach ($all_usages as $source_type => $source_ids) {
-          // Of those, only loop over existing entities.
-          foreach ($this->entityTypeManager->getStorage($source_type)->loadMultiple(array_keys($source_ids)) as $source_id => $source_entity) {
-            $entity_usages = $source_ids[$source_id];
-            $field_definitions = $this->entityFieldManager->getFieldDefinitions($source_type, $source_entity->bundle());
-            foreach ($entity_usages as $usage_details) {
-              if ($entity instanceof RevisionableInterface) {
-                $source_entity_revision = $this->entityTypeManager->getStorage($source_type)
-                  ->loadRevision($usage_details['source_vid']);
-                if ($source_entity_revision &&
-                  $source_entity->hasTranslation($usage_details['source_langcode']) &&
-                  $translation = $source_entity_revision->getTranslation($usage_details['source_langcode'])) {
-                  // Only show revision translations if they were affected.
-                  /** @var \Drupal\Core\Entity\ContentEntityInterface $translation */
-                  if (!$translation->isRevisionTranslationAffected()) {
-                    continue;
-                  }
-
-                  $link = $this->getSourceEntityLink($translation);
-                }
-              }
-              else {
-                $link = $this->getSourceEntityLink($source_entity);
-              }
-              // If the label is empty it means this usage shouldn't be shown
-              // on the UI, just skip this row.
-              if (empty($link)) {
-                continue;
-              }
-              $field_label = isset($field_definitions[$usage_details['field_name']]) ? $field_definitions[$usage_details['field_name']]->getLabel() : $this->t('Unknown');
-              $rows[] = [
-                $link,
-                $entity_types[$source_type]->getLabel(),
-                $usage_details['source_langcode'],
-                $usage_details['source_vid'] ?: '',
-                $field_label,
-              ];
-            }
-          }
-        }
-        $build = [
-          '#theme' => 'table',
-          '#rows' => $rows,
-          '#header' => $header,
-        ];
-      }
-    }
-    else {
-      // Non-existing entity in database.
-      $build = [
-        '#markup' => $this->t('Could not find the entity of type: @type with id: @id', ['@type' => $entity_type, '@id' => $entity_id]),
+    $all_rows = $this->getRows($entity_type, $entity_id);
+    if (empty($all_rows)) {
+      return [
+        '#markup' => $this->t('There are no recorded usages for entity of type: @type with id: @id', ['@type' => $entity_type, '@id' => $entity_id]),
       ];
     }
+
+    $header = [
+      $this->t('Entity'),
+      $this->t('Type'),
+      $this->t('Language'),
+      $this->t('Field name'),
+      $this->t('Status'),
+      $this->t('Used in'),
+    ];
+
+    $total = count($all_rows);
+    // @todo Make this configurable on the settings form.
+    $num_per_page = 25;
+    $page = pager_default_initialize($total, $num_per_page);
+    $page_rows = $this->getPageRows($page, $num_per_page, $entity_type, $entity_id);
+    // If all rows on this page are of entities that have usage on their default
+    // revision, we don't need the "Used in" column.
+    $used_in_previous_revisions = FALSE;
+    foreach ($page_rows as $row) {
+      if ($row[5] == $this->t('Translations or previous revisions')) {
+        $used_in_previous_revisions = TRUE;
+        break;
+      }
+    }
+    if (!$used_in_previous_revisions) {
+      unset($header[5]);
+      array_walk($page_rows, function (&$row, $key) {
+        unset($row[5]);
+      });
+    }
+    $build[] = [
+      '#theme' => 'table',
+      '#rows' => $page_rows,
+      '#header' => $header,
+    ];
+
+    $build[] = [
+      '#type' => 'pager',
+    ];
+
     return $build;
+  }
+
+  /**
+   * Retrieve all usage rows for this target entity.
+   *
+   * @param string $entity_type
+   *   The type of the target entity.
+   * @param int|string $entity_id
+   *   The ID of the target entity.
+   *
+   * @return array
+   *   An indexed array of rows that should be displayed as sources for this
+   *   target entity.
+   */
+  protected function getRows($entity_type, $entity_id) {
+    if (!empty($this->allRows)) {
+      return $this->allRows;
+      // @todo Cache this based on the target entity, invalidating the cached
+      // results every time records are added/removed to the same target entity.
+    }
+    $rows = [];
+    $entity = $this->entityTypeManager->getStorage($entity_type)->load($entity_id);
+    if (!$entity) {
+      return $rows;
+    }
+    $entity_types = $this->entityTypeManager->getDefinitions();
+    $languages = $this->languageManager()->getLanguages(LanguageInterface::STATE_ALL);
+    $all_usages = $this->entityUsage->listSources($entity);
+    foreach ($all_usages as $source_type => $ids) {
+      $type_storage = $this->entityTypeManager->getStorage($source_type);
+      foreach ($ids as $source_id => $records) {
+        // We will show a single row per source entity. If the target is not
+        // referenced on its default revision on the default language, we will
+        // just show indicate that in a specific column.
+        $source_entity = $type_storage->load($source_id);
+        if (!$source_entity) {
+          // If for some reason this record is broken, just skip it.
+          continue;
+        }
+        $field_definitions = $this->entityFieldManager->getFieldDefinitions($source_type, $source_entity->bundle());
+        if ($source_entity instanceof RevisionableInterface) {
+          $default_revision_id = $source_entity->getRevisionId();
+          $default_langcode = $source_entity->language()->getId();
+          $used_in_default = FALSE;
+          $default_key = 0;
+          foreach ($records as $key => $record) {
+            if ($record['source_vid'] == $default_revision_id && $record['source_langcode'] == $default_langcode) {
+              $default_key = $key;
+              $used_in_default = TRUE;
+              break;
+            }
+          }
+          $used_in_text = $used_in_default ? $this->t('Default') : $this->t('Translations or previous revisions');
+        }
+        $link = $this->getSourceEntityLink($source_entity);
+        // If the label is empty it means this usage shouldn't be shown
+        // on the UI, just skip this row.
+        if (empty($link)) {
+          continue;
+        }
+        if (isset($source_entity->status)) {
+          $published = !empty($source_entity->status->value) ? $this->t('Published') : $this->t('Unpublished');
+        }
+        else {
+          $published = '';
+        }
+        $field_label = isset($field_definitions[$records[$default_key]['field_name']]) ? $field_definitions[$records[$default_key]['field_name']]->getLabel() : $this->t('Unknown');
+        $rows[] = [
+          $link,
+          $entity_types[$source_type]->getLabel(),
+          $languages[$default_langcode]->getName(),
+          $field_label,
+          $published,
+          $used_in_text,
+        ];
+      }
+    }
+
+    $this->allRows = $rows;
+    return $this->allRows;
+  }
+
+  /**
+   * Get rows for a given page.
+   *
+   * @param int $page
+   *   The page number to retrieve.
+   * @param int $num_per_page
+   *   The number of rows we want to have on this page.
+   * @param string $entity_type
+   *   The type of the target entity.
+   * @param int|string $entity_id
+   *   The ID of the target entity.
+   *
+   * @return array
+   *   An indexed array of rows representing the records for a given page.
+   */
+  protected function getPageRows($page, $num_per_page, $entity_type, $entity_id) {
+    $offset = $page * $num_per_page;
+    return array_slice($this->getRows($entity_type, $entity_id), $offset, $num_per_page);
   }
 
   /**

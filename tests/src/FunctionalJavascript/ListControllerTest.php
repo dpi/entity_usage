@@ -2,6 +2,7 @@
 
 namespace Drupal\Tests\entity_usage\FunctionalJavascript;
 
+use Drupal\language\Entity\ConfigurableLanguage;
 use Drupal\node\Entity\Node;
 use Drupal\Tests\entity_usage\Traits\EntityUsageLastEntityQueryTrait;
 use Drupal\user\Entity\Role;
@@ -16,6 +17,14 @@ use Drupal\user\Entity\Role;
 class ListControllerTest extends EntityUsageJavascriptTestBase {
 
   use EntityUsageLastEntityQueryTrait;
+
+  /**
+   * {@inheritdoc}
+   */
+  protected static $modules = [
+    'language',
+    'content_translation',
+  ];
 
   /**
    * {@inheritdoc}
@@ -80,8 +89,8 @@ class ListControllerTest extends EntityUsageJavascriptTestBase {
     $assert_session->pageTextContains('Entity');
     $assert_session->pageTextContains('Type');
     $assert_session->pageTextContains('Language');
-    $assert_session->pageTextContains('Revision ID');
     $assert_session->pageTextContains('Field name');
+    $assert_session->pageTextContains('Status');
 
     // Make sure that all elements of the table are the expected ones.
     $first_row_title_link = $assert_session->elementExists('xpath', '//table/tbody/tr[1]/td[1]/a');
@@ -90,11 +99,11 @@ class ListControllerTest extends EntityUsageJavascriptTestBase {
     $first_row_type = $this->xpath('//table/tbody/tr[1]/td[2]')[0];
     $this->assertEquals('Content', $first_row_type->getText());
     $first_row_langcode = $this->xpath('//table/tbody/tr[1]/td[3]')[0];
-    $this->assertEquals('en', $first_row_langcode->getText());
-    $first_row_vid = $this->xpath('//table/tbody/tr[1]/td[4]')[0];
-    $this->assertEquals('3', $first_row_vid->getText());
-    $first_row_field_label = $this->xpath('//table/tbody/tr[1]/td[5]')[0];
+    $this->assertEquals('English', $first_row_langcode->getText());
+    $first_row_field_label = $this->xpath('//table/tbody/tr[1]/td[4]')[0];
     $this->assertEquals('Text', $first_row_field_label->getText());
+    $first_row_status = $this->xpath('//table/tbody/tr[1]/td[5]')[0];
+    $this->assertEquals('Published', $first_row_status->getText());
 
     $second_row_title_link = $assert_session->elementExists('xpath', '//table/tbody/tr[2]/td[1]/a');
     $this->assertEquals('Node 2', $second_row_title_link->getText());
@@ -102,13 +111,20 @@ class ListControllerTest extends EntityUsageJavascriptTestBase {
     $second_row_type = $this->xpath('//table/tbody/tr[2]/td[2]')[0];
     $this->assertEquals('Content', $second_row_type->getText());
     $second_row_langcode = $this->xpath('//table/tbody/tr[2]/td[3]')[0];
-    $this->assertEquals('en', $second_row_langcode->getText());
-    $second_row_vid = $this->xpath('//table/tbody/tr[2]/td[4]')[0];
-    $this->assertEquals('2', $second_row_vid->getText());
-    $second_row_field_label = $this->xpath('//table/tbody/tr[2]/td[5]')[0];
+    $this->assertEquals('English', $second_row_langcode->getText());
+    $second_row_field_label = $this->xpath('//table/tbody/tr[2]/td[4]')[0];
     $this->assertEquals('Related nodes', $second_row_field_label->getText());
+    $second_row_status = $this->xpath('//table/tbody/tr[2]/td[5]')[0];
+    $this->assertEquals('Published', $second_row_status->getText());
 
-    // Artifitially create some garbage in the database and make sure it doesn't
+    // If we unpublish Node 2 its status is correctly reflected.
+    /** @var \Drupal\node\NodeInterface $node2 */
+    $node2->setUnpublished()->save();
+    $this->drupalGet("/admin/content/entity-usage/node/{$node1->id()}");
+    $second_row_status = $this->xpath('//table/tbody/tr[2]/td[5]')[0];
+    $this->assertEquals('Unpublished', $second_row_status->getText());
+
+    // Artificially create some garbage in the database and make sure it doesn't
     // show up on the usage page.
     \Drupal::database()->insert('entity_usage')
       ->fields([
@@ -133,6 +149,71 @@ class ListControllerTest extends EntityUsageJavascriptTestBase {
     $assert_session->elementNotContains('css', 'table', 'user');
     $assert_session->elementNotContains('css', 'table', '5678');
     $assert_session->elementNotContains('css', 'table', 'field_foo');
+
+    // When all usages are shown on their default revisions, we don't see the
+    // extra column.
+    $assert_session->pageTextNotContains('Used in');
+    $assert_session->pageTextNotContains('Translations or previous revisions');
+
+    // If some sources reference our entity in a previous revision, an
+    // additional column is shown.
+    $node2->field_eu_test_related_nodes = NULL;
+    $node2->setNewRevision();
+    $node2->save();
+    $this->drupalGet("/admin/content/entity-usage/node/{$node1->id()}");
+    $assert_session->pageTextContains('Used in');
+    $second_row_used_in = $this->xpath('//table/tbody/tr[1]/td[6]')[0];
+    $this->assertEquals('Default', $second_row_used_in->getText());
+    $second_row_used_in = $this->xpath('//table/tbody/tr[2]/td[6]')[0];
+    $this->assertEquals('Translations or previous revisions', $second_row_used_in->getText());
+
+    // Make sure we only have 2 rows (so no previous revision shows up).
+    $this->assertEquals(2, count($this->xpath('//table/tbody/tr')));
+
+    // Create some additional languages.
+    foreach (['es'] as $langcode) {
+      ConfigurableLanguage::createFromLangcode($langcode)->save();
+    }
+
+    // Let the logged-in user do multi-lingual stuff.
+    /** @var \Drupal\user\RoleInterface $authenticated_role */
+    $authenticated_role = Role::load('authenticated');
+    $authenticated_role->grantPermission('administer content translation');
+    $authenticated_role->grantPermission('translate any entity');
+    $authenticated_role->grantPermission('create content translations');
+    $authenticated_role->grantPermission('administer languages');
+    $authenticated_role->grantPermission('administer entity usage');
+    $authenticated_role->grantPermission('access entity usage statistics');
+    $authenticated_role->save();
+
+    // Set our content type as translatable.
+    $this->drupalGet('/admin/config/regional/content-language');
+    $page->checkField('entity_types[node]');
+    $page->checkField('settings[node][eu_test_ct][translatable]');
+    $page->pressButton('Save configuration');
+    $session->wait(500);
+    $this->saveHtmlOutput();
+    $assert_session->pageTextContains('Settings successfully updated.');
+
+    // Translate $node2 and check its translation doesn't show up.
+    $this->drupalGet("/es/node/{$node2->id()}/translations/add/en/es");
+    $page->fillField('field_eu_test_related_nodes[0][target_id]', "Node 1 ({$node1->id()})");
+    // Ensure we are creating a new revision.
+    $page->checkField('Create new revision (all languages)');
+    $assert_session->checkboxChecked('Create new revision (all languages)');
+    $page->pressButton('Save (this translation)');
+    $session->wait(500);
+    $this->saveHtmlOutput();
+    $assert_session->pageTextContains('eu_test_ct Node 2 has been updated.');
+
+    // Usage now should be the same as before.
+    $this->drupalGet("/admin/content/entity-usage/node/{$node1->id()}");
+    $assert_session->pageTextContains('Used in');
+    $second_row_used_in = $this->xpath('//table/tbody/tr[1]/td[6]')[0];
+    $this->assertEquals('Default', $second_row_used_in->getText());
+    $second_row_used_in = $this->xpath('//table/tbody/tr[2]/td[6]')[0];
+    $this->assertEquals('Translations or previous revisions', $second_row_used_in->getText());
+    $this->assertEquals(2, count($this->xpath('//table/tbody/tr')));
   }
 
 }

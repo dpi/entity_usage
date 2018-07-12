@@ -206,8 +206,8 @@ class ParagraphsTest extends EntityUsageJavascriptTestBase {
     $first_row_type = $this->xpath('//table/tbody/tr[1]/td[2]')[0];
     $this->assertEquals('Content', $first_row_type->getText());
     $first_row_langcode = $this->xpath('//table/tbody/tr[1]/td[3]')[0];
-    $this->assertEquals('en', $first_row_langcode->getText());
-    $first_row_field_label = $this->xpath('//table/tbody/tr[1]/td[5]')[0];
+    $this->assertEquals('English', $first_row_langcode->getText());
+    $first_row_field_label = $this->xpath('//table/tbody/tr[1]/td[4]')[0];
     $this->assertEquals('Direct media', $first_row_field_label->getText());
     // The second row contains the reference from the first paragraph.
     $second_row_title_link = $assert_session->elementExists('xpath', '//table/tbody/tr[2]/td[1]/a');
@@ -217,8 +217,8 @@ class ParagraphsTest extends EntityUsageJavascriptTestBase {
     $second_row_type = $this->xpath('//table/tbody/tr[2]/td[2]')[0];
     $this->assertEquals('Paragraph', $second_row_type->getText());
     $second_row_langcode = $this->xpath('//table/tbody/tr[2]/td[3]')[0];
-    $this->assertEquals('en', $second_row_langcode->getText());
-    $second_row_field_label = $this->xpath('//table/tbody/tr[2]/td[5]')[0];
+    $this->assertEquals('English', $second_row_langcode->getText());
+    $second_row_field_label = $this->xpath('//table/tbody/tr[2]/td[4]')[0];
     $this->assertEquals('Media assets', $second_row_field_label->getText());
     // The third row contains the reference from the nested paragraph.
     $third_row_title_link = $assert_session->elementExists('xpath', '//table/tbody/tr[3]/td[1]/a');
@@ -228,8 +228,8 @@ class ParagraphsTest extends EntityUsageJavascriptTestBase {
     $third_row_type = $this->xpath('//table/tbody/tr[3]/td[2]')[0];
     $this->assertEquals('Paragraph', $third_row_type->getText());
     $third_row_langcode = $this->xpath('//table/tbody/tr[3]/td[3]')[0];
-    $this->assertEquals('en', $third_row_langcode->getText());
-    $third_row_field_label = $this->xpath('//table/tbody/tr[3]/td[5]')[0];
+    $this->assertEquals('English', $third_row_langcode->getText());
+    $third_row_field_label = $this->xpath('//table/tbody/tr[3]/td[4]')[0];
     $this->assertEquals('Media assets', $third_row_field_label->getText());
 
     // Remove references to the paragraphs, and check we don't show orphan
@@ -264,31 +264,16 @@ class ParagraphsTest extends EntityUsageJavascriptTestBase {
 
     // But we don't show orphan paragraphs on the usage page.
     $this->drupalGet("/admin/content/entity-usage/media/{$media1->id()}");
-    // The first row contains the direct reference from the host node, vid 2.
+    // The first row contains the direct reference from the host node.
     $first_row_title_link = $assert_session->elementExists('xpath', '//table/tbody/tr[1]/td[1]/a');
     $this->assertEquals('Node 1', $first_row_title_link->getText());
     $this->assertEquals($node1->toUrl()->toString(), $first_row_title_link->getAttribute('href'));
     $first_row_type = $this->xpath('//table/tbody/tr[1]/td[2]')[0];
     $this->assertEquals('Content', $first_row_type->getText());
     $first_row_langcode = $this->xpath('//table/tbody/tr[1]/td[3]')[0];
-    $this->assertEquals('en', $first_row_langcode->getText());
-    $first_row_vid = $this->xpath('//table/tbody/tr[1]/td[4]')[0];
-    $this->assertEquals('2', $first_row_vid->getText());
-    $first_row_field_label = $this->xpath('//table/tbody/tr[1]/td[5]')[0];
+    $this->assertEquals('English', $first_row_langcode->getText());
+    $first_row_field_label = $this->xpath('//table/tbody/tr[1]/td[4]')[0];
     $this->assertEquals('Direct media', $first_row_field_label->getText());
-    // The second row contains the direct reference from the host node, vid 1.
-    $second_row_title_link = $assert_session->elementExists('xpath', '//table/tbody/tr[2]/td[1]/a');
-    $this->assertEquals('Node 1', $second_row_title_link->getText());
-    // The link points to the previous revision URL.
-    $this->assertContains("/node/{$node1->id()}/revisions/", $second_row_title_link->getAttribute('href'));
-    $second_row_type = $this->xpath('//table/tbody/tr[1]/td[2]')[0];
-    $this->assertEquals('Content', $second_row_type->getText());
-    $second_row_langcode = $this->xpath('//table/tbody/tr[1]/td[3]')[0];
-    $this->assertEquals('en', $second_row_langcode->getText());
-    $second_row_vid = $this->xpath('//table/tbody/tr[2]/td[4]')[0];
-    $this->assertEquals('1', $second_row_vid->getText());
-    $second_row_field_label = $this->xpath('//table/tbody/tr[1]/td[5]')[0];
-    $this->assertEquals('Direct media', $second_row_field_label->getText());
     // No other usages referencing a paragraph entity show up.
     $assert_session->pageTextNotContains('Paragraph');
     $assert_session->pageTextNotContains('Media assets');
