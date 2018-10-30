@@ -234,8 +234,11 @@ abstract class EntityUsageTrackBase extends PluginBase implements EntityUsageTra
     $referencing_fields_on_bundle = array_intersect_key($all_fields_on_bundle, $referencing_fields_on_entity_type);
 
     if (!$this->config->get('track_enabled_base_fields')) {
-      $basefields = $this->entityFieldManager->getBaseFieldDefinitions($source_entity_type_id);
-      $referencing_fields_on_bundle = array_diff_key($referencing_fields_on_bundle, $basefields);
+      foreach ($referencing_fields_on_bundle as $key => $referencing_field_on_bundle) {
+        if ($referencing_field_on_bundle->getFieldStorageDefinition()->isBaseField()) {
+          unset($referencing_fields_on_bundle[$key]);
+        }
+      }
     }
 
     return $referencing_fields_on_bundle;
