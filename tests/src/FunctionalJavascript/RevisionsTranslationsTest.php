@@ -83,6 +83,8 @@ class RevisionsTranslationsTest extends EntityUsageJavascriptTestBase {
     $this->drupalGet("/node/{$node2->id()}/edit");
     $page->fillField('field_eu_test_related_nodes[0][target_id]', '');
     // Ensure we are creating a new revision.
+    $revision_tab = $page->find('css', 'a[href="#edit-revision-information"]');
+    $revision_tab->click();
     $page->checkField('Create new revision');
     $assert_session->checkboxChecked('Create new revision');
     $page->pressButton('Save');
@@ -112,6 +114,8 @@ class RevisionsTranslationsTest extends EntityUsageJavascriptTestBase {
     $this->drupalGet("/node/{$node2->id()}/edit");
     $page->fillField('field_eu_test_related_nodes[0][target_id]', "Node 1 ({$node1->id()})");
     // Ensure we are creating a new revision.
+    $revision_tab = $page->find('css', 'a[href="#edit-revision-information"]');
+    $revision_tab->click();
     $page->checkField('Create new revision');
     $assert_session->checkboxChecked('Create new revision');
     $page->pressButton('Save');
@@ -157,6 +161,8 @@ class RevisionsTranslationsTest extends EntityUsageJavascriptTestBase {
     $page->fillField('field_eu_test_related_nodes[0][target_id]', "Node 1 ({$node1->id()})");
     $page->fillField('field_eu_test_related_nodes[1][target_id]', "Node 3 ({$node3->id()})");
     // Ensure we are creating a new revision.
+    $revision_tab = $page->find('css', 'a[href="#edit-revision-information"]');
+    $revision_tab->click();
     $page->checkField('Create new revision');
     $assert_session->checkboxChecked('Create new revision');
     $page->pressButton('Save');
@@ -187,6 +193,8 @@ class RevisionsTranslationsTest extends EntityUsageJavascriptTestBase {
     $page->fillField('field_eu_test_related_nodes[0][target_id]', '');
     $page->fillField('field_eu_test_related_nodes[1][target_id]', '');
     // Ensure we are creating a new revision.
+    $revision_tab = $page->find('css', 'a[href="#edit-revision-information"]');
+    $revision_tab->click();
     $page->checkField('Create new revision');
     $assert_session->checkboxChecked('Create new revision');
     $page->pressButton('Save');
@@ -378,6 +386,8 @@ class RevisionsTranslationsTest extends EntityUsageJavascriptTestBase {
     $this->drupalGet("/es/node/{$node3->id()}/translations/add/en/es");
     $page->fillField('field_eu_test_related_nodes[0][target_id]', "Node 2 ({$node2->id()})");
     // Ensure we are creating a new revision.
+    $revision_tab = $page->find('css', 'a[href="#edit-revision-information"]');
+    $revision_tab->click();
     $page->checkField('Create new revision (all languages)');
     $assert_session->checkboxChecked('Create new revision (all languages)');
     $page->pressButton('Save (this translation)');
@@ -460,6 +470,8 @@ class RevisionsTranslationsTest extends EntityUsageJavascriptTestBase {
     $this->drupalGet("/es/node/{$node3->id()}/edit");
     $page->fillField('field_eu_test_related_nodes[0][target_id]', '');
     // Ensure we are creating a new revision.
+    $revision_tab = $page->find('css', 'a[href="#edit-revision-information"]');
+    $revision_tab->click();
     $page->checkField('Create new revision (all languages)');
     $assert_session->checkboxChecked('Create new revision (all languages)');
     $page->pressButton('Save (this translation)');
@@ -520,6 +532,8 @@ class RevisionsTranslationsTest extends EntityUsageJavascriptTestBase {
     // Reference Node 2 back in the ES translation.
     $page->fillField('field_eu_test_related_nodes[0][target_id]', "Node 2 ({$node2->id()})");
     // Ensure we are creating a new revision.
+    $revision_tab = $page->find('css', 'a[href="#edit-revision-information"]');
+    $revision_tab->click();
     $page->checkField('Create new revision (all languages)');
     $assert_session->checkboxChecked('Create new revision (all languages)');
     $page->pressButton('Save (this translation)');
@@ -605,6 +619,8 @@ class RevisionsTranslationsTest extends EntityUsageJavascriptTestBase {
     // We will add a ES translation again, so we make sure it is deleted later.
     $page->fillField('field_eu_test_related_nodes[0][target_id]', "Node 2 ({$node2->id()})");
     // Ensure we are creating a new revision.
+    $revision_tab = $page->find('css', 'a[href="#edit-revision-information"]');
+    $revision_tab->click();
     $page->checkField('Create new revision (all languages)');
     $assert_session->checkboxChecked('Create new revision (all languages)');
     $page->pressButton('Save (this translation)');

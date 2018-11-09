@@ -3,6 +3,7 @@
 namespace Drupal\Tests\entity_usage\FunctionalJavascript;
 
 use Drupal\Core\Field\FieldStorageDefinitionInterface;
+use Drupal\Core\Url;
 use Drupal\field\Entity\FieldConfig;
 use Drupal\field\Entity\FieldStorageConfig;
 use Drupal\link\LinkItemInterface;
@@ -27,6 +28,23 @@ class IntegrationTest extends EntityUsageJavascriptTestBase {
   protected static $modules = [
     'link',
   ];
+
+  /**
+   * {@inheritdoc}
+   */
+  public function setUp() {
+    parent::setUp();
+
+    $account = $this->drupalCreateUser([
+      'administer node fields',
+      'administer node display',
+      'administer nodes',
+      'bypass node access',
+      'use text format eu_test_text_format',
+      'administer entity usage',
+    ]);
+    $this->drupalLogin($account);
+  }
 
   /**
    * Tests the tracking of nodes in some simple CRUD operations.
@@ -77,6 +95,38 @@ class IntegrationTest extends EntityUsageJavascriptTestBase {
       ],
     ];
     $this->assertEquals($expected, $usage);
+
+    // Open Node 1 edit and delete form and verify that no warning is present.
+    $this->drupalGet("/node/{$node1->id()}/edit");
+    $assert_session->pageTextNotContains('Modifications on this form will affect all existing usages of this entity');
+    $this->drupalGet("/node/{$node1->id()}/delete");
+    $assert_session->pageTextNotContains('There are recorded usages of this entity');
+    // Configure nodes to have warning messages on both forms and try again.
+    $this->drupalGet('/admin/config/entity-usage/settings');
+    $edit_summary = $assert_session->elementExists('css', '#edit-edit-warning-message-entity-types summary');
+    $edit_summary->click();
+    $assert_session->pageTextContains('Entity types to show warning on edit form');
+    $page->checkField('edit_warning_message_entity_types[entity_types][node]');
+    $delete_summary = $assert_session->elementExists('css', '#edit-delete-warning-message-entity-types summary');
+    $delete_summary->click();
+    $assert_session->pageTextContains('Entity types to show warning on delete form');
+    $page->checkField('delete_warning_message_entity_types[entity_types][node]');
+    $page->pressButton('Save configuration');
+    $session->wait(500);
+    $this->saveHtmlOutput();
+    $assert_session->pageTextContains('The configuration options have been saved.');
+    $this->drupalGet("/node/{$node1->id()}/edit");
+    $assert_session->pageTextContains('Modifications on this form will affect all existing usages of this entity');
+    $assert_session->linkExists('existing usages');
+    $usage_url = Url::fromRoute('entity_usage.usage_list', [
+      'entity_type' => 'node',
+      'entity_id' => $node1->id(),
+    ])->toString();
+    $assert_session->linkByHrefExists($usage_url);
+    $this->drupalGet("/node/{$node1->id()}/delete");
+    $assert_session->pageTextContains('There are recorded usages of this entity');
+    $assert_session->linkExists('recorded usages');
+    $assert_session->linkByHrefExists($usage_url);
 
     // Create a new entity reference field.
     $storage = FieldStorageConfig::create([

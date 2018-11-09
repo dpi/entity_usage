@@ -2,14 +2,14 @@
 
 namespace Drupal\Tests\entity_usage\FunctionalJavascript;
 
-use Drupal\FunctionalJavascriptTests\LegacyJavascriptTestBase;
+use Drupal\FunctionalJavascriptTests\WebDriverTestBase;
 
 /**
  * Base class for Entity Usage Javascript functional tests.
  *
  * @package Drupal\Tests\entity_usage\FunctionalJavascript
  */
-abstract class EntityUsageJavascriptTestBase extends LegacyJavascriptTestBase {
+abstract class EntityUsageJavascriptTestBase extends WebDriverTestBase {
 
   /**
    * {@inheritdoc}

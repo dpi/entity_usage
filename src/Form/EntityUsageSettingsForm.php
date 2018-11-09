@@ -184,6 +184,52 @@ class EntityUsageSettingsForm extends ConfigFormBase {
       }
     }
 
+    // Edit warning message.
+    $form['edit_warning_message_entity_types'] = [
+      '#type' => 'details',
+      '#open' => FALSE,
+      '#title' => $this->t('Warning message on edit form'),
+      '#description' => $this->t('Check which entity types should show a message when being edited with recorded references to it.'),
+      '#tree' => TRUE,
+    ];
+    $form['edit_warning_message_entity_types']['entity_types'] = [
+      '#type' => 'checkboxes',
+      '#title' => $this->t('Entity types to show warning on edit form'),
+      '#options' => $entity_type_options,
+      '#default_value' => $config->get('edit_warning_message_entity_types') ?: [],
+      '#required' => FALSE,
+    ];
+
+    // Delete warning message.
+    $form['delete_warning_message_entity_types'] = [
+      '#type' => 'details',
+      '#open' => FALSE,
+      '#title' => $this->t('Warning message on delete form'),
+      '#description' => $this->t('Check which entity types should show a message when being deleted with recorded references to it.'),
+      '#tree' => TRUE,
+    ];
+    $form['delete_warning_message_entity_types']['entity_types'] = [
+      '#type' => 'checkboxes',
+      '#title' => $this->t('Entity types to show warning on delete form'),
+      '#options' => $entity_type_options,
+      '#default_value' => $config->get('delete_warning_message_entity_types') ?: [],
+      '#required' => FALSE,
+    ];
+
+    // Only allow to opt-in on target entities being tracked.
+    foreach (array_keys($entity_type_options) as $entity_type_id) {
+      $form['edit_warning_message_entity_types']['entity_types'][$entity_type_id]['#states'] = [
+        'enabled' => [
+          ':input[name="track_enabled_target_entity_types[entity_types][' . $entity_type_id . ']"]' => ['checked' => TRUE],
+        ]
+      ];
+      $form['delete_warning_message_entity_types']['entity_types'][$entity_type_id]['#states'] = [
+        'enabled' => [
+          ':input[name="track_enabled_target_entity_types[entity_types][' . $entity_type_id . ']"]' => ['checked' => TRUE],
+        ]
+      ];
+    }
+
     // Miscellaneous settings.
     $form['generic_settings'] = [
       '#type' => 'details',
@@ -222,6 +268,8 @@ class EntityUsageSettingsForm extends ConfigFormBase {
       ->set('local_task_enabled_entity_types', array_values(array_filter($form_state->getValue('local_task_enabled_entity_types')['entity_types'])))
       ->set('track_enabled_source_entity_types', array_values(array_filter($form_state->getValue('track_enabled_source_entity_types')['entity_types'])))
       ->set('track_enabled_target_entity_types', array_values(array_filter($form_state->getValue('track_enabled_target_entity_types')['entity_types'])))
+      ->set('edit_warning_message_entity_types', array_values(array_filter($form_state->getValue('edit_warning_message_entity_types')['entity_types'])))
+      ->set('delete_warning_message_entity_types', array_values(array_filter($form_state->getValue('delete_warning_message_entity_types')['entity_types'])))
       ->set('track_enabled_plugins', array_values(array_filter($form_state->getValue('track_enabled_plugins')['plugins'])))
       ->set('site_domains', $site_domains)
       ->save();

@@ -199,6 +199,8 @@ class ListControllerTest extends EntityUsageJavascriptTestBase {
     $this->drupalGet("/es/node/{$node2->id()}/translations/add/en/es");
     $page->fillField('field_eu_test_related_nodes[0][target_id]', "Node 1 ({$node1->id()})");
     // Ensure we are creating a new revision.
+    $revision_tab = $page->find('css', 'a[href="#edit-revision-information"]');
+    $revision_tab->click();
     $page->checkField('Create new revision (all languages)');
     $assert_session->checkboxChecked('Create new revision (all languages)');
     $page->pressButton('Save (this translation)');

@@ -119,7 +119,8 @@ class ConfigEntityTrackingTest extends EntityUsageJavascriptTestBase {
 
     // Make sure the 'contact' webform exists.
     $this->drupalGet('/form/contact');
-    $assert_session->statusCodeEquals(200);
+    $page->findField('email');
+    $page->findButton('Send message');
 
     // Create a node referencing this webform.
     $this->drupalGet('/node/add/eu_test_ct');
@@ -140,7 +141,6 @@ class ConfigEntityTrackingTest extends EntityUsageJavascriptTestBase {
     $this->saveHtmlOutput();
     // We should be at /webform/contact/usage.
     $this->assertContains("/webform/contact/usage", $session->getCurrentUrl());
-    $assert_session->pageTextContains('Entity usage information for Contact');
     $assert_session->elementContains('css', 'main table', 'Node that points to a webform');
     $assert_session->elementContains('css', 'main table', 'Related Webforms');
   }

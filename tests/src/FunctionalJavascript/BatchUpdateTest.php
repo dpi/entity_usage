@@ -24,13 +24,14 @@ class BatchUpdateTest extends EntityUsageJavascriptTestBase {
 
     // No permissions, you get a 403 when trying to access the batch update.
     $this->drupalGet('/admin/config/entity-usage/batch-update');
-    $assert_session->statusCodeEquals(403);
+    $assert_session->pageTextContains('You are not authorized to access this page');
     // Grant the logged-in the needed permission and try again.
     /** @var \Drupal\user\RoleInterface $role */
     $role = Role::load('authenticated');
     $this->grantPermissions($role, ['perform batch updates entity usage']);
     $this->drupalGet('/admin/config/entity-usage/batch-update');
-    $assert_session->statusCodeEquals(200);
+    $assert_session->pageTextContains('Batch update');
+    $assert_session->pageTextContains('This page allows you to delete and re-generate again all entity usage statistics in your system');
 
     /** @var \Drupal\entity_usage\EntityUsage $usage_service */
     $usage_service = \Drupal::service('entity_usage.usage');

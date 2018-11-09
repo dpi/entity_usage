@@ -102,16 +102,15 @@ class ConfigurationFormTest extends EntityUsageJavascriptTestBase {
 
     // Check the form is using the expected permission-based access.
     $this->drupalGet('/admin/config/entity-usage/settings');
-    $assert_session->statusCodeEquals(403);
+    $assert_session->pageTextContains('You are not authorized to access this page');
     $this->drupalLogin($this->drupalCreateUser([
       'bypass node access',
       'administer entity usage',
       'access entity usage statistics',
     ]));
     $this->drupalGet('/admin/config/entity-usage/settings');
-    $assert_session->statusCodeEquals(200);
-
-    $assert_session->titleEquals('Entity Usage Settings | Drupal');
+    $assert_session->pageTextContains('Local task entity types');
+    $session->getPage()->findButton('Save configuration');
 
     // Test the local tasks configuration.
     $node = Node::create([
@@ -149,18 +148,20 @@ class ConfigurationFormTest extends EntityUsageJavascriptTestBase {
     $this->saveHtmlOutput();
     // We should be at /node/*/usage.
     $this->assertContains("/node/{$node1->id()}/usage", $session->getCurrentUrl());
-    $assert_session->pageTextContains('Entity usage information for Test node 1');
     $assert_session->pageTextContains('There are no recorded usages for ');
     // We still have the local tabs available.
     $page->clickLink('View');
     $this->saveHtmlOutput();
     // We should be back at the node view.
-    $assert_session->titleEquals('Test node 1 | Drupal');
+    $this->assertSession()->addressEquals('node/' . $node1->id());
+    $page->findLink('Edit');
 
     // Test enabled source entity types config.
     $this->drupalGet('/admin/config/entity-usage/settings');
     $summary = $assert_session->elementExists('css', '#edit-track-enabled-source-entity-types summary');
     $this->assertEquals('Enabled source entity types', $summary->getText());
+    $source_entity_types_details = $page->find('css', '#edit-track-enabled-source-entity-types');
+    $source_entity_types_details->click();
     $assert_session->pageTextContains('Check which entity types should be tracked when source.');
     foreach ($entity_types as $entity_type_id => $entity_type) {
       $field_name = "track_enabled_source_entity_types[entity_types][$entity_type_id]";
@@ -178,6 +179,8 @@ class ConfigurationFormTest extends EntityUsageJavascriptTestBase {
     $this->drupalGet('/admin/config/entity-usage/settings');
     $summary = $assert_session->elementExists('css', '#edit-track-enabled-target-entity-types summary');
     $this->assertEquals('Enabled target entity types', $summary->getText());
+    $target_entity_types_details = $page->find('css', '#edit-track-enabled-target-entity-types');
+    $target_entity_types_details->click();
     $assert_session->pageTextContains('Check which entity types should be tracked when target.');
     foreach ($entity_types as $entity_type_id => $entity_type) {
       $field_name = "track_enabled_target_entity_types[entity_types][$entity_type_id]";
@@ -219,8 +222,8 @@ class ConfigurationFormTest extends EntityUsageJavascriptTestBase {
     $usage = \Drupal::service('entity_usage.usage')->listSources($media1);
     $this->assertEquals([], $usage);
     // Disabling media as target should prevent the record from being tracked.
-    $summary = $assert_session->elementExists('css', '#edit-track-enabled-target-entity-types summary');
-    $summary->click();
+    $target_entity_types_details = $page->find('css', '#edit-track-enabled-target-entity-types');
+    $target_entity_types_details->click();
     $page->uncheckField('track_enabled_target_entity_types[entity_types][media]');
     $page->pressButton('Save configuration');
     $this->saveHtmlOutput();
@@ -235,11 +238,11 @@ class ConfigurationFormTest extends EntityUsageJavascriptTestBase {
     $usage = \Drupal::service('entity_usage.usage')->listSources($media1);
     $this->assertEquals([], $usage);
     // Enabling media as target and disabling node as source should be the same.
-    $summary = $assert_session->elementExists('css', '#edit-track-enabled-source-entity-types summary');
-    $summary->click();
+    $source_entity_types_details = $page->find('css', '#edit-track-enabled-source-entity-types');
+    $source_entity_types_details->click();
     $page->uncheckField('track_enabled_source_entity_types[entity_types][node]');
-    $summary = $assert_session->elementExists('css', '#edit-track-enabled-target-entity-types summary');
-    $summary->click();
+    $target_entity_types_details = $page->find('css', '#edit-track-enabled-target-entity-types');
+    $target_entity_types_details->click();
     $page->checkField('track_enabled_target_entity_types[entity_types][media]');
     $page->pressButton('Save configuration');
     $this->saveHtmlOutput();
@@ -254,11 +257,11 @@ class ConfigurationFormTest extends EntityUsageJavascriptTestBase {
     $usage = \Drupal::service('entity_usage.usage')->listSources($media1);
     $this->assertEquals([], $usage);
     // Enable back both of them and we start tracking again.
-    $summary = $assert_session->elementExists('css', '#edit-track-enabled-source-entity-types summary');
-    $summary->click();
+    $source_entity_types_details = $page->find('css', '#edit-track-enabled-source-entity-types');
+    $source_entity_types_details->click();
     $page->checkField('track_enabled_source_entity_types[entity_types][node]');
-    $summary = $assert_session->elementExists('css', '#edit-track-enabled-target-entity-types summary');
-    $summary->click();
+    $target_entity_types_details = $page->find('css', '#edit-track-enabled-target-entity-types');
+    $target_entity_types_details->click();
     $page->checkField('track_enabled_target_entity_types[entity_types][media]');
     $page->pressButton('Save configuration');
     $this->saveHtmlOutput();
@@ -308,6 +311,7 @@ class ConfigurationFormTest extends EntityUsageJavascriptTestBase {
     // Disable entity_reference and check usage is not tracked.
     $summary = $assert_session->elementExists('css', '#edit-track-enabled-plugins summary');
     $this->assertEquals('Enabled tracking plugins', $summary->getText());
+    $summary = $assert_session->elementExists('css', '#edit-track-enabled-plugins');
     $summary->click();
     $page->uncheckField('track_enabled_plugins[plugins][entity_reference]');
     $page->pressButton('Save configuration');
