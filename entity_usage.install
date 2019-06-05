@@ -106,6 +106,8 @@ function entity_usage_schema() {
     'indexes' => [
       'target_entity' => ['target_type', 'target_id'],
       'target_entity_string' => ['target_type', 'target_id_string'],
+      'source_entity' => ['source_type', 'source_id'],
+      'source_entity_string' => ['source_type', 'source_id_string'],
     ],
   ];
   return $schema;
@@ -248,4 +250,123 @@ function entity_usage_post_update_regenerate_2x(&$sandbox) {
  */
 function entity_usage_update_8203(&$sandbox) {
   // Left empty on purpose.
+}
+
+/**
+ * Add source entity index to the entity_usage table.
+ */
+function entity_usage_update_8204(&$sandbox) {
+  // This is deliberately duplicated, instead of calling hook_schema() to
+  // obtain it.
+  $spec = [
+    'description' => 'Track entities that reference other entities.',
+    'fields' => [
+      'target_id' => [
+        'description' => 'The target entity ID.',
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'default' => 0,
+      ],
+      'target_id_string' => [
+        'description' => 'The target ID, when the entity uses string IDs.',
+        'type' => 'varchar_ascii',
+        'length' => 128,
+        'not null' => TRUE,
+        'default' => '',
+      ],
+      'target_type' => [
+        'description' => 'The target entity type.',
+        'type' => 'varchar_ascii',
+        'length' => 128,
+        'not null' => TRUE,
+        'default' => '',
+      ],
+      'source_id' => [
+        'description' => 'The source entity ID.',
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'default' => 0,
+      ],
+      'source_id_string' => [
+        'description' => 'The source ID, when the entity uses string IDs.',
+        'type' => 'varchar_ascii',
+        'length' => 128,
+        'not null' => FALSE,
+      ],
+      'source_type' => [
+        'description' => 'The source entity type.',
+        'type' => 'varchar_ascii',
+        'length' => 128,
+        'not null' => TRUE,
+        'default' => '',
+      ],
+      'source_langcode' => [
+        'description' => 'The source entity language code.',
+        'type' => 'varchar_ascii',
+        'length' => 12,
+        'not null' => TRUE,
+        'default' => '',
+      ],
+      'source_vid' => [
+        'description' => 'The source entity revision ID.',
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'default' => 0,
+      ],
+      'method' => [
+        'description' => 'The method used to track the target, generally the plugin ID.',
+        'type' => 'varchar_ascii',
+        'length' => 128,
+        'not null' => TRUE,
+        'default' => '',
+      ],
+      'field_name' => [
+        'description' => 'The field in the source entity containing the target entity.',
+        'type' => 'varchar_ascii',
+        'length' => 128,
+        'not null' => TRUE,
+        'default' => '',
+      ],
+      'count' => [
+        'description' => 'The number of times the target entity is referenced in this case.',
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'default' => 0,
+      ],
+    ],
+    'primary key' => [
+      'target_id',
+      'target_id_string',
+      'target_type',
+      'source_id',
+      'source_type',
+      'source_langcode',
+      'source_vid',
+      'method',
+      'field_name',
+    ],
+    'indexes' => [
+      'target_entity' => ['target_type', 'target_id'],
+      'target_entity_string' => ['target_type', 'target_id_string'],
+      'source_entity' => ['source_type', 'source_id'],
+      'source_entity_string' => ['source_type', 'source_id_string'],
+    ],
+  ];
+  $schema = \Drupal::database()->schema();
+  $schema->addIndex(
+    'entity_usage',
+    'source_entity',
+    ['source_type','source_id'],
+    $spec
+  );
+  $schema->addIndex(
+    'entity_usage',
+    'source_entity_string',
+    ['source_type','source_id_string'],
+    $spec
+  );
 }
