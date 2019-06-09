@@ -188,12 +188,7 @@ class ListUsageController extends ControllerBase {
         if (empty($link)) {
           continue;
         }
-        if (isset($source_entity->status)) {
-          $published = !empty($source_entity->status->value) ? $this->t('Published') : $this->t('Unpublished');
-        }
-        else {
-          $published = '';
-        }
+        $published = $this->getSourceEntityStatus($source_entity);
         $field_label = isset($field_definitions[$records[$default_key]['field_name']]) ? $field_definitions[$records[$default_key]['field_name']]->getLabel() : $this->t('Unknown');
         $rows[] = [
           $link,
@@ -247,6 +242,36 @@ class ListUsageController extends ControllerBase {
       return $this->t('Entity usage information for %entity_label', ['%entity_label' => $entity->label()]);
     }
     return $this->t('Entity Usage List');
+  }
+
+  /**
+   * Retrieve the source entity's status.
+   *
+   * @param \Drupal\Core\Entity\EntityInterface $source_entity
+   *   The source entity.
+   *
+   * @return string
+   *   The entity's status.
+   */
+  protected function getSourceEntityStatus(EntityInterface $source_entity) {
+    // Treat paragraph entities in a special manner. Paragraph entities
+    // should get their host (parent) entity's status.
+    if ($source_entity->getEntityTypeId() == 'paragraph') {
+      /** @var \Drupal\paragraphs\ParagraphInterface $source_entity */
+      $parent = $source_entity->getParentEntity();
+      if (!empty($parent)) {
+        return $this->getSourceEntityStatus($parent);
+      }
+    }
+
+    if (isset($source_entity->status)) {
+      $published = !empty($source_entity->status->value) ? $this->t('Published') : $this->t('Unpublished');
+    }
+    else {
+      $published = '';
+    }
+
+    return $published;
   }
 
   /**

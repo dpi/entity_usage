@@ -231,6 +231,23 @@ class ParagraphsTest extends EntityUsageJavascriptTestBase {
     $this->assertEquals('English', $third_row_langcode->getText());
     $third_row_field_label = $this->xpath('//table/tbody/tr[3]/td[4]')[0];
     $this->assertEquals('Media assets', $third_row_field_label->getText());
+    // All three rows should show the status of the host node, not the media
+    // immediate parent (paragraphs).
+    $first_row_status = $this->xpath('//table/tbody/tr[1]/td[5]')[0];
+    $this->assertEquals('Published', $first_row_status->getText());
+    $second_row_status = $this->xpath('//table/tbody/tr[2]/td[5]')[0];
+    $this->assertEquals('Published', $second_row_status->getText());
+    $third_row_status = $this->xpath('//table/tbody/tr[3]/td[5]')[0];
+    $this->assertEquals('Published', $third_row_status->getText());
+    $node1->setUnpublished()->save();
+    $this->drupalGet("/admin/content/entity-usage/media/{$media1->id()}");
+    $first_row_status = $this->xpath('//table/tbody/tr[1]/td[5]')[0];
+    $this->assertEquals('Unpublished', $first_row_status->getText());
+    $second_row_status = $this->xpath('//table/tbody/tr[2]/td[5]')[0];
+    $this->assertEquals('Unpublished', $second_row_status->getText());
+    $third_row_status = $this->xpath('//table/tbody/tr[3]/td[5]')[0];
+    $this->assertEquals('Unpublished', $third_row_status->getText());
+    $node1->setPublished()->save();
 
     // Remove references to the paragraphs, and check we don't show orphan
     // paragraphs on the usage page.
