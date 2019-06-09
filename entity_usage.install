@@ -7,6 +7,7 @@
 
 use Drupal\Core\Url;
 use Drupal\Core\Site\Settings;
+use Drupal\entity_usage\Controller\ListUsageController;
 
 /**
  * Implements hook_schema().
@@ -369,4 +370,15 @@ function entity_usage_update_8204(&$sandbox) {
     ['source_type','source_id_string'],
     $spec
   );
+}
+
+/**
+ * Initialize the new "usage_controller_items_per_page" config value to 25.
+ */
+function entity_usage_update_8205(&$sandbox) {
+  $config = \Drupal::configFactory()->getEditable('entity_usage.settings');
+  $items_per_page = $config->get('usage_controller_items_per_page');
+  if (empty($items_per_page)) {
+    $config->set('usage_controller_items_per_page', ListUsageController::ITEMS_PER_PAGE_DEFAULT)->save(TRUE);
+  }
 }

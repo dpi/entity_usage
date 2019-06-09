@@ -44,3 +44,6 @@ entity_usage.settings:
       type: sequence
       sequence:
         type: string
+    usage_controller_items_per_page:
+      label: Number of items per page on the usage page
+      type: integer

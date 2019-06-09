@@ -216,6 +216,30 @@ class ListControllerTest extends EntityUsageJavascriptTestBase {
     $second_row_used_in = $this->xpath('//table/tbody/tr[2]/td[6]')[0];
     $this->assertEquals('Translations or previous revisions', $second_row_used_in->getText());
     $this->assertEquals(2, count($this->xpath('//table/tbody/tr')));
+
+    // Verify that it's possible to control the number of items per page.
+    // Initially we have no pager since two rows fit in one page.
+    $this->drupalGet("/admin/content/entity-usage/node/{$node1->id()}");
+    $assert_session->elementNotExists('css', 'ul.pager__items');
+    $this->drupalGet('/admin/config/entity-usage/settings');
+    // Set items per page to 1.
+    $page->find('css', 'input[name="usage_controller_items_per_page"]')
+      ->setValue('1');
+    $page->pressButton('Save configuration');
+    $session->wait(500);
+    $this->saveHtmlOutput();
+    $assert_session->pageTextContains('The configuration options have been saved.');
+    $this->drupalGet("/admin/content/entity-usage/node/{$node1->id()}");
+    // Pager is there.
+    $pager_element = $assert_session->elementExists('css', 'ul.pager__items');
+    // First node is on the first page, the second node on the next page.
+    $first_row_title_link = $assert_session->elementExists('xpath', '//table/tbody/tr[1]/td[1]/a');
+    $this->assertEquals('Node 3', $first_row_title_link->getText());
+    $assert_session->elementNotExists('xpath', '//table/tbody/tr[2]');
+    $pager_element->find('css', '.pager__item--next a')->click();
+    $first_row_title_link = $assert_session->elementExists('xpath', '//table/tbody/tr[1]/td[1]/a');
+    $this->assertEquals('Node 2', $first_row_title_link->getText());
+    $assert_session->elementNotExists('xpath', '//table/tbody/tr[2]');
   }
 
 }

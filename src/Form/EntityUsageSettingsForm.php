@@ -9,6 +9,7 @@ use Drupal\Core\Entity\EntityTypeManagerInterface;
 use Drupal\Core\Form\ConfigFormBase;
 use Drupal\Core\Form\FormStateInterface;
 use Drupal\Core\Routing\RouteBuilderInterface;
+use Drupal\entity_usage\Controller\ListUsageController;
 use Drupal\entity_usage\EntityUsageTrackManager;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 
@@ -248,6 +249,14 @@ class EntityUsageSettingsForm extends ConfigFormBase {
       '#description' => $this->t("A comma or new-line separated list of domain names for this website. Absolute URL's in content will be checked against these domains to allow usage tracking."),
       '#default_value' => implode("\r\n", $config->get('site_domains') ?: []),
     ];
+    $form['generic_settings']['usage_controller_items_per_page'] = [
+      '#type' => 'number',
+      '#title' => $this->t('Items per page'),
+      '#description' => $this->t('Define here the number of items per page that should be shown on the usage page.'),
+      '#default_value' => $config->get('usage_controller_items_per_page') ?: ListUsageController::ITEMS_PER_PAGE_DEFAULT,
+      '#min' => 1,
+      '#step' => 1,
+    ];
 
     return parent::buildForm($form, $form_state);
   }
@@ -272,6 +281,7 @@ class EntityUsageSettingsForm extends ConfigFormBase {
       ->set('delete_warning_message_entity_types', array_values(array_filter($form_state->getValue('delete_warning_message_entity_types')['entity_types'])))
       ->set('track_enabled_plugins', array_values(array_filter($form_state->getValue('track_enabled_plugins')['plugins'])))
       ->set('site_domains', $site_domains)
+      ->set('usage_controller_items_per_page', $form_state->getValue('usage_controller_items_per_page'))
       ->save();
 
     if ($local_tasks_updated) {
