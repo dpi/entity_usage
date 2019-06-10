@@ -2,6 +2,8 @@
 
 namespace Drupal\entity_usage\Plugin\EntityUsage\Track;
 
+use Drupal\block_content\Plugin\Block\BlockContentBlock;
+use Drupal\Core\Block\BlockPluginInterface;
 use Drupal\Core\Field\FieldItemInterface;
 use Drupal\entity_usage\EntityUsageTrackBase;
 
@@ -40,17 +42,30 @@ class BlockField extends EntityUsageTrackBase {
         $target_id = $view_name;
       }
     }
-    // @todo other special cases apart from views?
-    else {
-      $id = $block_instance->getConfiguration()['id'];
-      if ($this->entityTypeManager->getStorage('block_content')->load($id)) {
+    elseif ($block_instance instanceof BlockContentBlock
+      && $uuid = $block_instance->getDerivativeId()) {
+      $blocks = $this->entityTypeManager
+        ->getStorage('block_content')
+        ->loadByProperties(['uuid' => $uuid]);
+      if (!empty($blocks)) {
         // Doing this here means that an initial save operation of a host entity
         // will likely not track this block, once it does not exist at this
         // point. However, it's preferable to miss that and ensure we only track
         // lodable entities.
+        $block = reset($blocks);
+        $target_id = $block->id();
         $target_type = 'block_content';
-        $target_id = $block_instance->getConfiguration()['id'];
       }
+    }
+    // I'm not 100% convinced of the utility of this scenario, but technically
+    // it could happen.
+    elseif ($block_instance instanceof BlockPluginInterface
+      && !($block_instance instanceof BlockContentBlock)) {
+      $target_id = $block_instance->getPluginId();
+      $target_type = 'block';
+    }
+    else {
+      throw new \Exception('Block saved as target entity is not one of the trackable block types.');
     }
 
     return ($target_type && $target_id) ? [$target_type . '|' . $target_id] : [];

@@ -101,7 +101,7 @@ class EntityUsageSettingsForm extends ConfigFormBase {
         $content_entity_types[$entity_type->id()] = $entity_type->getLabel();
       }
       $entity_type_options[$entity_type->id()] = $entity_type->getLabel();
-      if ($entity_type->hasLinkTemplate('canonical')) {
+      if ($entity_type->hasLinkTemplate('canonical') || $entity_type->hasLinkTemplate('edit-form')) {
         $tabs_options[$entity_type->id()] = $entity_type->getLabel();
       }
     }

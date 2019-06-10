@@ -61,14 +61,22 @@ class EntityUsageLocalTask extends DeriverBase implements ContainerDeriverInterf
     $configured_types = $this->config->get('entity_usage.settings')->get('local_task_enabled_entity_types') ?: [];
 
     foreach ($this->entityTypeManager->getDefinitions() as $entity_type_id => $entity_type) {
+      // We prefer the canonical template, but we also allow edit-form templates
+      // on entities that don't have canonical (like views, etc).
       if ($entity_type->hasLinkTemplate('canonical')) {
+        $template_key = 'canonical';
+      }
+      elseif ($entity_type->hasLinkTemplate('edit-form')) {
+        $template_key = 'edit_form';
+      }
+      if (!empty($template_key)) {
         if (!in_array($entity_type_id, $configured_types, TRUE)) {
           continue;
         }
         $this->derivatives["$entity_type_id.entity_usage"] = [
           'route_name' => "entity.$entity_type_id.entity_usage",
           'title' => $this->t('Usage'),
-          'base_route' => "entity.$entity_type_id.canonical",
+          'base_route' => "entity.$entity_type_id.$template_key",
           'weight' => 99,
         ];
       }
