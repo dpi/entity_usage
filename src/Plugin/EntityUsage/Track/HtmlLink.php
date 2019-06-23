@@ -95,7 +95,7 @@ class HtmlLink extends TextFieldEmbedBase {
     $entities = [];
 
     // Loop trough all the <a> elements that don't have the LinkIt attributes.
-    $xpath_query = "//a[@href != '' and not(@data-entity-uuid)]";
+    $xpath_query = "//a[@href != '']";
     foreach ($xpath->query($xpath_query) as $element) {
       /** @var \DOMElement $element */
       try {
@@ -136,6 +136,19 @@ class HtmlLink extends TextFieldEmbedBase {
         if ($target_type && $target_id) {
           $entity = $this->entityTypeManager->getStorage($target_type)->load($target_id);
           if ($entity) {
+
+            if ($element->hasAttribute('data-entity-uuid')) {
+              // Normally the Linkit plugin handles when a element has this
+              // attribute, but sometimes users may change the HREF manually and
+              // leave behind the wrong UUID.
+              $data_uuid = $element->getAttribute('data-entity-uuid');
+              // If the UUID is the same as found in HREF, then skip it because
+              // it's LinkIt's job to register this usage.
+              if ($data_uuid == $entity->uuid()) {
+                continue;
+              }
+            }
+
             $entities[$entity->uuid()] = $target_type;
           }
         }
