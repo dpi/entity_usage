@@ -131,22 +131,18 @@ class BatchUpdateForm extends FormBase {
       \Drupal::service('entity_usage.usage')->bulkDeleteSources($entity_type_id);
 
       $context['sandbox']['progress'] = 0;
-      $context['sandbox']['current_id'] = -1;
+      $context['sandbox']['ids'] = $entity_storage->getQuery()
+        ->accessCheck(FALSE)
+        ->sort($entity_type_key)
+        ->execute();
       $context['sandbox']['total'] = (int) $entity_storage->getQuery()
         ->accessCheck(FALSE)
         ->count()
         ->execute();
     }
 
-    $entity_ids = $entity_storage->getQuery()
-      ->condition($entity_type_key, $context['sandbox']['current_id'], '>')
-      ->range(0, 1)
-      ->accessCheck(FALSE)
-      ->sort($entity_type_key)
-      ->execute();
-
     /** @var \Drupal\Core\Entity\EntityInterface $entity */
-    $entity = $entity_storage->load(reset($entity_ids));
+    $entity = $entity_storage->load(array_shift($context['sandbox']['ids']));
     if ($entity) {
       if ($entity->getEntityType()->isRevisionable()) {
         // Track all revisions and translations of the source entity. Sources
@@ -172,7 +168,6 @@ class BatchUpdateForm extends FormBase {
       }
 
       $context['sandbox']['progress']++;
-      $context['sandbox']['current_id'] = $entity->id();
       $context['results'][] = $entity_type_id . ':' . $entity->id();
     }
 
