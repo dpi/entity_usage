@@ -2,6 +2,7 @@
 
 namespace Drupal\entity_usage\Controller;
 
+use Drupal\block_content\BlockContentInterface;
 use Drupal\Core\Access\AccessResult;
 use Drupal\Core\Config\ConfigFactoryInterface;
 use Drupal\Core\Controller\ControllerBase;
@@ -324,6 +325,11 @@ class ListUsageController extends ControllerBase {
       $rel = 'canonical';
     }
 
+    // Block content likely used in Layout Builder inline blocks.
+    if ($source_entity instanceof BlockContentInterface && !$source_entity->isReusable()) {
+      $rel = NULL;
+    }
+
     if ($rel) {
       $link_text = $text ?: $entity_label;
       // Prevent 404s by exposing the text unlinked if the user has no access
@@ -369,6 +375,23 @@ class ListUsageController extends ControllerBase {
         return FALSE;
       }
       return $this->getSourceEntityLink($parent, $entity_label);
+    }
+    // Treat block_content entities in a special manner. Block content
+    // relationships are stored as serialized data on the host entity. This
+    // makes it difficult to query parent data. Instead we look up relationship
+    // data which may exist in entity_usage tables. This requires site builders
+    // to set up entity usage on host-entity-type -> block_content manually.
+    // @todo this could be made more generic to support other entity types with
+    // difficult to handle parent -> child relationships.
+    elseif ($source_entity->getEntityTypeId() === 'block_content') {
+      $sources = $this->entityUsage->listSources($source_entity, FALSE);
+      $source = reset($sources);
+      if ($source !== FALSE) {
+        $parent = $this->entityTypeManager()->getStorage($source['source_type'])->load($source['source_id']);
+        if ($parent) {
+          return $this->getSourceEntityLink($parent);
+        }
+      }
     }
 
     // As a fallback just return a non-linked label.
