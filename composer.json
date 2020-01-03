@@ -18,5 +18,12 @@
     "drupal/webform": "~5.0",
     "drupal/block_field": "~1.0",
     "drupal/dynamic_entity_reference": "~1.0"
+  },
+  "extra": {
+    "drush": {
+      "services": {
+        "drush.services.yml": "^9"
+      }
+    }
   }
 }
