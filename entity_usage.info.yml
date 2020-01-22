@@ -12,3 +12,6 @@ test_dependencies:
   - webform:webform
   - block_field:block_field
   - dynamic_entity_reference:dynamic_entity_reference
+  - entity_browser:entity_browser
+  - entity_browser_block:entity_browser_block
+  - inline_entity_form:inline_entity_form

@@ -82,25 +82,51 @@ class LayoutBuilder extends EntityUsageTrackBase {
   public function getTargetEntities(FieldItemInterface $item) {
     assert($item instanceof LayoutSectionItem);
 
+    // We support both Content Blocks and Entity Browser Blocks.
     $blockContentRevisionIds = [];
+    $ebbContentIds = [];
 
     /** @var \Drupal\layout_builder\Plugin\DataType\SectionData $value */
     foreach ($item as $value) {
       /** @var \Drupal\layout_builder\Section $section */
       $section = $value->getValue();
       foreach ($section->getComponents() as $component) {
+        $configuration = $component->toArray()['configuration'];
         $def = $this->blockManager->getDefinition($component->getPluginId());
         if ($def['id'] === 'inline_block') {
-          $configuration = $component->toArray()['configuration'];
           $blockContentRevisionIds[] = $configuration['block_revision_id'];
+        }
+        elseif ($def['id'] === 'entity_browser_block' && !empty($configuration['entity_ids'])) {
+          $ebbContentIds = array_unique(array_merge($ebbContentIds, (array) $configuration['entity_ids']));
         }
       }
     }
 
-    if (count($blockContentRevisionIds) === 0) {
-      return [];
+    $target_entities = [];
+    if (count($blockContentRevisionIds) > 0) {
+      $target_entities = $this->prepareBlockContentIds($blockContentRevisionIds);
     }
+    if (count($ebbContentIds) > 0) {
+      $target_entities = array_merge($target_entities, $this->prepareEntityBrowserBlockIds($ebbContentIds));
+    }
+    return $target_entities;
 
+  }
+
+  /**
+   * Prepare block content target entity values to be in the correct format.
+   *
+   * @param array $blockContentRevisionIds
+   *   An array of block (content) revision IDs.
+   *
+   * @return array
+   *   An array of the corresponding block IDs from the revision IDs passed in,
+   *   each prefixed with the string "block_content|".
+   *
+   * @throws \Drupal\Component\Plugin\Exception\InvalidPluginDefinitionException
+   * @throws \Drupal\Component\Plugin\Exception\PluginNotFoundException
+   */
+  private function prepareBlockContentIds(array $blockContentRevisionIds) {
     /** @var \Drupal\Core\Entity\ContentEntityStorageInterface $blockContentStorage */
     $blockContentStorage = $this->entityTypeManager->getStorage('block_content');
 
@@ -111,6 +137,45 @@ class LayoutBuilder extends EntityUsageTrackBase {
 
     return array_map(function (string $id): string {
       return 'block_content|' . $id;
+    }, $ids);
+  }
+
+  /**
+   * Prepare Entity Browser Block IDs to be in the correct format.
+   *
+   * @param array $ebbContentIds
+   *   An array of entity ID values as returned from the EBB configuration.
+   *   (Each value is expected to be in the format "node:123", "media:42", etc).
+   *
+   * @return array
+   *   The same array passed in, with the following modifications:
+   *   - Non-loadable entities will be filtered out.
+   *   - The ":" character will be replaced by the "|" character.
+   */
+  private function prepareEntityBrowserBlockIds(array $ebbContentIds) {
+    // Only return loadable entities.
+    $ids = array_filter($ebbContentIds, function ($item) {
+      // Entity Browser Block stores each entity in "entity_ids" in the format:
+      // "{$entity_type_id}:{$entity_id}".
+      list($entity_type_id, $entity_id) = explode(":", $item);
+      $storage = $this->entityTypeManager->getStorage($entity_type_id);
+      if (!$storage) {
+        return FALSE;
+      }
+      $entity = $storage->load($entity_id);
+      if (!$entity) {
+        return FALSE;
+      }
+      return TRUE;
+    });
+
+    if (empty($ids)) {
+      return [];
+    }
+
+    // Return items in the expected format, separating type and id with a "|".
+    return array_map(function (string $item): string {
+      return str_replace(":", "|", $item);
     }, $ids);
   }
 

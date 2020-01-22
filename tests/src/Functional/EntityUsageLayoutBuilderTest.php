@@ -15,7 +15,7 @@ use Drupal\layout_builder\SectionComponent;
 use Drupal\Tests\BrowserTestBase;
 
 /**
- * Tests layout builder usage displays in UI.
+ * Tests layout builder usage through Inline Blocks displays in UI.
  *
  * @group entity_usage
  * @group layout_builder
