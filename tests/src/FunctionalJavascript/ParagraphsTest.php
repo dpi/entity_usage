@@ -279,7 +279,7 @@ class ParagraphsTest extends EntityUsageJavascriptTestBase {
     $usage = $usage_service->listSources($media1);
     $this->assertTrue(!empty($usage['paragraph']));
 
-    // But we don't show orphan paragraphs on the usage page.
+    // Assert how orphaned paragraphs on older revision are shown.
     $this->drupalGet("/admin/content/entity-usage/media/{$media1->id()}");
     // The first row contains the direct reference from the host node.
     $first_row_title_link = $assert_session->elementExists('xpath', '//table/tbody/tr[1]/td[1]/a');
@@ -291,9 +291,11 @@ class ParagraphsTest extends EntityUsageJavascriptTestBase {
     $this->assertEquals('English', $first_row_langcode->getText());
     $first_row_field_label = $this->xpath('//table/tbody/tr[1]/td[4]')[0];
     $this->assertEquals('Direct media', $first_row_field_label->getText());
-    // No other usages referencing a paragraph entity show up.
-    $assert_session->pageTextNotContains('Paragraph');
-    $assert_session->pageTextNotContains('Media assets');
+
+    // The paragraphs are mentioned as used by previous revision.
+    $assert_session->pageTextContains('Node ' . $node1->id() . ' > field_paragraphs (previous revision) > Nested paragraphs');
+    $assert_session->pageTextContains('Node ' . $node1->id() . ' > field_paragraphs (previous revision)');
+    $assert_session->pageTextContains('Media assets');
   }
 
 }

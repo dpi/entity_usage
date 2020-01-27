@@ -332,8 +332,8 @@ class ListUsageController extends ControllerBase {
       $rel = NULL;
     }
 
+    $link_text = $text ?: $entity_label;
     if ($rel) {
-      $link_text = $text ?: $entity_label;
       // Prevent 404s by exposing the text unlinked if the user has no access
       // to view the entity.
       return $source_entity->access('view') ? $source_entity->toLink($link_text, $rel) : $link_text;
@@ -344,39 +344,10 @@ class ListUsageController extends ControllerBase {
     // we will use the link to the parent's entity label instead.
     /** @var \Drupal\paragraphs\ParagraphInterface $source_entity */
     if ($source_entity->getEntityTypeId() == 'paragraph') {
-      // Paragraph items may be legitimately orphan, so even if this is a real
-      // usage, we will only show it on the UI if its parent is loadable and
-      // references the paragraph on its default revision.
-      // @todo This could probably be simplified once #2954039 lands.
       $parent = $source_entity->getParentEntity();
-      if (empty($parent)) {
-        $orphan = TRUE;
+      if ($parent) {
+        return $this->getSourceEntityLink($parent, $link_text);
       }
-      else {
-        $parent_field = $source_entity->get('parent_field_name')->value;
-        /** @var \Drupal\entity_reference_revisions\EntityReferenceRevisionsFieldItemList $values */
-        $values = $parent->{$parent_field};
-        if (empty($values->getValue())) {
-          // The field is empty or was removed.
-          $orphan = TRUE;
-        }
-        else {
-          // There are values in the field. Once paragraphs can have just been
-          // re-ordered, there is no other option apart from looping through all
-          // values and checking if any of them is this entity.
-          $orphan = TRUE;
-          foreach ($values as $value) {
-            if ($value->entity->id() == $source_entity->id()) {
-              $orphan = FALSE;
-              break;
-            }
-          }
-        }
-      }
-      if ($orphan) {
-        return FALSE;
-      }
-      return $this->getSourceEntityLink($parent, $entity_label);
     }
     // Treat block_content entities in a special manner. Block content
     // relationships are stored as serialized data on the host entity. This
@@ -397,7 +368,7 @@ class ListUsageController extends ControllerBase {
     }
 
     // As a fallback just return a non-linked label.
-    return $entity_label;
+    return $link_text;
   }
 
   /**
