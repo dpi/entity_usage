@@ -14,6 +14,7 @@ use Drupal\Core\Language\LanguageInterface;
 use Drupal\Core\Link;
 use Drupal\entity_usage\EntityUsageInterface;
 use Symfony\Component\DependencyInjection\ContainerInterface;
+use Drupal\Core\Pager\PagerManagerInterface;
 
 /**
  * Controller for our pages.
@@ -61,6 +62,13 @@ class ListUsageController extends ControllerBase {
   protected $itemsPerPage;
 
   /**
+   * The pager manager.
+   *
+   * @var \Drupal\Core\Pager\PagerManagerInterface
+   */
+  protected $pagerManager;
+
+  /**
    * ListUsageController constructor.
    *
    * @param \Drupal\Core\Entity\EntityTypeManagerInterface $entity_type_manager
@@ -69,13 +77,18 @@ class ListUsageController extends ControllerBase {
    *   The entity field manager.
    * @param \Drupal\entity_usage\EntityUsageInterface $entity_usage
    *   The EntityUsage service.
+   * @param \Drupal\Core\Config\ConfigFactoryInterface $config_factory
+   * The config factory service.
+   * @param \Drupal\Core\Pager\PagerManagerInterface $pager_manager
+   *   The pager manager.
    */
-  public function __construct(EntityTypeManagerInterface $entity_type_manager, EntityFieldManagerInterface $entity_field_manager, EntityUsageInterface $entity_usage, ConfigFactoryInterface $config_factory) {
+  public function __construct(EntityTypeManagerInterface $entity_type_manager, EntityFieldManagerInterface $entity_field_manager, EntityUsageInterface $entity_usage, ConfigFactoryInterface $config_factory, PagerManagerInterface $pager_manager) {
     $this->entityTypeManager = $entity_type_manager;
     $this->entityFieldManager = $entity_field_manager;
     $this->entityUsage = $entity_usage;
     $this->entityUsageConfig = $config_factory->get('entity_usage.settings');
     $this->itemsPerPage = $this->entityUsageConfig->get('usage_controller_items_per_page') ?: self::ITEMS_PER_PAGE_DEFAULT;
+    $this->pagerManager = $pager_manager;
   }
 
   /**
@@ -86,7 +99,8 @@ class ListUsageController extends ControllerBase {
       $container->get('entity_type.manager'),
       $container->get('entity_field.manager'),
       $container->get('entity_usage.usage'),
-      $container->get('config.factory')
+      $container->get('config.factory'),
+      $container->get('pager.manager')
     );
   }
 
@@ -121,7 +135,8 @@ class ListUsageController extends ControllerBase {
     ];
 
     $total = count($all_rows);
-    $page = pager_default_initialize($total, $this->itemsPerPage);
+    $pager = $this->pagerManager->createPager($total, $this->itemsPerPage);
+    $page = $pager->getCurrentPage();
     $page_rows = $this->getPageRows($page, $this->itemsPerPage, $entity_type, $entity_id);
     // If all rows on this page are of entities that have usage on their default
     // revision, we don't need the "Used in" column.

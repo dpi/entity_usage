@@ -6,7 +6,7 @@ use Drupal\field\Entity\FieldConfig;
 use Drupal\field\Entity\FieldStorageConfig;
 use Drupal\media\Entity\Media;
 use Drupal\Tests\entity_usage\Traits\EntityUsageLastEntityQueryTrait;
-use Drupal\Tests\media\Functional\MediaFunctionalTestCreateMediaTypeTrait;
+use Drupal\Tests\media\Traits\MediaTypeCreationTrait;
 use Drupal\Tests\paragraphs\FunctionalJavascript\ParagraphsTestBaseTrait;
 use Drupal\user\Entity\Role;
 
@@ -18,7 +18,7 @@ use Drupal\user\Entity\Role;
 class ParagraphsTest extends EntityUsageJavascriptTestBase {
 
   use ParagraphsTestBaseTrait;
-  use MediaFunctionalTestCreateMediaTypeTrait;
+  use MediaTypeCreationTrait;
   use EntityUsageLastEntityQueryTrait;
 
   /**
@@ -44,7 +44,7 @@ class ParagraphsTest extends EntityUsageJavascriptTestBase {
     $usage_service = \Drupal::service('entity_usage.usage');
 
     // Create a media type and some media entities.
-    $media_type = $this->createMediaType([], 'image');
+    $media_type = $this->createMediaType('image');
     $media1 = Media::create([
       'bundle' => $media_type->id(),
       'name' => 'Media asset 1',
@@ -78,12 +78,12 @@ class ParagraphsTest extends EntityUsageJavascriptTestBase {
       ],
     ])->save();
     // Define our widget and formatter for this field.
-    entity_get_form_display('paragraph', 'single_media', 'default')
+    \Drupal::service('entity_display.repository')->getFormDisplay('paragraph', 'single_media', 'default')
       ->setComponent('field_media_assets', [
         'type' => 'entity_reference_autocomplete',
       ])
       ->save();
-    entity_get_display('paragraph', 'single_media', 'default')
+    \Drupal::service('entity_display.repository')->getViewDisplay('paragraph', 'single_media', 'default')
       ->setComponent('field_media_assets', [
         'type' => 'entity_reference_label',
       ])
@@ -108,12 +108,12 @@ class ParagraphsTest extends EntityUsageJavascriptTestBase {
       'settings' => [],
     ])->save();
     // Define our widget and formatter for this field.
-    entity_get_form_display('paragraph', 'rich_media', 'default')
+    \Drupal::service('entity_display.repository')->getFormDisplay('paragraph', 'rich_media', 'default')
       ->setComponent('field_nested_paragraphs', [
         'type' => 'paragraphs',
       ])
       ->save();
-    entity_get_display('paragraph', 'rich_media', 'default')
+    \Drupal::service('entity_display.repository')->getViewDisplay('paragraph', 'rich_media', 'default')
       ->setComponent('field_nested_paragraphs', [
         'type' => 'paragraph_summary',
       ])
@@ -148,12 +148,12 @@ class ParagraphsTest extends EntityUsageJavascriptTestBase {
       ],
     ])->save();
     // Define our widget and formatter for this field.
-    entity_get_form_display('node', 'paragraphed_test', 'default')
+    \Drupal::service('entity_display.repository')->getFormDisplay('node', 'paragraphed_test', 'default')
       ->setComponent('field_direct_media', [
         'type' => 'entity_reference_autocomplete',
       ])
       ->save();
-    entity_get_display('node', 'paragraphed_test', 'default')
+    \Drupal::service('entity_display.repository')->getViewDisplay('node', 'paragraphed_test', 'default')
       ->setComponent('field_direct_media', [
         'type' => 'entity_reference_label',
       ])

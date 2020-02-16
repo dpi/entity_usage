@@ -375,24 +375,16 @@ class EmbeddedContentTest extends EntityUsageJavascriptTestBase {
     ]);
     $node6->save();
     // Check that both targets are tracked.
-    $usage = $usage_service->listTargets($node6);
-    $expected = [
-      'node' => [
-        $node5->id() => [
-          [
-            'method' => 'html_link',
-            'field_name' => 'field_eu_test_rich_text',
-            'count' => 1,
-          ],
-          [
-            'method' => 'html_link',
-            'field_name' => 'field_eu_test_normal_text',
-            'count' => 1,
-          ],
-        ],
-      ],
-    ];
-    $this->assertEquals($expected, $usage);
+    $usages = $usage_service->listTargets($node6);
+
+    // Asserting the whole array directly might fail due to different sort
+    // orders, depending on the PHP version.
+    $this->assertCount(2, $usages['node'][$node5->id()]);
+    foreach ($usages['node'][$node5->id()] as $usage) {
+      $this->assertEquals(1, $usage['count']);
+      $this->assertEquals('html_link', $usage['method']);
+      $this->assertContains($usage['field_name'], ['field_eu_test_rich_text', 'field_eu_test_normal_text']);
+    }
 
     // Create node 7 referencing node 6 using an aliased URL.
     $alias_url = '/i-am-an-alias';
