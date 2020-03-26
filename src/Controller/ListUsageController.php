@@ -161,6 +161,7 @@ class ListUsageController extends ControllerBase {
 
     $build[] = [
       '#type' => 'pager',
+      '#route_name' => '<current>',
     ];
 
     return $build;
